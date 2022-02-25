@@ -1,11 +1,11 @@
 SELECT
-    segments.date AS day,
+    segments.date AS date,
     campaign.id AS campaign_id,
     ad_group.id AS ad_group_id,
     segments.ad_network_type AS network,
     segments.conversion_action_name AS conversion_name,
     segments.conversion_action_category AS conversion_category,
-    metrics.conversions AS convesions,
+    metrics.conversions AS conversions,
     metrics.all_conversions AS all_conversions
 FROM ad_group
 WHERE

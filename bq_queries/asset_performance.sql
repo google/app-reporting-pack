@@ -1,25 +1,7 @@
+-- Contains performance (clicks, impressions, installs, inapps, etc) on asset_id level
+-- segmented by network (Search, Display, YouTube).
 CREATE OR REPLACE TABLE {bq_project}.{bq_dataset}.asset_performance_F
 AS (
-WITH GeoLanguageTable AS (
-    SELECT
-        campaign_id,
-        ARRAY_AGG(DISTINCT geo_target ORDER BY geo_target) AS geos,
-        ARRAY_AGG(DISTINCT language ORDER BY language) AS languages
-    FROM {bq_project}.{bq_dataset}.campaign_geo_language_target
-    GROUP BY 1
-),
-    AppCampaignSettingsTable AS (
-        SELECT
-            campaign_id,
-            campaign_sub_type,
-            app_id,
-            app_store,
-            bidding_strategy,
-            ARRAY_AGG(conversion_source ORDER BY conversion_source) AS conversion_sources,
-            ARRAY_AGG(conversion_name ORDER BY conversion_name) AS target_conversions
-        FROM {bq_project}.{bq_dataset}.app_campaign_settings
-        GROUP BY 1, 2, 3, 4, 5
-    )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
     M.account_id,
@@ -58,7 +40,7 @@ SELECT
         WHEN "TEXT" THEN ""
         WHEN "IMAGE" THEN CONCAT(Assets.height, "x", Assets.width)
         WHEN "MEDIA_BUNDLE" THEN CONCAT(Assets.height, "x", Assets.width)
-        WHEN "YOUTUBE_VIDEO" THEN "Placeholder"
+        WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO: Take orientation from YouTube API  
         ELSE NULL
         END AS asset_orientation,
     ROUND(Videos.video_duration, 1000) AS video_duration,
@@ -76,9 +58,9 @@ SELECT
 FROM {bq_project}.{bq_dataset}.asset_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
-LEFT JOIN AppCampaignSettingsTable AS ACS
+LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN GeoLanguageTable AS G
+LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
 LEFT JOIN {bq_project}.{bq_dataset}.asset_reference AS R
   ON AP.asset_id = R.asset_id

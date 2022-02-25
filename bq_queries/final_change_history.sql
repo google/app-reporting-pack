@@ -1,26 +1,6 @@
+-- Contains daily changes (bids, budgets, assets, etc) on campaign level.
 CREATE OR REPLACE TABLE {bq_project}.{bq_dataset}.final_change_history_F
 AS (
-WITH GeoLanguageTable AS (
-    SELECT
-        campaign_id,
-        ARRAY_AGG(DISTINCT geo_target ORDER BY geo_target) AS geos,
-        ARRAY_AGG(DISTINCT language ORDER BY language) AS languages
-    FROM {bq_project}.{bq_dataset}.campaign_geo_language_target
-    GROUP BY 1
-),
-    AppCampaignSettingsTable AS (
-        SELECT
-            campaign_id,
-            campaign_sub_type,
-            app_id,
-            app_store,
-            bidding_strategy,
-            start_date,
-            ARRAY_AGG(conversion_source ORDER BY conversion_source) AS conversion_sources,
-            ARRAY_AGG(conversion_name ORDER BY conversion_name) AS target_conversions
-        FROM {bq_project}.{bq_dataset}.app_campaign_settings
-        GROUP BY 1, 2, 3, 4, 5, 6
-    )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
     M.account_id,
@@ -38,10 +18,10 @@ SELECT
     ARRAY_TO_STRING(ACS.target_conversions, " | ")  AS target_conversions,
     "" AS firebase_bidding_status,
     ACS.start_date AS start_date,
-    0 AS n_target_conversions,
-    0 AS current_budget,
-    0 AS current_target_cpa,
-    0 AS current_target_roas,
+    ARRAY_LENGTH(ACS.target_conversions) AS n_of_target_conversions,
+    ROUND(B.budget_amount / 1e5, 2) AS current_budget_amount,
+    ROUND(B.target_cpa / 1e5, 2) AS current_target_cpa,
+    ROUND(B.target_roas / 1e5, 2) AS current_target_roas,
     0 AS budget,
     0 AS target_cpa,
     0 AS target_roas,
@@ -63,8 +43,10 @@ SELECT
 FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
-LEFT JOIN AppCampaignSettingsTable AS ACS
+LEFT JOIN {bq_project}.{bq_dataset}.bid_budget AS B
+    ON M.campaign_id = B.campaign_id
+LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN GeoLanguageTable AS G
+LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);

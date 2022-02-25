@@ -2,7 +2,6 @@ SELECT
     segments.date AS date,
     segments.ad_network_type AS network,
     ad_group.id AS ad_group_id,
-    metrics.impressions AS impressions,
     metrics.clicks AS clicks,
     metrics.impressions AS impressions,
     metrics.cost_micros AS cost,
