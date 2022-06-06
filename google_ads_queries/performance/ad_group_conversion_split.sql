@@ -6,7 +6,8 @@ SELECT
     segments.conversion_action_name AS conversion_name,
     segments.conversion_action_category AS conversion_category,
     metrics.conversions AS conversions,
-    metrics.all_conversions AS all_conversions
+    metrics.all_conversions AS all_conversions,
+    metrics.conversions_value AS conversions_value
 FROM ad_group
 WHERE
     campaign.advertising_channel_type = "MULTI_CHANNEL"

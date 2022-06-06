@@ -24,7 +24,8 @@ SELECT
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
     `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
-    SUM(AP.view_through_conversions) AS view_through_conversions
+    SUM(AP.view_through_conversions) AS view_through_conversions,
+    SUM(AP.conversions_value) AS conversions_value
 FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
