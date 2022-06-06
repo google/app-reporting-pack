@@ -23,7 +23,7 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    ROUND(SUM(AP.cost) / 1e5, 2) AS cost,
+    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(AP.view_through_conversions) AS view_through_conversions
 FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M

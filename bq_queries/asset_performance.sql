@@ -40,7 +40,7 @@ SELECT
         WHEN "TEXT" THEN ""
         WHEN "IMAGE" THEN CONCAT(Assets.height, "x", Assets.width)
         WHEN "MEDIA_BUNDLE" THEN CONCAT(Assets.height, "x", Assets.width)
-        WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO: Take orientation from YouTube API  
+        WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO: Take orientation from YouTube API
         ELSE NULL
         END AS asset_orientation,
     ROUND(Videos.video_duration, 1000) AS video_duration,
@@ -51,7 +51,7 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    ROUND(SUM(AP.cost) / 1e5, 2) AS cost,
+    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(AP.installs) AS installs,
     SUM(AP.inapps) AS inapps,
     SUM(AP.view_through_conversions) AS view_through_conversions
