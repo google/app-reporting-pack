@@ -43,8 +43,8 @@ SELECT
         WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO: Take orientation from YouTube API
         ELSE NULL
         END AS asset_orientation,
-    ROUND(Videos.video_duration, 1000) AS video_duration,
-		Assets.type AS asset_type,
+    ROUND(MediaFile.video_duration / 1000) AS video_duration,
+    Assets.type AS asset_type,
     Assets.field_type AS field_type,
     R.performance_label AS performance_label,
     IF(R.enabled, "ENABLED", "DELETED") AS asset_status,
@@ -68,6 +68,6 @@ LEFT JOIN {bq_project}.{bq_dataset}.asset_reference AS R
     AND AP.ad_group_id = R.ad_group_id
 LEFT JOIN {bq_project}.{bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
-LEFT JOIN {bq_project}.{bq_dataset}.videos AS Videos
-  ON Assets.youtube_video_id = Videos.video_id
+LEFT JOIN {bq_project}.{bq_dataset}.mediafile AS MediaFile
+  ON Assets.youtube_video_id = MediaFile.video_id
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28);
