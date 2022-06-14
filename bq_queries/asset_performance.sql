@@ -11,13 +11,13 @@ SELECT
     M.campaign_name,
     M.campaign_status,
     ACS.campaign_sub_type,
-    ARRAY_TO_STRING(G.geos, " | ") AS geos,
-    ARRAY_TO_STRING(G.languages, " | ") AS languages,
+    IFNULL(G.geos, "All") AS geos,
+    IFNULL(G.languages, "All") AS languages,
     ACS.app_id,
     ACS.app_store,
     ACS.bidding_strategy,
-    ARRAY_TO_STRING(ACS.target_conversions, " | ")  AS target_conversions,
-    "" AS firebase_bidding_status,
+    ACS.target_conversions,
+    "" AS firebase_bidding_status,  --TODO
     M.ad_group_id,
     M.ad_group_name,
     M.ad_group_status,
@@ -40,7 +40,7 @@ SELECT
         WHEN "TEXT" THEN ""
         WHEN "IMAGE" THEN CONCAT(Assets.height, "x", Assets.width)
         WHEN "MEDIA_BUNDLE" THEN CONCAT(Assets.height, "x", Assets.width)
-        WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO: Take orientation from YouTube API
+        WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO
         ELSE NULL
         END AS asset_orientation,
     ROUND(MediaFile.video_duration / 1000) AS video_duration,
