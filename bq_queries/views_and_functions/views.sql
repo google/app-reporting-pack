@@ -1,6 +1,6 @@
 -- Represents basic app campaign settings that are used when creating
 -- final tables for dashboards
-CREATE OR REPLACE VIEW `{bq_project}.{bq_dataset}.AppCampaignSettingsView`
+CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.AppCampaignSettingsView`
 AS (
     SELECT
         campaign_id,
@@ -16,7 +16,7 @@ AS (
 );
 
 -- Campaign level geo and language targeting
-CREATE OR REPLACE VIEW `{bq_project}.{bq_dataset}.GeoLanguageView` AS (
+CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.GeoLanguageView` AS (
     SELECT
         campaign_id,
         ARRAY_AGG(DISTINCT geo_target ORDER BY geo_target) AS geos,

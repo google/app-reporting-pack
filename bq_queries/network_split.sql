@@ -1,5 +1,5 @@
 -- Contains ad group level performance segmented by network (Search, Display, YouTube).
-CREATE OR REPLACE TABLE {bq_project}.{bq_dataset}.network_split_F
+CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.network_split
 AS (
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
@@ -23,14 +23,14 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
+    `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(AP.view_through_conversions) AS view_through_conversions,
     SUM(AP.conversions_value) AS conversions_value
 FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
-LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19);

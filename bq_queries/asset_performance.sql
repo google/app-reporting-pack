@@ -1,6 +1,6 @@
 -- Contains performance (clicks, impressions, installs, inapps, etc) on asset_id level
 -- segmented by network (Search, Display, YouTube).
-CREATE OR REPLACE TABLE {bq_project}.{bq_dataset}.asset_performance_F
+CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.asset_performance
 AS (
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
@@ -51,7 +51,7 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
+    `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(AP.installs) AS installs,
     SUM(AP.inapps) AS inapps,
     SUM(AP.view_through_conversions) AS view_through_conversions,
@@ -59,9 +59,9 @@ SELECT
 FROM {bq_project}.{bq_dataset}.asset_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
-LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
 LEFT JOIN {bq_project}.{bq_dataset}.asset_reference AS R
   ON AP.asset_id = R.asset_id

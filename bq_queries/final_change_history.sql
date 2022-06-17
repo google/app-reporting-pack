@@ -1,5 +1,5 @@
 -- Contains daily changes (bids, budgets, assets, etc) on campaign level.
-CREATE OR REPLACE TABLE {bq_project}.{bq_dataset}.final_change_history_F
+CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.final_change_history
 AS (
     WITH CampaignPerformance AS (
         SELECT
@@ -7,7 +7,7 @@ AS (
             campaign_id,
             SUM(clicks) AS clicks,
             SUM(impressions) AS impressions,
-            `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(cost)) AS cost,
+            `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(cost)) AS cost,
             SUM(view_through_conversions) AS view_through_conversions
         FROM {bq_project}.{bq_dataset}.ad_group_performance
         LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
@@ -42,8 +42,8 @@ SELECT
     "" AS firebase_bidding_status,
     ACS.start_date AS start_date,
     ARRAY_LENGTH(ACS.target_conversions) AS n_of_target_conversions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.budget_amount) AS current_budget_amount,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.target_cpa) AS current_target_cpa,
+    `{bq_project}.{target_dataset}.NormalizeMillis`(B.budget_amount) AS current_budget_amount,
+    `{bq_project}.{target_dataset}.NormalizeMillis`(B.target_cpa) AS current_target_cpa,
     B.target_roas AS current_target_roas,
     BidBudgetHistory.budget_amount AS budget,
     BidBudgetHistory.target_cpa AS target_cpa,
@@ -78,10 +78,10 @@ LEFT JOIN CampaignMapping AS M
     ON CP.campaign_id = M.campaign_id
 LEFT JOIN {bq_project}.{bq_dataset}.bid_budget AS B
     ON CP.campaign_id = B.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.bid_budgets_*` AS BidBudgetHistory
+LEFT JOIN `{bq_project}.{target_dataset}.bid_budgets_*` AS BidBudgetHistory
     ON M.campaign_id = BidBudgetHistory.campaign_id
         AND CP.day = BidBudgetHistory.day
-LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id);
