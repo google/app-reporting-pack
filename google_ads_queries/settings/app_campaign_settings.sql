@@ -7,7 +7,7 @@ SELECT
     campaign.start_date AS start_date,
     segments.external_conversion_source AS conversion_source,
     segments.conversion_action_name AS conversion_name,
-    segments.conversion_action AS conversion_id
+    segments.conversion_action~0 AS conversion_id
 FROM
     campaign
 WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"
