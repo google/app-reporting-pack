@@ -1,7 +1,11 @@
-# UAC Reporting Pack 
+# App Reporting Pack
 
-UAC Reporting Pack is a Data Studio based solution that shows different aspects
-of App campaigns performance and settings.
+## Problem statement
+
+Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets are performaring.
+
+## Solution
+App Reporting Pack fetches all necessary data from Ads API and returns ready-to-use tables that show different aspects of App campaigns performance and settings.
 
 Key pillars of UAC Reporting Pack:
 
@@ -9,50 +13,60 @@ Key pillars of UAC Reporting Pack:
 *   Creatives Insights
 *   Campaign Debugging
 
+
+
+## Deliverable
+
+Tables in BigQuery that are ready to be used to build
+a DataStudio dashboard for App Reporting Pack.
+
+* `asset_performance`
+* `creative_excellence`
+* `approval_statuses`
+* `change_history`
+* `performance_grouping_changes`
+* `ad_group_network_split`
+* `geo_performance`
+
+## Deployment
 ## Prerequisites
 
-* Create virtual environment `python -m venv uac-reporting-pack` and activate it with `source uac-reporting-pack/bin/activate`.
-* Install `google-ads-api-report-fetcher` library with `pip install google-ads-api-report-fetcher`.
-* Follow documentation on [API authentication](https://github.com/google/ads-api-reports-fetcher#getting-started) to generate `google-ads.yaml` file;
-    if you already have such file you may skip this step.
+* Google Ads API access - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
+* Python 3.8+
+* `google-ads-api-report-fetcher` Python library installed
+* Access to repository configured. In order to clone this repository you need to do the following:
+    * Visit https://professional-services.googlesource.com/new-password and login with your account
+    * Once authenticated please copy all lines in box and paste them in the terminal.
 
+## Installation
+
+In order to run App Reporting Pack please follow the steps outlined below:
+
+* clone this repository `git clone https://professional-services.googlesource.com/solution/uac-reporting-pack`
+* configure virtual environment and install a single dependency:
+    ```
+    python -m venv app-reporting-pack
+    source app-reporting-pack/bin/activate
+    pip install google-ads-api-report-fetcher
+    ```
 
 ## Running queries
 
-1. Specify enviromental variables
+In order to generate all necessary tables for App Reporting Pack please run `deploy.sh` script:
 
-```
-export CUSTOMER_ID=
-export BQ_PROJECT=
-export BQ_DATASET=
-export START_DATE=
-export END_DATE=
+```shell
+bash deploy.sh
 ```
 
-`START_DATE` and `END_DATE` should be specified in `YYYY-MM-DD` format (i.e. 2022-01-01).
-`CUSTOMER_ID` should be specifed in `1234567890` format (no dashes between digits).
+It will guide you through a series of questions to get all necessary parameters to run the scripts:
 
-2. Run `fetch-reports` command to fetch Google Ads data and store them in BigQuery
+* `account_id` - id of Google Ads MCC account (no dashes, 111111111 format)
+* `BigQuery project_id` - id of BigQuery project where script will store the data (i.e. `my_project`)
+* `BigQuery dataset` - id of BigQuery dataset where script will store the data (i.e. `my_dataset`)
+* `start date` - first date from which you want to get performance data (i.e., `2022-01-01`)
+* `end date` - last date from which you want to get performance data (i.e., `2022-12-31`)
+* `Ads config` - path to `google-ads.yaml` file.
 
-```
-fetch-reports google_ads_queries/*/*.sql \
-    --account=$CUSTOMER_ID \
-    --output=bq \
-    --bq.project=$BQ_PROJECT \
-    --bq.dataset=$BQ_DATASET \
-    --sql.start_date=$START_DATE \
-    --sql.end_date=$END_DATE \
-    --ads-config=path/to/google-ads.yaml
-```
-
-3. Run `post-process-queries` command to prepare tables in BigQuery based on data
-fetched by `fetch-reports` command.
-
-```
-post-process-queries bq_queries/*.sql \
-    --bq.project=$BQ_PROJECT \
-    --bq.dataset=$BQ_DATASET \
-```
 
 ## Disclaimer
 This is not an officially supported Google product.
