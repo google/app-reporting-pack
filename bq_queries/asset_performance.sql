@@ -1,5 +1,11 @@
 -- Contains performance (clicks, impressions, installs, inapps, etc) on asset_id level
 -- segmented by network (Search, Display, YouTube).
+CREATE TEMP FUNCTION GetCohort(arr ARRAY<FLOAT64>, day INT64)
+RETURNS FLOAT64
+AS (
+    arr[SAFE_OFFSET(day)]
+);
+
 CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.asset_performance
 AS (
 SELECT
@@ -23,8 +29,7 @@ SELECT
     M.ad_group_status,
     AP.asset_id,
     CASE Assets.type
-        WHEN "TEXT" THEN Assets.text
-        WHEN "IMAGE" THEN Assets.asset_name
+        WHEN "TEXT" THEN Assets.text WHEN "IMAGE" THEN Assets.asset_name
         WHEN "MEDIA_BUNDLE" THEN Assets.asset_name
         WHEN "YOUTUBE_VIDEO" THEN Assets.youtube_video_title
         ELSE NULL
@@ -54,18 +59,23 @@ SELECT
     `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(AP.installs) AS installs,
     SUM(
-        IF(LagAdjustmentsInstalls.lag_adjustment IS NULL, 
-            installs, 
-            ROUND(installs / LagAdjustmentsInstalls.lag_adjustment))
+        IF(LagAdjustmentsInstalls.lag_adjustment IS NULL,
+            AP.installs,
+            ROUND(AP.installs / LagAdjustmentsInstalls.lag_adjustment))
     ) AS installs_adjusted,
     SUM(AP.inapps) AS inapps,
     SUM(
         IF(LagAdjustmentsInapps.lag_adjustment IS NULL,
-            inapps,
-            ROUND(inapps / LagAdjustmentsInapps.lag_adjustment))
+            AP.inapps,
+            ROUND(AP.inapps / LagAdjustmentsInapps.lag_adjustment))
     ) AS inapps_adjusted,
     SUM(AP.view_through_conversions) AS view_through_conversions,
-    SUM(AP.conversions_value) AS conversions_value
+    SUM(AP.conversions_value) AS conversions_value,
+    {% for day in cohort_days %}
+        SUM(GetCohort(AssetCohorts.lag_data.installs, {{day}})) AS installs_{{day}}_day,
+        SUM(GetCohort(AssetCohorts.lag_data.inapps, {{day}})) AS inapps_{{day}}_day,
+        SUM(GetCohort(AssetCohorts.lag_data.conversions_value, {{day}})) AS conversions_value_{{day}}_day,
+    {% endfor %}
 FROM {bq_project}.{bq_dataset}.asset_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
@@ -88,4 +98,9 @@ LEFT JOIN {bq_project}.{bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
 LEFT JOIN {bq_project}.{bq_dataset}.mediafile AS MediaFile
   ON Assets.youtube_video_id = MediaFile.video_id
+LEFT JOIN `{bq_project}.{target_dataset}.AssetCohorts` AS AssetCohorts
+    ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction
+        AND AP.ad_group_id = AssetCohorts.ad_group_id
+        AND AP.network = AssetCohorts.network
+        AND AP.asset_id = AssetCohorts.asset_id
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28);

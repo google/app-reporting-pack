@@ -61,3 +61,23 @@ CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.ConversionLagAdjustments` 
             0.85 AS lag_adjustment
         )
 );
+
+CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.AssetCohorts` AS (
+    SELECT
+        day_of_interaction,
+        ad_group_id,
+        asset_id,
+        network,
+        STRUCT(
+            ARRAY_AGG(lag ORDER BY lag) AS lags,
+            ARRAY_AGG(installs ORDER BY lag) AS installs,
+            ARRAY_AGG(inapps ORDER BY lag) AS inapps,
+            ARRAY_AGG(conversions_value ORDER BY lag) AS conversions_value,
+            ARRAY_AGG(view_through_conversions ORDER BY lag) AS view_through_conversions
+        ) AS lag_data
+    FROM `{bq_project}.{bq_dataset}.conversion_lags_*`
+    WHERE
+        day_of_interaction IS NOT NULL
+        AND lag <= 90
+    GROUP BY 1, 2, 3, 4
+);
