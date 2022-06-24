@@ -7,6 +7,7 @@ SELECT
     campaign.start_date AS start_date,
     segments.external_conversion_source AS conversion_source,
     segments.conversion_action_name AS conversion_name,
+    segments.conversion_action_category AS conversion_type,
     segments.conversion_action~0 AS conversion_id
 FROM
     campaign

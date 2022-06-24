@@ -53,7 +53,17 @@ SELECT
     SUM(AP.impressions) AS impressions,
     `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(AP.installs) AS installs,
+    SUM(
+        IF(LagAdjustmentsInstalls.lag_adjustment IS NULL, 
+            installs, 
+            ROUND(installs / LagAdjustmentsInstalls.lag_adjustment))
+    ) AS installs_adjusted,
     SUM(AP.inapps) AS inapps,
+    SUM(
+        IF(LagAdjustmentsInapps.lag_adjustment IS NULL,
+            inapps,
+            ROUND(inapps / LagAdjustmentsInapps.lag_adjustment))
+    ) AS inapps_adjusted,
     SUM(AP.view_through_conversions) AS view_through_conversions,
     SUM(AP.conversions_value) AS conversions_value
 FROM {bq_project}.{bq_dataset}.asset_performance AS AP
@@ -63,6 +73,14 @@ LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
 LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
+LEFT JOIN `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
+    ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInstalls.adjustment_date
+        AND AP.network = LagAdjustmentsInstalls.network
+        AND ACS.install_conversion_id = LagAdjustmentsInstalls.conversion_id
+LEFT JOIN `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
+    ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInapps.adjustment_date
+        AND AP.network = LagAdjustmentsInapps.network
+        AND ACS.inapp_conversion_id = LagAdjustmentsInapps.conversion_id
 LEFT JOIN {bq_project}.{bq_dataset}.asset_reference AS R
   ON AP.asset_id = R.asset_id
     AND AP.ad_group_id = R.ad_group_id

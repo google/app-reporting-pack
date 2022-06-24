@@ -1,6 +1,5 @@
 SELECT
     segments.date AS date,
-    campaign.id AS campaign_id,
     ad_group.id AS ad_group_id,
     segments.ad_network_type AS network,
     segments.conversion_action_name AS conversion_name,

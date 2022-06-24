@@ -9,11 +9,13 @@ AS (
         app_store,
         bidding_strategy,
         start_date,
+        IF(conversion_type = "DOWNLOAD", conversion_id, NULL) AS install_conversion_id,
+        IF(conversion_type != "DOWNLOAD", conversion_id, NULL) AS inapp_conversion_id,
         ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_source ORDER BY conversion_source), "|") AS conversion_sources,
         ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_name ORDER BY conversion_name), " | ") AS target_conversions,
-        COUNT(DISTINCT conversion_name) AS n_of_target_conversions
+        COUNT(conversion_name) AS n_of_target_conversions
     FROM {bq_project}.{bq_dataset}.app_campaign_settings
-    GROUP BY 1, 2, 3, 4, 5, 6
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
 );
 
 -- Campaign level geo and language targeting
@@ -28,4 +30,34 @@ CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.GeoLanguageView` AS (
     FULL JOIN {bq_project}.{bq_dataset}.campaign_languages AS CampaignLanguages
         ON CampaignGeoTarget.campaign_id = CampaignLanguages.campaign_id
     GROUP BY 1
+);
+
+
+-- Conversion Lag adjustment placeholder data
+-- TODO: Once conversion lag adjustment algorithm is ready switch to it.
+CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS (
+    SELECT
+        DATE_SUB(CURRENT_DATE(), INTERVAL day DAY) AS adjustment_date,
+        network,
+        conversion_id,
+        lag_adjustment
+    FROM (
+        SELECT
+            1 AS day,
+            "SEARCH" AS network,
+            "884802129" AS conversion_id,
+            0.5 AS lag_adjustment
+        UNION ALL
+        SELECT
+            3 AS day,
+            "SEARCH" AS network,
+            "884802129" AS conversion_id,
+            0.75 AS lag_adjustment
+        UNION ALL
+        SELECT
+            3 AS day,
+            "SEARCH" AS network,
+            "884802129" AS conversion_id,
+            0.85 AS lag_adjustment
+        )
 );
