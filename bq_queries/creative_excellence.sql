@@ -32,11 +32,14 @@ WITH
             day,
             campaign_id,
             budget_amount,
-            LAG(budget_amount) OVER(PARTITION BY campaign_id ORDER BY day) AS budget_amount_last_day,
+            LAG(budget_amount) OVER(
+                PARTITION BY campaign_id ORDER BY day) AS budget_amount_last_day,
             target_cpa,
-            LAG(target_cpa) OVER(PARTITION BY campaign_id ORDER BY day) AS target_cpa_last_day,
+            LAG(target_cpa) OVER(
+                PARTITION BY campaign_id ORDER BY day) AS target_cpa_last_day,
             target_roas,
-            LAG(target_roas) OVER(PARTITION BY campaign_id ORDER BY day) AS target_roas_last_day
+            LAG(target_roas) OVER(
+                PARTITION BY campaign_id ORDER BY day) AS target_roas_last_day
         FROM `{bq_project}.{target_dataset}.bid_budgets_*`
         WHERE day >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
     ),
@@ -47,23 +50,23 @@ WITH
         SELECT
             campaign_id,
             COUNT(
-                IF(budget_amount / budget_amount_last_day > 1.2
-                    OR budget_amount / budget_amount_last_day < 0.8,
+                IF(SAFE_DIVIDE(budget_amount, budget_amount_last_day) > 1.2
+                    OR SAFE_DIVIDE(budget_amount, budget_amount_last_day) < 0.8,
                 1, 0)
             ) AS dramatic_budget_changes,
             COUNT(
                 IF(target_cpa > 0 -- check for campaigns with target_cpa bidding
                     AND (
-                        target_cpa / target_cpa_last_day> 1.2
-                        OR target_cpa / target_cpa_last_day < 0.8
+                        SAFE_DIVIDE(target_cpa, target_cpa_last_day) > 1.2
+                        OR SAFE_DIVIDE(target_cpa, target_cpa_last_day) < 0.8
                     ),
                 1, 0)
             ) AS dramatic_target_cpa_changes,
             COUNT(
                 IF(target_roas > 0 -- check for campaigns with target_roas bidding
                     AND (
-                        target_roas / target_roas_last_day > 1.2
-                        OR target_roas / target_roas_last_day < 0.8
+                        SAFE_DIVIDE(target_roas, target_roas_last_day) > 1.2
+                        OR SAFE_DIVIDE(target_roas, target_roas_last_day) < 0.8
                     ),
                 1, 0)
             ) AS dramatic_target_roas_changes,
@@ -97,27 +100,38 @@ SELECT
     -- For Installs campaigns the recommend budget amount it 50 times target_cpa
     -- for Action campaigns - 10 times target_cpa
     CASE
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" AND B.budget_amount/B.target_cpa >= 50 THEN "OK"
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" AND B.budget_amount/B.target_cpa < 50 THEN "50x needed"
-        WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST" AND B.budget_amount/B.target_cpa >= 10 THEN "OK"
-        WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST" AND B.budget_amount/B.target_cpa < 10 THEN "10x needed"
+        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+            AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) >= 50 THEN "OK"
+        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+            AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) < 50 THEN "50x needed"
+        WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST"
+            AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) >= 10 THEN "OK"
+        WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST"
+            AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) < 10 THEN "10x needed"
         ELSE "Not Applicable"
         END AS enough_budget,
     -- number of active assets of a certain type
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(install_videos, engagement_videos, pre_registration_videos) AS n_videos,
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(install_images, engagement_images, pre_registration_images) AS n_images,
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(install_headlines, engagement_headlines, pre_registration_headlines) AS n_headlines,
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(install_descriptions, engagement_descriptions, pre_registration_descriptions) AS n_descriptions,
+    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+        install_videos, engagement_videos, pre_registration_videos) AS n_videos,
+    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+        install_images, engagement_images, pre_registration_images) AS n_images,
+    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+        install_headlines, engagement_headlines, pre_registration_headlines) AS n_headlines,
+    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+        install_descriptions, engagement_descriptions, pre_registration_descriptions) AS n_descriptions,
     ARRAY_LENGTH(SPLIT(install_media_bundles, "|")) - 1 AS n_html5,
     S.ad_strength AS ad_strength,
     IFNULL(C.cost_last_7_days, 0) AS cost_last_7_days,
     IFNULL(
-        IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST", Conv.installs, Conv.inapps),
+        IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+            Conv.installs, Conv.inapps),
         0) AS conversions_last_7_days,
     CASE
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" AND SUM(Conv.installs) OVER (PARTITION BY Conv.campaign_id) > 10
+        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+            AND SUM(Conv.installs) OVER (PARTITION BY Conv.campaign_id) > 10
             THEN TRUE
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" AND SUM(Conv.inapps) OVER (PARTITION BY Conv.campaign_id) > 10
+        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+            AND SUM(Conv.inapps) OVER (PARTITION BY Conv.campaign_id) > 10
             THEN TRUE
         ELSE FALSE
         END AS enough_conversions,
