@@ -11,6 +11,7 @@ setup() {
 	read -r start_date
 	echo -n "Enter end_date in YYYY-MM-DD format: "
 	read -r end_date
+	ask_for_cohorts
 	echo  "Script are expecting google-ads.yaml file in your home directory"
 	echo -n "Is the file there (Y/n): "
 	read -r ads_config_answer
@@ -28,6 +29,7 @@ setup() {
 	echo "Start date: $start_date"
 	echo "End date: $end_date"
 	echo "Ads config: $ads_config"
+	echo "Cohorts: $cohorts"
 }
 
 deploy() {
@@ -43,9 +45,17 @@ deploy() {
 	fi
 }
 
+ask_for_cohorts() {
+	echo -n "Asset performance can have cohorts. Enter Y if you want to activate: "
+	read -r cohorts_answer
+	if [[ $cohorts_answer = "Y" ]]; then
+		echo -n "Please enter cohort number in the following format 1,2,3,4,5: "
+		read -r cohorts
+	fi
+}
 generate_parameters() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
-	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output"
+	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --sql.cohort_days=$cohorts"
 }
 
 
