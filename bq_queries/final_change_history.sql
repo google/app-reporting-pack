@@ -7,11 +7,14 @@ AS (
             M.campaign_id,
             SUM(clicks) AS clicks,
             SUM(impressions) AS impressions,
-            `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(cost)) AS cost,
+            SUM(cost) AS cost,
+            SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+                IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0), 
+                IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0))) AS conversions,
             SUM(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
             SUM(
-                IF(LagAdjustmentsInstalls.lag_adjustment IS NULL, 
-                    IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0), 
+                IF(LagAdjustmentsInstalls.lag_adjustment IS NULL,
+                    IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
                     ROUND(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0) / LagAdjustmentsInstalls.lag_adjustment))
             ) AS installs_adjusted,
             SUM(IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0)) AS inapps,
@@ -66,6 +69,10 @@ SELECT
     ACS.target_conversions,
     "" AS firebase_bidding_status,
     ACS.start_date AS start_date,
+    DATE_DIFF(
+        CURRENT_DATE(),
+        PARSE_DATE("%Y-%m-%d", ACS.start_date),
+        DAY) AS days_since_start_date,
     ACS.n_of_target_conversions,
     `{bq_project}.{target_dataset}.NormalizeMillis`(B.budget_amount) AS current_budget_amount,
     `{bq_project}.{target_dataset}.NormalizeMillis`(B.target_cpa) AS current_target_cpa,
@@ -73,6 +80,14 @@ SELECT
     `{bq_project}.{target_dataset}.NormalizeMillis`(BidBudgetHistory.budget_amount) AS budget,
     `{bq_project}.{target_dataset}.NormalizeMillis`(BidBudgetHistory.target_cpa) AS target_cpa,
     BidBudgetHistory.target_roas AS target_roas,
+    -- If cost for a given day is higher than allocated budget than is_budget_limited = 1
+    IF(CP.cost > BidBudgetHistory.budget_amount, 1, 0) AS is_budget_limited,
+    -- If cost for a given day is 20% higher than allocated budget than is_budget_overshooting = 1
+    IF(CP.cost > BidBudgetHistory.budget_amount * 1.2, 1, 0) AS is_budget_overshooting,
+    -- If cost for a given day is 50% lower than allocated budget than is_budget_underspend = 1
+    IF(CP.cost < BidBudgetHistory.budget_amount * 0.5, 1, 0) AS is_budget_underspend,
+    -- If CPA for a given day is 10% higher than target_cpa than is_cpa_overshooting = 1
+    IF(SAFE_DIVIDE(CP.cost, CP.conversions) > BidBudgetHistory.target_cpa * 1.1, 1, 0) AS is_cpa_overshooting,
     0 AS text_changes,
     0 AS image_changes,
     0 AS html5_changes,
@@ -100,7 +115,11 @@ SELECT
     END AS budget_changes,
     CP.clicks,
     CP.impressions,
-    CP.cost,
+    `{bq_project}.{target_dataset}.NormalizeMillis`(CP.cost) AS cost,
+    IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+        CP.installs, CP.inapps) AS conversions,
+    IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+        CP.installs_adjusted, CP.inapps_adjusted) AS conversions_adjusted,
     CP.installs,
     CP.installs_adjusted,
     CP.inapps,

@@ -24,6 +24,9 @@ SELECT
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
     `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
+    SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+        IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
+        IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0))) AS conversions,
     SUM(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
     SUM(
         IF(LagAdjustmentsInstalls.lag_adjustment IS NULL,
@@ -37,6 +40,7 @@ SELECT
             ROUND(IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0) / LagAdjustmentsInapps.lag_adjustment))
     ) AS inapps_adjusted,
     SUM(AP.view_through_conversions) AS view_through_conversions,
+    SUM(AP.video_views) AS video_views,
     SUM(AP.conversions_value) AS conversions_value
 FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
 LEFT JOIN {bq_project}.{bq_dataset}.ad_group_conversion_split AS ConvSplit

@@ -22,14 +22,6 @@ setup() {
 		read -r ads_config
 	fi
 
-	echo "Your configuration:"
-	echo "account_id: $CUSTOMER_ID"
-	echo "BigQuery project_id: $project"
-	echo "BigQuery dataset:: $bq_dataset"
-	echo "Start date: $start_date"
-	echo "End date: $end_date"
-	echo "Ads config: $ads_config"
-	echo "Cohorts: $cohorts"
 }
 
 deploy() {
@@ -55,7 +47,8 @@ ask_for_cohorts() {
 }
 generate_parameters() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
-	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --sql.cohort_days=$cohorts"
+	bq_dataset_legacy=$(echo $bq_dataset"_legacy")
+	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
 }
 
 
@@ -89,10 +82,29 @@ generate_output_tables() {
 		--project=$project --target=$bq_dataset $macros
 }
 
+generate_legacy_views() {
+	echo "===generating legacy views==="
+	gaarf-bq bq_queries/legacy_views/*.sql \
+		--project=$project --target=$bq_dataset $macros
+}
+
+print_configuration() {
+	echo "Your configuration:"
+	echo "account_id: $CUSTOMER_ID"
+	echo "BigQuery project_id: $project"
+	echo "BigQuery dataset:: $bq_dataset"
+	echo "Start date: $start_date"
+	echo "End date: $end_date"
+	echo "Ads config: $ads_config"
+	echo "Cohorts: $cohorts"
+}
+
 setup
+print_configuration
 deploy
 generate_parameters
 fetch_reports
 generate_bq_views
 generate_snapshots
 generate_output_tables
+generate_legacy_views

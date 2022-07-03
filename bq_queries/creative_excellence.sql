@@ -7,11 +7,22 @@ WITH
     -- Calculate ad_group level cost for the last 7 days
     CostDynamicsTable AS (
         SELECT
-            ad_group_id,
-            `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
-        FROM {bq_project}.{bq_dataset}.ad_group_performance
+            PARSE_DATE("%Y-%m-%d", date) AS day,
+            campaign_id,
+            SUM(cost) AS cost
+        FROM {bq_project}.{bq_dataset}.ad_group_performance AS C
+        LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+            ON C.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
+        GROUP BY 1, 2
+    ),
+    AdGroupCostTable AS (
+        SELECT
+            campaign_id,
+            COUNT(*) AS n_active_days,
+            `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
+        FROM CostDynamicsTable
         GROUP BY 1
     ),
     ConversionSplitTable AS (
@@ -51,6 +62,7 @@ WITH
     BidBudgetAvg7DaysTable AS (
         SELECT
             campaign_id,
+            SUM(IF(cost > budget_amount, 1, 0)) AS budget_overspend,
             COUNT(
                 IF(SAFE_DIVIDE(budget_amount, budget_amount_last_day) > 1.2
                     OR SAFE_DIVIDE(budget_amount, budget_amount_last_day) < 0.8,
@@ -73,11 +85,14 @@ WITH
                 1, 0)
             ) AS dramatic_target_roas_changes,
             AVG(`{bq_project}.{target_dataset}.NormalizeMillis`(budget_amount)) AS average_budget_7_days,
+            SUM(`{bq_project}.{target_dataset}.NormalizeMillis`(budget_amount)) AS sum_budget_7_days,
             COALESCE(
                 AVG(`{bq_project}.{target_dataset}.NormalizeMillis`(target_cpa)),
                 AVG(target_roas)
-            )AS average_bid_7_days
+            ) AS average_bid_7_days
         FROM BidBudget7DaysTable
+        LEFT JOIN CostDynamicsTable
+            USING(day, campaign_id)
         GROUP BY 1
     )
 SELECT
@@ -92,6 +107,7 @@ SELECT
     ACS.app_store,
     ACS.bidding_strategy,
     ACS.target_conversions,
+    "" AS firebase_bidding_status,
     M.ad_group_id,
     M.ad_group_name,
     M.ad_group_status,
@@ -128,6 +144,8 @@ SELECT
         IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
             Conv.installs, Conv.inapps),
         0) AS conversions_last_7_days,
+    Conv.installs AS installs_last_7_days,
+    Conv.inapps AS inapps_last_7_days,
     CASE
         WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
             AND SUM(Conv.installs) OVER (PARTITION BY Conv.campaign_id) > 10
@@ -138,6 +156,9 @@ SELECT
         ELSE FALSE
         END AS enough_conversions,
     Avg7Days.average_budget_7_days AS average_budget_7_days,
+    Avg7Days.budget_overspend AS budget_overspend_7_days,
+    Avg7Days.budget_overspend / C.n_active_days AS budget_overspend_ratio,
+    Avg7Days.sum_budget_7_days AS sum_budget_7_days,
     Avg7Days.average_bid_7_days AS average_bid_7_days,
     Avg7Days.dramatic_budget_changes AS dramatic_budget_changes,
     COALESCE(
@@ -151,8 +172,8 @@ LEFT JOIN {bq_project}.{bq_dataset}.bid_budget AS B
     ON M.campaign_id = B.campaign_id
 LEFT JOIN {bq_project}.{bq_dataset}.asset_structure AS S
   ON M.ad_group_id = S.ad_group_id
-LEFT JOIN CostDynamicsTable AS C
-  ON M.ad_group_id = C.ad_group_id
+LEFT JOIN AdGroupCostTable AS C
+  ON M.campaign_id = C.campaign_id
 LEFT JOIN ConversionSplitTable AS Conv
   ON M.campaign_id = Conv.campaign_id
   AND M.ad_group_id = Conv.ad_group_id

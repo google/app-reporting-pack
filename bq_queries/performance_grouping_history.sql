@@ -2,6 +2,7 @@
 CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.performance_grouping
 AS (
     SELECT
+        day,
         M.account_id,
         M.account_name,
         M.currency,
@@ -18,11 +19,15 @@ AS (
         M.ad_group_name,
         M.ad_group_status,
         PerformanceGrouping.performance_label,
+        geos,
+        languages,
         COUNT(*) AS N
     FROM `{bq_project}.{target_dataset}.performance_grouping_statuses_*` AS PerformanceGrouping
     LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
       ON PerformanceGrouping.ad_group_id = M.ad_group_id
     LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
       ON M.campaign_id = ACS.campaign_id
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+    LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
+      ON M.campaign_id =  G.campaign_id
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 );
