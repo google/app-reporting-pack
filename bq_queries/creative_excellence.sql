@@ -16,11 +16,13 @@ WITH
     ),
     ConversionSplitTable AS (
         SELECT
-            campaign_id,
-            ad_group_id,
-            SUM(IF(conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
-            SUM(IF(conversion_category != "DOWNLOAD", conversions, 0)) AS inapps
-        FROM {bq_project}.{bq_dataset}.ad_group_conversion_split
+            M.campaign_id,
+            Conv.ad_group_id,
+            SUM(IF(Conv.conversion_category = "DOWNLOAD", Conv.conversions, 0)) AS installs,
+            SUM(IF(Conv.conversion_category != "DOWNLOAD", Conv.conversions, 0)) AS inapps
+        FROM {bq_project}.{bq_dataset}.ad_group_conversion_split AS Conv
+        LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+            ON Conv.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
         GROUP BY 1, 2
