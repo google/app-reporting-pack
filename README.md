@@ -3,8 +3,8 @@
 ## Problem statement
 
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets are performaring.
-
 ## Solution
+
 App Reporting Pack fetches all necessary data from Ads API and returns ready-to-use tables that show different aspects of App campaigns performance and settings.
 
 Key pillars of UAC Reporting Pack:
