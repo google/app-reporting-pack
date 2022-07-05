@@ -37,29 +37,11 @@ CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.GeoLanguageView` AS (
 -- TODO: Once conversion lag adjustment algorithm is ready switch to it.
 CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS (
     SELECT
-        DATE_SUB(CURRENT_DATE(), INTERVAL day DAY) AS adjustment_date,
+        DATE_SUB(CURRENT_DATE(), INTERVAL lag_day DAY) AS adjustment_date,
         network,
         conversion_id,
         lag_adjustment
-    FROM (
-        SELECT
-            1 AS day,
-            "SEARCH" AS network,
-            "884802129" AS conversion_id,
-            0.5 AS lag_adjustment
-        UNION ALL
-        SELECT
-            3 AS day,
-            "SEARCH" AS network,
-            "884802129" AS conversion_id,
-            0.75 AS lag_adjustment
-        UNION ALL
-        SELECT
-            3 AS day,
-            "SEARCH" AS network,
-            "884802129" AS conversion_id,
-            0.85 AS lag_adjustment
-        )
+    FROM {bq_project}.{bq_dataset}.conversion_lag_adjustments
 );
 
 CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.AssetCohorts` AS (
