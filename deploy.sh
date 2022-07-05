@@ -1,8 +1,26 @@
 #!/bin/bash
+welcome() {
+echo "Welcome to installation of App Reporting Pack"
+	if [[ -f "reporting_pack.config" ]]; then
+		read_config
+		echo "Found saved configuration."
+		print_configuration
+		echo -n "Do you want to use it (Y/n): "
+		read -r setup_config_answer
+		if [[ $setup_config_answer = "Y" ]]; then
+			echo "Using saved configuration..."
+		else
+			echo "Creating new configuration..."
+			setup
+		fi
+	else
+		setup
+	fi
+}
+
 setup() {
-	echo "Welcome to installation of App Reporting Pack"
 	echo -n "Enter account_id: "
-	read -r CUSTOMER_ID
+	read -r customer_id
 	echo -n "Enter BigQuery project_id: "
 	read -r project
 	echo -n "Enter BigQuery dataset: "
@@ -21,7 +39,36 @@ setup() {
 		echo -n "Enter full path to google-ads.yaml file: "
 		read -r ads_config
 	fi
+	echo -n "Do you want to save this config (Y/n): "
+	read -r save_config_answer
+	if [[ $save_config_answer = "Y" ]]; then
+		save_config
+	fi
+	print_configuration
+}
 
+save_config() {
+	declare -A setup_config
+	setup_config["customer_id"]=$customer_id
+	setup_config["project"]=$project
+	setup_config["bq_dataset"]=$bq_dataset
+	setup_config["start_date"]=$start_date
+	setup_config["end_date"]=$end_date
+	setup_config["ads_config"]=$ads_config
+	setup_config["cohorts"]=$cohorts
+	declare -p setup_config > "reporting_pack.config"
+}
+
+read_config() {
+	declare -A config
+	source -- "reporting_pack.config"
+	customer_id=${setup_config["customer_id"]}
+	project=${setup_config["project"]}
+	bq_dataset=${setup_config["bq_dataset"]}
+	start_date=${setup_config["start_date"]}
+	end_date=${setup_config["end_date"]}
+	ads_config=${setup_config["ads_config"]}
+	cohorts=${setup_config["cohorts"]}
 }
 
 deploy() {
@@ -35,6 +82,7 @@ deploy() {
 	else
 		setup
 	fi
+	generate_parameters
 }
 
 ask_for_cohorts() {
@@ -47,15 +95,14 @@ ask_for_cohorts() {
 }
 generate_parameters() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
-	bq_dataset_legacy=$(echo $bq_dataset"_legacy")
-	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
+	bq_dataset_legacy=$(echo $bq_dataset"_legacy") macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
 }
 
 
 fetch_reports() {
 	echo "===fetching reports==="
 	gaarf google_ads_queries/*/*.sql \
-	--account=$CUSTOMER_ID \
+	--account=$customer_id \
 	--output=bq \
 	--bq.project=$project --bq.dataset=$bq_dataset \
 	--macro.start_date=$start_date --macro.end_date=$end_date \
@@ -96,19 +143,17 @@ generate_legacy_views() {
 
 print_configuration() {
 	echo "Your configuration:"
-	echo "account_id: $CUSTOMER_ID"
-	echo "BigQuery project_id: $project"
-	echo "BigQuery dataset:: $bq_dataset"
-	echo "Start date: $start_date"
-	echo "End date: $end_date"
-	echo "Ads config: $ads_config"
-	echo "Cohorts: $cohorts"
+	echo "	account_id: $customer_id"
+	echo "	BigQuery project_id: $project"
+	echo "	BigQuery dataset:: $bq_dataset"
+	echo "	Start date: $start_date"
+	echo "	End date: $end_date"
+	echo "	Ads config: $ads_config"
+	echo "	Cohorts: $cohorts"
 }
 
-setup
-print_configuration
+welcome
 deploy
-generate_parameters
 fetch_reports
 conversion_lag_adjustment
 generate_bq_views
