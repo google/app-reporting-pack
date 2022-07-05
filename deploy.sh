@@ -60,7 +60,13 @@ fetch_reports() {
 	--bq.project=$project --bq.dataset=$bq_dataset \
 	--macro.start_date=$start_date --macro.end_date=$end_date \
 	--ads-config=$ads_config
+}
 
+conversion_lag_adjustment() {
+
+	echo "===calculating conversion lag adjustment==="
+	$(which python) scripts/conv_lag_adjustment.py \
+		--bq.project=$project --bq.dataset=$bq_dataset
 }
 
 generate_bq_views() {
@@ -104,6 +110,7 @@ print_configuration
 deploy
 generate_parameters
 fetch_reports
+conversion_lag_adjustment
 generate_bq_views
 generate_snapshots
 generate_output_tables
