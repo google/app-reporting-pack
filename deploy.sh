@@ -1,9 +1,13 @@
 #!/bin/bash
+solution_name="App Reporting Pack"
+solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
+	tr ' ' '_')
+
 welcome() {
-echo "Welcome to installation of App Reporting Pack"
-	if [[ -f "reporting_pack.config" ]]; then
+echo "Welcome to installation of $solution_name"
+	if [[ -f "$solution_name_lowercase.config" ]]; then
 		read_config
-		echo "Found saved configuration."
+		echo "Found saved configuration at $solution_name_lowercase.config"
 		print_configuration
 		echo -n "Do you want to use it (Y/n): "
 		read -r setup_config_answer
@@ -56,12 +60,12 @@ save_config() {
 	setup_config["end_date"]=$end_date
 	setup_config["ads_config"]=$ads_config
 	setup_config["cohorts"]=$cohorts
-	declare -p setup_config > "reporting_pack.config"
+	declare -p setup_config > "$solution_name_lowercase.config"
 }
 
 read_config() {
 	declare -A config
-	source -- "reporting_pack.config"
+	source -- "$solution_name_lowercase.config"
 	customer_id=${setup_config["customer_id"]}
 	project=${setup_config["project"]}
 	bq_dataset=${setup_config["bq_dataset"]}
@@ -72,7 +76,7 @@ read_config() {
 }
 
 deploy() {
-	echo -n "Deploy App Reporting Pack? Y/n/q: "
+	echo -n "Deploy $solution_name? Y/n/q: "
 	read -r answer
 
 	if [[ $answer = "Y" ]]; then
@@ -106,7 +110,7 @@ fetch_reports() {
 	--output=bq \
 	--bq.project=$project --bq.dataset=$bq_dataset \
 	--macro.start_date=$start_date --macro.end_date=$end_date \
-	--ads-config=$ads_config
+	--ads-config=$ads_config --save-config
 }
 
 conversion_lag_adjustment() {
@@ -119,7 +123,7 @@ conversion_lag_adjustment() {
 generate_bq_views() {
 	echo "===generating views and functions==="
 	gaarf-bq bq_queries/views_and_functions/*.sql \
-		--project=$project --target=$bq_dataset $macros
+		--project=$project --target=$bq_dataset $macros --save-config
 }
 
 
@@ -152,8 +156,17 @@ print_configuration() {
 	echo "	Cohorts: $cohorts"
 }
 
-welcome
-deploy
+get_input() {
+	welcome
+	deploy
+}
+
+if [[ -f "$solution_name_lowercase.config"  && "$1" = "-s" ]]; then
+	read_config
+	generate_parameters
+else
+	get_input
+fi
 fetch_reports
 conversion_lag_adjustment
 generate_bq_views
