@@ -22,7 +22,7 @@ AS (
         GeoTargetConstant.country_code,
         SUM(clicks) AS clicks,
         SUM(impressions) AS impressions,
-        `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(GP.cost)) AS cost,
+        `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(GP.cost)) AS cost,
         SUM(IF(ConversionSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
         SUM(IF(ConversionSplit.conversion_category != "DOWNLOAD", conversions, 0)) AS inapps,
         SUM(video_views) AS video_views,

@@ -21,7 +21,7 @@ WITH
         SELECT
             campaign_id,
             COUNT(*) AS n_active_days,
-            `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
+            `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
         FROM CostDynamicsTable
         GROUP BY 1
     ),
@@ -84,10 +84,10 @@ WITH
                     ),
                 1, 0)
             ) AS dramatic_target_roas_changes,
-            AVG(`{bq_project}.{target_dataset}.NormalizeMillis`(budget_amount)) AS average_budget_7_days,
-            SUM(`{bq_project}.{target_dataset}.NormalizeMillis`(budget_amount)) AS sum_budget_7_days,
+            AVG(`{bq_project}.{bq_dataset}.NormalizeMillis`(budget_amount)) AS average_budget_7_days,
+            SUM(`{bq_project}.{bq_dataset}.NormalizeMillis`(budget_amount)) AS sum_budget_7_days,
             COALESCE(
-                AVG(`{bq_project}.{target_dataset}.NormalizeMillis`(target_cpa)),
+                AVG(`{bq_project}.{bq_dataset}.NormalizeMillis`(target_cpa)),
                 AVG(target_roas)
             ) AS average_bid_7_days
         FROM BidBudget7DaysTable
@@ -112,8 +112,8 @@ SELECT
     M.ad_group_name,
     M.ad_group_status,
     ACS.n_of_target_conversions,
-    `{bq_project}.{target_dataset}.NormalizeMillis`(B.budget_amount) AS budget_amount,
-    `{bq_project}.{target_dataset}.NormalizeMillis`(B.target_cpa) AS target_cpa,
+    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.budget_amount) AS budget_amount,
+    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.target_cpa) AS target_cpa,
     B.target_roas AS target_roas,
     -- For Installs campaigns the recommend budget amount it 50 times target_cpa
     -- for Action campaigns - 10 times target_cpa
@@ -129,13 +129,13 @@ SELECT
         ELSE "Not Applicable"
         END AS enough_budget,
     -- number of active assets of a certain type
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
         install_videos, engagement_videos, pre_registration_videos) AS n_videos,
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
         install_images, engagement_images, pre_registration_images) AS n_images,
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
         install_headlines, engagement_headlines, pre_registration_headlines) AS n_headlines,
-    `{bq_project}.{target_dataset}.GetNumberOfElements`(
+    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
         install_descriptions, engagement_descriptions, pre_registration_descriptions) AS n_descriptions,
     ARRAY_LENGTH(SPLIT(install_media_bundles, "|")) - 1 AS n_html5,
     S.ad_strength AS ad_strength,

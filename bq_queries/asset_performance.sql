@@ -12,7 +12,7 @@ WITH CampaignCostTable AS (
     SELECT
         AP.date,
         M.campaign_id,
-        `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS campaign_cost,
+        `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS campaign_cost,
     FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
     LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
       ON AP.ad_group_id = M.ad_group_id
@@ -67,10 +67,10 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
+    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     ANY_VALUE(CampCost.campaign_cost) AS campaign_cost,
     -- TODO: provide correct enums
-    SUM(IF(bidding_strategy = "", 0, `{bq_project}.{target_dataset}.NormalizeMillis`(AP.cost))) AS cost_non_install_campaigns,
+    SUM(IF(bidding_strategy = "", 0, `{bq_project}.{bq_dataset}.NormalizeMillis`(AP.cost))) AS cost_non_install_campaigns,
     SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
             AP.installs, AP.inapps)) AS conversions,
     SUM(AP.installs) AS installs,

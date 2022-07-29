@@ -23,7 +23,7 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    `{bq_project}.{target_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
+    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
         IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
         IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0))) AS conversions,
