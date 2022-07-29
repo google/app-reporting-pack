@@ -6,6 +6,7 @@ from functools import reduce
 from google.cloud import bigquery
 from gaarf.base_query import BaseQuery
 from gaarf.query_executor import AdsReportFetcher
+from gaarf.cli.utils import GaarfConfigBuilder
 
 
 def read_lag_enums_data(lag_enums):
@@ -33,8 +34,6 @@ def calculate_conversion_lag_cumulative_table(joined_data, group_by):
         conversion_lag_table)
 
 
-
-
 def join_lag_data_and_enums(lag_data, lag_enums):
     return pd.merge(lag_data,
                     lag_enums,
@@ -55,11 +54,11 @@ def calculate_cumulative_sum_ordered_by_n(grouped_data, base_groupby):
         base_groupby, as_index=False)["all_conversions"].cumsum()
     total_conversions_by_group = grouped_data.groupby(
         base_groupby, as_index=False)["all_conversions"].sum()
-    new_ds = pd.merge(
-        grouped_data[base_groupby + ["lag_number", "cumsum"]],
-        total_conversions_by_group[base_groupby + ["all_conversions"]],
-        on=base_groupby,
-        how="left")
+    new_ds = pd.merge(grouped_data[base_groupby + ["lag_number", "cumsum"]],
+                      total_conversions_by_group[base_groupby +
+                                                 ["all_conversions"]],
+                      on=base_groupby,
+                      how="left")
     new_ds["pct_conv"] = new_ds["cumsum"] / new_ds["all_conversions"]
     new_ds["shifted_lag_number"] = new_ds["lag_number"].shift(1)
     new_ds["shifted_pct_conv"] = new_ds["pct_conv"].shift(1)
@@ -88,34 +87,39 @@ def calculate_incremental_lag(expanded_data, base_groupby):
 
 
 def write_lag_data(bq_client, cumulative_lag_data, table_id):
-    job_config = bigquery.LoadJobConfig(
-        write_disposition="WRITE_TRUNCATE",
-    )
-    job = bq_client.load_table_from_dataframe(
-        cumulative_lag_data, table_id, job_config=job_config)
+    job_config = bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", )
+    job = bq_client.load_table_from_dataframe(cumulative_lag_data,
+                                              table_id,
+                                              job_config=job_config)
     job.result()
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--config", dest="gaarf_config", default=None)
+    parser.add_argument("--output", dest="save", default="bq")
     parser.add_argument("--bq.project", dest="project")
     parser.add_argument("--bq.dataset", dest="dataset")
-    args = parser.parse_args()
 
+    args = parser.parse_known_args()
+
+    config = GaarfConfigBuilder(args).build()
+    project, dataset = config.writer_params.get(
+        "project"), config.writer_params.get("dataset")
     bq_client = bigquery.Client()
     base_groupby = ["network", "conversion_id"]
     dirname = os.path.dirname(__file__)
     lag_enums = read_lag_enums_data(
         os.path.join(dirname, "conversion_lag_mapping.csv"))
     lag_data = read_api_conversion_lag_data(
-        bq_client, f"{args.project}.{args.dataset}.conversion_lag_data")
+        bq_client, f"{project}.{dataset}.conversion_lag_data")
     joined_data = join_lag_data_and_enums(lag_data, lag_enums)
 
     conv_lag_table = calculate_conversion_lag_cumulative_table(
         joined_data, base_groupby)
-    write_lag_data(
-        bq_client, conv_lag_table,
-        f"{args.project}.{args.dataset}.conversion_lag_adjustments")
+    write_lag_data(bq_client, conv_lag_table,
+                   f"{project}.{dataset}.conversion_lag_adjustments")
+
 
 if __name__ == "__main__":
     main()
