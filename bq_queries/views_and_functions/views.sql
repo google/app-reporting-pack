@@ -1,6 +1,6 @@
 -- Represents basic app campaign settings that are used when creating
 -- final tables for dashboards
-CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.AppCampaignSettingsView`
+CREATE OR REPLACE VIEW `{bq_project}.{bq_dataset}.AppCampaignSettingsView`
 AS (
     SELECT
         campaign_id,
@@ -19,7 +19,7 @@ AS (
 );
 
 -- Campaign level geo and language targeting
-CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.GeoLanguageView` AS (
+CREATE OR REPLACE VIEW `{bq_project}.{bq_dataset}.GeoLanguageView` AS (
     SELECT
         COALESCE(CampaignGeoTarget.campaign_id, CampaignLanguages.campaign_id) AS campaign_id,
         ARRAY_TO_STRING(ARRAY_AGG(DISTINCT country_code ORDER BY country_code), " | ") AS geos,
@@ -35,7 +35,7 @@ CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.GeoLanguageView` AS (
 
 -- Conversion Lag adjustment placeholder data
 -- TODO: Once conversion lag adjustment algorithm is ready switch to it.
-CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS (
+CREATE OR REPLACE VIEW `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS (
     SELECT
         DATE_SUB(CURRENT_DATE(), INTERVAL lag_day DAY) AS adjustment_date,
         network,
@@ -44,7 +44,7 @@ CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.ConversionLagAdjustments` 
     FROM {bq_project}.{bq_dataset}.conversion_lag_adjustments
 );
 
-CREATE OR REPLACE VIEW `{bq_project}.{target_dataset}.AssetCohorts` AS (
+CREATE OR REPLACE VIEW `{bq_project}.{bq_dataset}.AssetCohorts` AS (
     SELECT
         day_of_interaction,
         ad_group_id,

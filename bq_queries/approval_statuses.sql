@@ -11,7 +11,7 @@ WITH
             review_status,
             policy_topics,
             "" AS policy_summary
-        FROM `{bq_project}.{target_dataset}.ad_group_approval_statuses_*`
+        FROM `{bq_project}.{bq_dataset}.ad_group_approval_statuses_*`
     ),
     AssetDisapprovals AS (
         SELECT
@@ -22,7 +22,7 @@ WITH
             review_status,
             policy_topics,
             policy_summary
-        FROM `{bq_project}.{target_dataset}.asset_approval_statuses_*`
+        FROM `{bq_project}.{bq_dataset}.asset_approval_statuses_*`
     ),
     CombinedDisapprovals AS (
         SELECT
@@ -86,9 +86,9 @@ SELECT
 FROM CombinedDisapprovals AS Disapprovals
 LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
   ON Disapprovals.ad_group_id = M.ad_group_id
-LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
 LEFT JOIN {bq_project}.{bq_dataset}.asset_mapping AS Assets
   ON Disapprovals.asset_id = Assets.id

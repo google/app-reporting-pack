@@ -53,7 +53,7 @@ WITH
             target_roas,
             LAG(target_roas) OVER(
                 PARTITION BY campaign_id ORDER BY day) AS target_roas_last_day
-        FROM `{bq_project}.{target_dataset}.bid_budgets_*`
+        FROM `{bq_project}.{bq_dataset}.bid_budgets_*`
         WHERE day >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
     ),
     -- Average bid and budget data for each campaign for the last 7 days;
@@ -166,7 +166,7 @@ SELECT
         Avg7Days.dramatic_target_roas_changes
     ) AS dramatic_bid_changes
 FROM {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
-LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
 LEFT JOIN {bq_project}.{bq_dataset}.bid_budget AS B
     ON M.campaign_id = B.campaign_id

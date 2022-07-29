@@ -10,7 +10,7 @@ AS (
         GetHash(CONCAT(G.geos, G.languages, A.app_id, A.bidding_strategy)) AS hash_medium,
         GetHash(CONCAT(G.geos, G.languages, A.app_id)) AS hash_flex,
         GetHash(CONCAT(G.geos, G.languages)) AS hash_broad
-    FROM `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS A
-    LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
+    FROM `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS A
+    LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
         USING(campaign_id)
 );

@@ -98,15 +98,15 @@ LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
 LEFT JOIN CampaignCostTable AS CampCost
     ON AP.date = CampCost.date
       AND M.campaign_id = CampCost.campaign_id
-LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{target_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
-LEFT JOIN `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
+LEFT JOIN `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
     ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInstalls.adjustment_date
         AND AP.network = LagAdjustmentsInstalls.network
         AND ACS.install_conversion_id = LagAdjustmentsInstalls.conversion_id
-LEFT JOIN `{bq_project}.{target_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
+LEFT JOIN `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
     ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInapps.adjustment_date
         AND AP.network = LagAdjustmentsInapps.network
         AND ACS.inapp_conversion_id = LagAdjustmentsInapps.conversion_id
@@ -117,7 +117,7 @@ LEFT JOIN {bq_project}.{bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
 LEFT JOIN {bq_project}.{bq_dataset}.mediafile AS MediaFile
   ON Assets.youtube_video_id = MediaFile.video_id
-LEFT JOIN `{bq_project}.{target_dataset}.AssetCohorts` AS AssetCohorts
+LEFT JOIN `{bq_project}.{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction
         AND AP.ad_group_id = AssetCohorts.ad_group_id
         AND AP.network = AssetCohorts.network

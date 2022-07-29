@@ -33,7 +33,7 @@ AS (
         USING(ad_group_id, network, date, country_id)
     LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
       ON GP.ad_group_id = M.ad_group_id
-    LEFT JOIN `{bq_project}.{target_dataset}.AppCampaignSettingsView` AS ACS
+    LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
       ON M.campaign_id = ACS.campaign_id
     LEFT JOIN {bq_project}.{bq_dataset}.geo_target_constant AS GeoTargetConstant
         ON GP.country_id = GeoTargetConstant.constant_id
