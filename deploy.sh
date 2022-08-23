@@ -1,24 +1,17 @@
 #!/bin/bash
+COLOR='\033[0;36m' # Cyan
+NC='\033[0m' # No color
+
 solution_name="App Reporting Pack"
 solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 	tr ' ' '_')
 
-welcome() {
-echo "Welcome to installation of $solution_name"
-	if [[ -f "$solution_name_lowercase.config" ]]; then
-		read_config
-		echo "Found saved configuration at $solution_name_lowercase.config"
-		print_configuration
-		echo -n "Do you want to use it (Y/n): "
-		read -r setup_config_answer
-		if [[ $setup_config_answer = "Y" ]]; then
-			echo "Using saved configuration..."
-		else
-			echo "Creating new configuration..."
-			setup
-		fi
+check_ads_config() {
+	if [[ -f "$HOME/google-ads.yaml" ]]; then
+		ads_config=$HOME/google-ads.yaml
 	else
-		setup
+		echo -n "Enter full path to google-ads.yaml file: "
+		read -r ads_config
 	fi
 }
 
@@ -46,37 +39,14 @@ setup() {
 	echo -n "Do you want to save this config (Y/n): "
 	read -r save_config_answer
 	if [[ $save_config_answer = "Y" ]]; then
-		save_config
+		save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
 	fi
 	print_configuration
 }
 
-save_config() {
-	declare -A setup_config
-	setup_config["customer_id"]=$customer_id
-	setup_config["project"]=$project
-	setup_config["bq_dataset"]=$bq_dataset
-	setup_config["start_date"]=$start_date
-	setup_config["end_date"]=$end_date
-	setup_config["ads_config"]=$ads_config
-	setup_config["cohorts"]=$cohorts
-	declare -p setup_config > "$solution_name_lowercase.config"
-}
-
-read_config() {
-	declare -A config
-	source -- "$solution_name_lowercase.config"
-	customer_id=${setup_config["customer_id"]}
-	project=${setup_config["project"]}
-	bq_dataset=${setup_config["bq_dataset"]}
-	start_date=${setup_config["start_date"]}
-	end_date=${setup_config["end_date"]}
-	ads_config=${setup_config["ads_config"]}
-	cohorts=${setup_config["cohorts"]}
-}
 
 deploy() {
-	echo -n "Deploy $solution_name? Y/n/q: "
+	echo -n -e "${COLOR}Deploy $solution_name? Y/n/q: ${NC}"
 	read -r answer
 
 	if [[ $answer = "Y" ]]; then
@@ -90,59 +60,60 @@ deploy() {
 }
 
 ask_for_cohorts() {
-	echo -n "Asset performance can have cohorts. Enter Y if you want to activate: "
+	echo -n -e "${COLOR}Asset performance can have cohorts. Enter Y if you want to activate: ${NC}"
 	read -r cohorts_answer
 	if [[ $cohorts_answer = "Y" ]]; then
-		echo -n "Please enter cohort number in the following format 1,2,3,4,5: "
+		echo -n -e "${COLOR}Please enter cohort number in the following format 1,2,3,4,5: ${NC}"
 		read -r cohorts
 	fi
 }
 generate_parameters() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
-	bq_dataset_legacy=$(echo $bq_dataset"_legacy") macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
+	bq_dataset_legacy=$(echo $bq_dataset"_legacy")
+	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
 }
 
 
 fetch_reports() {
-	echo "===fetching reports==="
+	echo -e "${COLOR}===fetching reports===${NC}"
 	gaarf google_ads_queries/*/*.sql \
 	--account=$customer_id \
 	--output=bq \
 	--bq.project=$project --bq.dataset=$bq_dataset \
 	--macro.start_date=$start_date --macro.end_date=$end_date \
-	--ads-config=$ads_config --save-config
+	--ads-config=$ads_config "$@"
 }
 
 conversion_lag_adjustment() {
-
-	echo "===calculating conversion lag adjustment==="
+	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
 	$(which python) scripts/conv_lag_adjustment.py \
+		--account=$customer_id --ads-config=$ads_config \
 		--bq.project=$project --bq.dataset=$bq_dataset
 }
 
 generate_bq_views() {
-	echo "===generating views and functions==="
+	echo -e "${COLOR}===generating views and functions===${NC}"
 	gaarf-bq bq_queries/views_and_functions/*.sql \
-		--project=$project --target=$bq_dataset $macros --save-config
+		--project=$project --target=$bq_dataset $macros "$@"
 }
 
 
 generate_snapshots() {
-	echo "===generating snapshots==="
+	echo -e "${COLOR}===generating snapshots===${NC}"
 	gaarf-bq bq_queries/snapshots/*.sql \
-		--project=$project --target=$bq_dataset $macros
+		--project=$project --target=$bq_dataset $macros "$@"
 }
 
 generate_output_tables() {
-	echo "===generating final tables==="
+	echo -e "${COLOR}===generating final tables===${NC}"
 	gaarf-bq bq_queries/*.sql \
-		--project=$project --target=$bq_dataset $macros
+		--project=$project --target=$bq_dataset_output $macros "$@"
 }
 
 generate_legacy_views() {
-	echo "===generating legacy views==="
+	echo -e "${COLOR}===generating legacy views===${NC}"
 	gaarf-bq bq_queries/legacy_views/*.sql \
-		--project=$project --target=$bq_dataset $macros
+		--project=$project --target=$bq_dataset_legacy $macros "$@"
 }
 
 print_configuration() {
@@ -156,20 +127,53 @@ print_configuration() {
 	echo "	Cohorts: $cohorts"
 }
 
+welcome() {
+	echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
+}
+
 get_input() {
-	welcome
+	setup
 	deploy
 }
 
-if [[ -f "$solution_name_lowercase.config"  && "$1" = "-s" ]]; then
-	read_config
-	generate_parameters
+
+run_with_config() {
+	echo -e "${COLOR}===fetching reports===${NC}"
+	gaarf google_ads_queries/**/*.sql -c=$solution_name_lowercase.yaml \
+		--ads-config=$ads_config
+	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
+	$(which python) scripts/conv_lag_adjustment.py \
+		-c=$solution_name_lowercase.yaml \
+		--ads-config=$ads_config
+	echo -e "${COLOR}===generating views and functions===${NC}"
+	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml
+	echo -e "${COLOR}===generating snapshots===${NC}"
+	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml
+	echo -e "${COLOR}===generating final tables===${NC}"
+	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml
+	echo -e "${COLOR}===generating legacy views===${NC}"
+	gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml
+
+}
+
+welcome
+check_ads_config
+
+if [[ -f "$solution_name_lowercase.yaml" ]]; then
+	echo -e "${COLOR}Found saved configuration at $solution_name_lowercase.yaml${NC}"
+	cat $solution_name_lowercase.yaml
+	echo -n -e "${COLOR}Do you want to use it (Y/n): ${NC}"
+	read -r setup_config_answer
+	if [[ $setup_config_answer = "Y" ]]; then
+		echo -e "${COLOR}Using saved configuration...${NC}"
+	fi
+	run_with_config
 else
 	get_input
+	fetch_reports $save_config
+	conversion_lag_adjustment
+	generate_bq_views $save_config
+	generate_snapshots $save_config
+	generate_output_tables $save_config
+	generate_legacy_views $save_config
 fi
-fetch_reports
-conversion_lag_adjustment
-generate_bq_views
-generate_snapshots
-generate_output_tables
-generate_legacy_views
