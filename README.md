@@ -2,7 +2,8 @@
 
 ## Problem statement
 
-Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets are performaring.
+Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
+
 ## Solution
 
 App Reporting Pack fetches all necessary data from Ads API and returns ready-to-use tables that show different aspects of App campaigns performance and settings.
@@ -47,12 +48,14 @@ In order to run App Reporting Pack please follow the steps outlined below:
     ```
     python -m venv app-reporting-pack
     source app-reporting-pack/bin/activate
-    pip install google-ads-api-report-fetcher
+    pip install -r requirements.txt
     ```
 
 ## Running queries
 
-In order to generate all necessary tables for App Reporting Pack please run `deploy.sh` script:
+### Running locally
+
+In order to generate all necessary tables for App Reporting Pack please run `deploy.sh` script in a terminal:
 
 ```shell
 bash deploy.sh
@@ -66,6 +69,38 @@ It will guide you through a series of questions to get all necessary parameters 
 * `start date` - first date from which you want to get performance data (i.e., `2022-01-01`)
 * `end date` - last date from which you want to get performance data (i.e., `2022-12-31`)
 * `Ads config` - path to `google-ads.yaml` file.
+
+After the initial run of `deploy.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
+When you run `bash deploy.sh` next time it will automatically pick up created configuration.
+
+
+## Run queries in a Docker container
+
+You can run App Reporting Pack queries inside a Docker container.
+
+1. Build `app-reporting-pack` image:
+
+```
+sudo docker build . -t app-reporting-pack
+```
+
+It will create `app-reporting-pack` docker image you can use later on. It expects the following input:
+
+* `google-ads.yaml` - absolute path to `google-ads.yaml` file
+* `service_account.json` - absolute path to service account json file
+* `config.yaml` - absolute path to YAML config (to generate it please run `deploy.sh` script from *Running locally* section.
+
+2. Run:
+
+```
+sudo docker run \
+    -v /path/to/google-ads.yaml:/google-ads.yaml \
+    -v /path/to/service_account.json:/service_account.json \
+    -v /path/to/apr-config.yaml:/config.yaml \
+    app-reporting-pack
+```
+
+> Don't forget to change /path/to/google-ads.yaml and /path/to/service_account.json with valid paths.
 
 
 ## Disclaimer
