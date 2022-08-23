@@ -1,89 +1,28 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import argparse
-import os
-import numpy as np
-import pandas as pd
-from functools import reduce
 from google.cloud import bigquery
-from gaarf.base_query import BaseQuery
+from datetime import datetime, timedelta
+
+from gaarf.api_clients import GoogleAdsApiClient
+from gaarf.utils import get_customer_ids
 from gaarf.query_executor import AdsReportFetcher
 from gaarf.cli.utils import GaarfConfigBuilder
 
-
-def read_lag_enums_data(lag_enums):
-    return pd.read_csv(lag_enums)
-
-
-def read_api_conversion_lag_data(bq_client, table_name):
-    query = f"SELECT * FROM `{table_name}`"
-    data = bq_client.query(query).result().to_dataframe()
-    return data
-
-
-def calculate_conversion_lag_cumulative_table(joined_data, group_by):
-    grouped = joined_data.groupby(group_by)
-    conversion_lag_table = []
-    for group_name, df_group in grouped:
-        grouped_data = calculate_conversions_by_name_network_lag(df_group)
-        cumulative_data = calculate_cumulative_sum_ordered_by_n(
-            grouped_data, group_by)
-        expanded_data = expand_and_join_lags(cumulative_data)
-        incremental_lag = calculate_incremental_lag(expanded_data, group_by)
-        conversion_lag_table.append(incremental_lag)
-    return reduce(
-        lambda left, right: pd.concat([left, right], ignore_index=True),
-        conversion_lag_table)
-
-
-def join_lag_data_and_enums(lag_data, lag_enums):
-    return pd.merge(lag_data,
-                    lag_enums,
-                    on="conversion_lag_bucket",
-                    how="left")
-
-
-def calculate_conversions_by_name_network_lag(joined_data):
-    return joined_data.groupby(
-        ["network", "conversion_id", "lag_number"], as_index=False).agg({
-            "all_conversions":
-            np.sum
-        }).sort_values(by=["conversion_id", "network", "lag_number"])
-
-
-def calculate_cumulative_sum_ordered_by_n(grouped_data, base_groupby):
-    grouped_data["cumsum"] = grouped_data.groupby(
-        base_groupby, as_index=False)["all_conversions"].cumsum()
-    total_conversions_by_group = grouped_data.groupby(
-        base_groupby, as_index=False)["all_conversions"].sum()
-    new_ds = pd.merge(grouped_data[base_groupby + ["lag_number", "cumsum"]],
-                      total_conversions_by_group[base_groupby +
-                                                 ["all_conversions"]],
-                      on=base_groupby,
-                      how="left")
-    new_ds["pct_conv"] = new_ds["cumsum"] / new_ds["all_conversions"]
-    new_ds["shifted_lag_number"] = new_ds["lag_number"].shift(1)
-    new_ds["shifted_pct_conv"] = new_ds["pct_conv"].shift(1)
-    new_ds[
-        "lag_distance"] = new_ds["lag_number"] - new_ds["shifted_lag_number"]
-    new_ds["lag_distance"] = new_ds["lag_distance"].fillna(1)
-    new_ds["daily_incremental_lag"] = new_ds["pct_conv"] - new_ds[
-        "shifted_pct_conv"]
-    new_ds["daily_incremental_lag"] = new_ds["daily_incremental_lag"].fillna(
-        new_ds["pct_conv"][0])
-    return new_ds
-
-
-def expand_and_join_lags(lag_data):
-    return lag_data.loc[lag_data.index.repeat(lag_data.lag_distance)]
-
-
-def calculate_incremental_lag(expanded_data, base_groupby):
-    expanded_data["incremental_lag"] = expanded_data[
-        "daily_incremental_lag"] / expanded_data["lag_distance"]
-    expanded_data["lag_adjustment"] = expanded_data.groupby(
-        base_groupby, as_index=False)["incremental_lag"].cumsum()
-    expanded_data["lag_day"] = expanded_data.groupby(
-        base_groupby).cumcount() + 1
-    return expanded_data[base_groupby + ["lag_day", "lag_adjustment"]]
+from src.queries import ConversionLagQuery
+from src.conv_lag_builder import ConversionLagBuilder
 
 
 def write_lag_data(bq_client, cumulative_lag_data, table_id):
@@ -98,25 +37,34 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-c", "--config", dest="gaarf_config", default=None)
     parser.add_argument("--output", dest="save", default="bq")
-    parser.add_argument("--bq.project", dest="project")
-    parser.add_argument("--bq.dataset", dest="dataset")
+    parser.add_argument("--ads-config", dest="ads_config")
+    parser.add_argument("--account", dest="customer_id")
+    parser.add_argument("--api-version", dest="api_version", default="10")
 
     args = parser.parse_known_args()
 
     config = GaarfConfigBuilder(args).build()
+
     project, dataset = config.writer_params.get(
         "project"), config.writer_params.get("dataset")
-    bq_client = bigquery.Client()
-    base_groupby = ["network", "conversion_id"]
-    dirname = os.path.dirname(__file__)
-    lag_enums = read_lag_enums_data(
-        os.path.join(dirname, "conversion_lag_mapping.csv"))
-    lag_data = read_api_conversion_lag_data(
-        bq_client, f"{project}.{dataset}.conversion_lag_data")
-    joined_data = join_lag_data_and_enums(lag_data, lag_enums)
 
-    conv_lag_table = calculate_conversion_lag_cumulative_table(
-        joined_data, base_groupby)
+    google_ads_client = GoogleAdsApiClient(path_to_config=args[0].ads_config,
+                                           version=f"v{config.api_version}")
+    customer_ids = get_customer_ids(google_ads_client, config.account)
+    report_fetcher = AdsReportFetcher(google_ads_client, customer_ids)
+
+    bq_client = bigquery.Client(project)
+
+    days_ago_180 = (datetime.now() - timedelta(days=180)).strftime("%Y-%m-%d")
+    days_ago_30 = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
+
+    lag_data = report_fetcher.fetch(
+        ConversionLagQuery(days_ago_180, days_ago_30)).to_pandas()
+
+    conv_lag_builder = ConversionLagBuilder(lag_data,
+                                            ["network", "conversion_id"])
+
+    conv_lag_table = conv_lag_builder.calculate_reference_values()
     write_lag_data(bq_client, conv_lag_table,
                    f"{project}.{dataset}.conversion_lag_adjustments")
 
