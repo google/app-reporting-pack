@@ -1,5 +1,5 @@
 -- Contains daily changes (bids, budgets, assets, etc) on campaign level.
-CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.final_change_history
+CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.change_history
 AS (
     WITH CampaignPerformance AS (
         SELECT
@@ -9,7 +9,7 @@ AS (
             SUM(impressions) AS impressions,
             SUM(cost) AS cost,
             SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
-                IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0), 
+                IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
                 IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0))) AS conversions,
             SUM(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
             SUM(

@@ -15,7 +15,6 @@ Key pillars of UAC Reporting Pack:
 *   Campaign Debugging
 
 
-
 ## Deliverable
 
 Tables in BigQuery that are ready to be used to build
@@ -25,9 +24,10 @@ a DataStudio dashboard for App Reporting Pack.
 * `creative_excellence`
 * `approval_statuses`
 * `change_history`
-* `performance_grouping_changes`
+* `performance_grouping_history`
 * `ad_group_network_split`
 * `geo_performance`
+* `cannibalization`
 
 ## Deployment
 ## Prerequisites

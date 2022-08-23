@@ -29,4 +29,4 @@ SELECT
     inapps_adjusted,
     video_views,
     conversions_value AS conversion_value
-FROM {bq_project}.{target_dataset}.network_split;
+FROM {bq_project}.{target_dataset}.ad_group_network_split;

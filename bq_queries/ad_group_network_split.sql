@@ -1,5 +1,5 @@
 -- Contains ad group level performance segmented by network (Search, Display, YouTube).
-CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.network_split
+CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.ad_group_network_split
 AS (
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
