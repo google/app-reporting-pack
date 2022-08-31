@@ -8,7 +8,7 @@ Crucial information on App campaigns is scattered across various places in Googl
 
 App Reporting Pack fetches all necessary data from Ads API and returns ready-to-use tables that show different aspects of App campaigns performance and settings.
 
-Key pillars of UAC Reporting Pack:
+Key pillars of App Reporting Pack:
 
 *   Deep Dive Performance Analysis
 *   Creatives Insights
@@ -32,12 +32,22 @@ a DataStudio dashboard for App Reporting Pack.
 ## Deployment
 ## Prerequisites
 
-* Google Ads API access - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
+* Google Ads API access and [google-ads.yaml](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md#setting-up-using-google-adsyaml) file - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
 * Python 3.8+
-* `google-ads-api-report-fetcher` Python library installed
 * Access to repository configured. In order to clone this repository you need to do the following:
     * Visit https://professional-services.googlesource.com/new-password and login with your account
     * Once authenticated please copy all lines in box and paste them in the terminal.
+* [Service account](https://cloud.google.com/iam/docs/creating-managing-service-accounts#creating) created and [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating) downloaded in order to write data to BigQuery.
+    * Once you downloaded service account key export it as an environmental variable
+        ```
+        export GOOGLE_APPLICATION_CREDENTIALS=path/to/service_account.json
+        ```
+
+    * If authenticating via service account is not possible you can authenticate with the following command:
+         ```
+         gcloud auth application-default login
+         ```
+
 
 ## Installation
 
@@ -51,9 +61,9 @@ In order to run App Reporting Pack please follow the steps outlined below:
     pip install -r requirements.txt
     ```
 
-## Running queries
+## Usage
 
-### Running locally
+### Running queries locally
 
 In order to generate all necessary tables for App Reporting Pack please run `deploy.sh` script in a terminal:
 
@@ -74,7 +84,7 @@ After the initial run of `deploy.sh` command it will generate `app_reporting_pac
 When you run `bash deploy.sh` next time it will automatically pick up created configuration.
 
 
-## Run queries in a Docker container
+### Running queries in a Docker container
 
 You can run App Reporting Pack queries inside a Docker container.
 
