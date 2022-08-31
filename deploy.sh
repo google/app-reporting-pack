@@ -145,10 +145,10 @@ run_with_config() {
 	$(which python) scripts/conv_lag_adjustment.py \
 		-c=$solution_name_lowercase.yaml \
 		--ads-config=$ads_config
-	echo -e "${COLOR}===generating views and functions===${NC}"
-	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml
 	echo -e "${COLOR}===generating snapshots===${NC}"
 	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml
+	echo -e "${COLOR}===generating views and functions===${NC}"
+	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml
 	echo -e "${COLOR}===generating final tables===${NC}"
 	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml
 	echo -e "${COLOR}===generating legacy views===${NC}"
@@ -172,8 +172,8 @@ else
 	get_input
 	fetch_reports $save_config
 	conversion_lag_adjustment
-	generate_bq_views $save_config
 	generate_snapshots $save_config
+	generate_bq_views $save_config
 	generate_output_tables $save_config
 	generate_legacy_views $save_config
 fi
