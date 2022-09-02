@@ -40,6 +40,12 @@ def main():
     parser.add_argument("--ads-config", dest="ads_config")
     parser.add_argument("--account", dest="customer_id")
     parser.add_argument("--api-version", dest="api_version", default="10")
+    parser.add_argument("--customer-ids-query",
+                        dest="customer_ids_query",
+                        default=None)
+    parser.add_argument("--customer-ids-query-file",
+                        dest="customer_ids_query_file",
+                        default=None)
 
     args = parser.parse_known_args()
 
@@ -50,7 +56,8 @@ def main():
 
     google_ads_client = GoogleAdsApiClient(path_to_config=args[0].ads_config,
                                            version=f"v{config.api_version}")
-    customer_ids = get_customer_ids(google_ads_client, config.account)
+    customer_ids = get_customer_ids(google_ads_client, config.account,
+                                    args[0].customer_ids_query)
     report_fetcher = AdsReportFetcher(google_ads_client, customer_ids)
 
     bq_client = bigquery.Client(project)

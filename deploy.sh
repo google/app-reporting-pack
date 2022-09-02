@@ -6,6 +6,9 @@ solution_name="App Reporting Pack"
 solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 	tr ' ' '_')
 
+# Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
+customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
+
 check_ads_config() {
 	if [[ -f "$HOME/google-ads.yaml" ]]; then
 		ads_config=$HOME/google-ads.yaml
@@ -79,6 +82,7 @@ fetch_reports() {
 	gaarf google_ads_queries/*/*.sql \
 	--account=$customer_id \
 	--output=bq \
+	--customer-ids-query="$customer_ids_query" \
 	--bq.project=$project --bq.dataset=$bq_dataset \
 	--macro.start_date=$start_date --macro.end_date=$end_date \
 	--ads-config=$ads_config "$@"
@@ -171,7 +175,7 @@ if [[ -f "$solution_name_lowercase.yaml" ]]; then
 else
 	get_input
 	fetch_reports $save_config
-	conversion_lag_adjustment
+	conversion_lag_adjustment --customer--ids-query="$customer_ids_query"
 	generate_snapshots $save_config
 	generate_bq_views $save_config
 	generate_output_tables $save_config
