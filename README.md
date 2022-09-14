@@ -65,10 +65,10 @@ In order to run App Reporting Pack please follow the steps outlined below:
 
 ### Running queries locally
 
-In order to generate all necessary tables for App Reporting Pack please run `deploy.sh` script in a terminal:
+In order to generate all necessary tables for App Reporting Pack please run `run-local.sh` script in a terminal:
 
 ```shell
-bash deploy.sh
+bash run-local.sh
 ```
 
 It will guide you through a series of questions to get all necessary parameters to run the scripts:
@@ -80,8 +80,13 @@ It will guide you through a series of questions to get all necessary parameters 
 * `end date` - last date from which you want to get performance data (i.e., `2022-12-31`)
 * `Ads config` - path to `google-ads.yaml` file.
 
-After the initial run of `deploy.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
-When you run `bash deploy.sh` next time it will automatically pick up created configuration.
+After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
+When you run `bash run-local.sh` next time it will automatically pick up created configuration.
+
+When running `run-local.sh` scripts you can specify two options which are useful when running queries periodically (i.e. as a cron job):
+
+* `-c <config>`- path to `app_reporting_pack.yaml` config file. Comes handy when you have multiple config files or the configuration is located outside of current folder.
+* `-q` - skips all confirmation prompts and starts running scripts based on config file.
 
 
 ### Running queries in a Docker container
@@ -98,7 +103,7 @@ It will create `app-reporting-pack` docker image you can use later on. It expect
 
 * `google-ads.yaml` - absolute path to `google-ads.yaml` file
 * `service_account.json` - absolute path to service account json file
-* `config.yaml` - absolute path to YAML config (to generate it please run `deploy.sh` script from *Running locally* section.
+* `config.yaml` - absolute path to YAML config (to generate it please run `run-local.sh` script from *Running locally* section.
 
 2. Run:
 

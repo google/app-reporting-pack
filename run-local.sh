@@ -1,10 +1,38 @@
 #!/bin/bash
 COLOR='\033[0;36m' # Cyan
 NC='\033[0m' # No color
+usage="bash run-local.sh -c|--config <config> -q|--quiet\n\n
+Helper script for running App Reporting Pack queries.\n\n
+-h|--help - show this help message\n
+-c|--config <config> - path to config.yaml file, i.e., path/to/app_reporting_pack.yaml\n
+-q|--quiet - skips all confirmation prompts and starts running scripts based on config files
+"
 
 solution_name="App Reporting Pack"
 solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 	tr ' ' '_')
+
+config_file="$solution_name_lowercase.yaml"
+quiet="N"
+
+while :; do
+case $1 in
+	-q|--quiet)
+		quiet="Y"
+		;;
+	-c|--config)
+		shift
+		config_file=$1
+		;;
+	-h|--help)
+		echo -e $usage;
+		exit
+		;;
+	*)
+		break
+	esac
+	shift
+done
 
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
@@ -160,19 +188,21 @@ run_with_config() {
 
 }
 
-welcome
 check_ads_config
 
-if [[ -f "$solution_name_lowercase.yaml" ]]; then
-	echo -e "${COLOR}Found saved configuration at $solution_name_lowercase.yaml${NC}"
-	cat $solution_name_lowercase.yaml
-	echo -n -e "${COLOR}Do you want to use it (Y/n): ${NC}"
-	read -r setup_config_answer
-	if [[ $setup_config_answer = "Y" ]]; then
-		echo -e "${COLOR}Using saved configuration...${NC}"
+if [[ -f "$config_file" ]]; then
+	if [[ $quiet = "N" ]]; then
+		echo -e "${COLOR}Found saved configuration at $solution_name_lowercase.yaml${NC}"
+		cat $solution_name_lowercase.yaml
+		echo -n -e "${COLOR}Do you want to use it (Y/n): ${NC}"
+		read -r setup_config_answer
+		if [[ $setup_config_answer = "Y" ]]; then
+			echo -e "${COLOR}Using saved configuration...${NC}"
+		fi
 	fi
 	run_with_config
 else
+	welcome
 	get_input
 	fetch_reports $save_config
 	conversion_lag_adjustment --customer--ids-query="$customer_ids_query"
