@@ -24,6 +24,10 @@ case $1 in
 		shift
 		config_file=$1
 		;;
+	-l|--loglevel)
+		shift
+		loglevel=$1
+		;;
 	-h|--help)
 		echo -e $usage;
 		exit
@@ -91,17 +95,24 @@ deploy() {
 }
 
 ask_for_cohorts() {
-	echo -n -e "${COLOR}Asset performance can have cohorts. Enter Y if you want to activate: ${NC}"
+	default_cohorts=(0 1 3 5 7 14 30)
+	echo -n -e "${COLOR}Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to adjust it? [Y/n]: ${NC}"
 	read -r cohorts_answer
 	if [[ $cohorts_answer = "Y" ]]; then
 		echo -n -e "${COLOR}Please enter cohort number in the following format 1,2,3,4,5: ${NC}"
-		read -r cohorts
+		read -r cohorts_string
 	fi
+	IFS="," read -ra cohorts_array <<< $cohorts_string
+	combined_cohorts=("${default_cohorts[@]}" "${cohorts_array[@]}")
+	unique_cohorts=($(for f in "${combined_cohorts[@]}"; do echo "${f}"; done | sort -u -n))
+	_cohorts="${unique_cohorts[@]}"
+	cohorts_final=$(echo ${_cohorts// /,})
 }
+
 generate_parameters() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
 	bq_dataset_legacy=$(echo $bq_dataset"_legacy")
-	macros="--macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
+	macros="--macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts_final"
 }
 
 
@@ -156,7 +167,7 @@ print_configuration() {
 	echo "	Start date: $start_date"
 	echo "	End date: $end_date"
 	echo "	Ads config: $ads_config"
-	echo "	Cohorts: $cohorts"
+	echo "	Cohorts: $cohorts_final"
 }
 
 welcome() {
@@ -172,23 +183,27 @@ get_input() {
 run_with_config() {
 	echo -e "${COLOR}===fetching reports===${NC}"
 	gaarf google_ads_queries/**/*.sql -c=$solution_name_lowercase.yaml \
-		--ads-config=$ads_config
+		--ads-config=$ads_config --log=$loglevel
 	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
 	$(which python) scripts/conv_lag_adjustment.py \
 		-c=$solution_name_lowercase.yaml \
-		--ads-config=$ads_config
+		--ads-config=$ads_config --log=$loglevel
 	echo -e "${COLOR}===generating snapshots===${NC}"
-	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml
+	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating views and functions===${NC}"
-	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml
+	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating final tables===${NC}"
-	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml
+	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating legacy views===${NC}"
-	gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml
+	gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 
 }
 
 check_ads_config
+
+if [[ -z ${loglevel} ]]; then
+	loglevel="INFO"
+fi
 
 if [[ -f "$config_file" ]]; then
 	if [[ $quiet = "N" ]]; then
@@ -204,10 +219,10 @@ if [[ -f "$config_file" ]]; then
 else
 	welcome
 	get_input
-	fetch_reports $save_config
+	fetch_reports $save_config --log=$loglevel
 	conversion_lag_adjustment --customer--ids-query="$customer_ids_query"
-	generate_snapshots $save_config
-	generate_bq_views $save_config
-	generate_output_tables $save_config
-	generate_legacy_views $save_config
+	generate_snapshots $save_config --log=$loglevel
+	generate_bq_views $save_config --log=$loglevel
+	generate_output_tables $save_config --log=$loglevel
+	generate_legacy_views $save_config --log=$loglevel
 fi
