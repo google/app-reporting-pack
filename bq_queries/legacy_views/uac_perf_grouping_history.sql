@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.uac_perf_grouping_history AS
+CREATE OR REPLACE VIEW {legacy_dataset}.uac_perf_grouping_history AS
 SELECT
     Day,
     account_name AS AccountName,
@@ -17,5 +17,5 @@ SELECT
     geos AS country_code,
     languages AS Language,
     target_conversions AS TargetConversions
-FROM {bq_project}.{target_dataset}.performance_grouping;
+FROM {target_dataset}.performance_grouping;
 

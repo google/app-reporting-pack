@@ -1,5 +1,5 @@
 -- Contains daily changes (bids, budgets, assets, etc) on campaign level.
-CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.change_history
+CREATE OR REPLACE TABLE {target_dataset}.change_history
 AS (
     WITH CampaignPerformance AS (
         SELECT
@@ -25,18 +25,18 @@ AS (
             ) AS inapps_adjusted,
             SUM(view_through_conversions) AS view_through_conversions,
             SUM(AP.conversions_value) AS conversions_value
-        FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
-        LEFT JOIN {bq_project}.{bq_dataset}.ad_group_conversion_split AS ConvSplit
+        FROM {bq_dataset}.ad_group_performance AS AP
+        LEFT JOIN {bq_dataset}.ad_group_conversion_split AS ConvSplit
             USING(date, ad_group_id, network)
-        LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+        LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
             USING(ad_group_id)
-        LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+        LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
           ON M.campaign_id = ACS.campaign_id
-        LEFT JOIN `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
+        LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
             ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInstalls.adjustment_date
                 AND AP.network = LagAdjustmentsInstalls.network
                 AND ACS.install_conversion_id = LagAdjustmentsInstalls.conversion_id
-        LEFT JOIN `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
+        LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
             ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInapps.adjustment_date
                 AND AP.network = LagAdjustmentsInapps.network
                 AND ACS.inapp_conversion_id = LagAdjustmentsInapps.conversion_id
@@ -50,7 +50,7 @@ AS (
             campaign_id,
             campaign_name,
             campaign_status
-        FROM {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping
+        FROM {bq_dataset}.account_campaign_ad_group_mapping
     )
 SELECT
     CP.day,
@@ -74,11 +74,11 @@ SELECT
         PARSE_DATE("%Y-%m-%d", ACS.start_date),
         DAY) AS days_since_start_date,
     ACS.n_of_target_conversions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.budget_amount) AS current_budget_amount,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.target_cpa) AS current_target_cpa,
+    `{bq_dataset}.NormalizeMillis`(B.budget_amount) AS current_budget_amount,
+    `{bq_dataset}.NormalizeMillis`(B.target_cpa) AS current_target_cpa,
     B.target_roas AS current_target_roas,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(BidBudgetHistory.budget_amount) AS budget,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(BidBudgetHistory.target_cpa) AS target_cpa,
+    `{bq_dataset}.NormalizeMillis`(BidBudgetHistory.budget_amount) AS budget,
+    `{bq_dataset}.NormalizeMillis`(BidBudgetHistory.target_cpa) AS target_cpa,
     BidBudgetHistory.target_roas AS target_roas,
     -- If cost for a given day is higher than allocated budget than is_budget_limited = 1
     IF(CP.cost > BidBudgetHistory.budget_amount, 1, 0) AS is_budget_limited,
@@ -115,7 +115,7 @@ SELECT
     END AS budget_changes,
     CP.clicks,
     CP.impressions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(CP.cost) AS cost,
+    `{bq_dataset}.NormalizeMillis`(CP.cost) AS cost,
     IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
         CP.installs, CP.inapps) AS conversions,
     IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
@@ -129,12 +129,12 @@ SELECT
 FROM CampaignPerformance AS CP
 LEFT JOIN CampaignMapping AS M
     ON CP.campaign_id = M.campaign_id
-LEFT JOIN {bq_project}.{bq_dataset}.bid_budget AS B
+LEFT JOIN {bq_dataset}.bid_budget AS B
     ON CP.campaign_id = B.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.bid_budgets_*` AS BidBudgetHistory
+LEFT JOIN `{bq_dataset}.bid_budgets_*` AS BidBudgetHistory
     ON M.campaign_id = BidBudgetHistory.campaign_id
         AND CP.day = BidBudgetHistory.day
-LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id);

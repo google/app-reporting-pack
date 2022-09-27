@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.uacassets AS
+CREATE OR REPLACE VIEW {legacy_dataset}.uacassets AS
 SELECT
     Day,
     account_name AS AccountName,
@@ -128,4 +128,4 @@ SELECT
     0 AS conversion_value_day_7,
     0 AS conversion_value_day_14,
     0 AS conversion_value_day_30,
-FROM {bq_project}.{target_dataset}.asset_performance;
+FROM {target_dataset}.asset_performance;

@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.uac_network_split AS
+CREATE OR REPLACE VIEW {legacy_dataset}.uac_network_split AS
 SELECT
     Day,
     campaign_id AS CampaignID,
@@ -29,4 +29,4 @@ SELECT
     inapps_adjusted,
     video_views,
     conversions_value AS conversion_value
-FROM {bq_project}.{target_dataset}.ad_group_network_split;
+FROM {target_dataset}.ad_group_network_split;

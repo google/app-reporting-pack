@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.change_history AS
+CREATE OR REPLACE VIEW {legacy_dataset}.change_history AS
 SELECT
     Day,
     account_name AS AccountName,
@@ -59,4 +59,4 @@ SELECT
     0 AS ad_groups_paused,
     0 AS ad_groups_deleted,
     SAFE_DIVIDE(cost, conversions) AS CPA
-FROM {bq_project}.{target_dataset}.change_history;
+FROM {target_dataset}.change_history;

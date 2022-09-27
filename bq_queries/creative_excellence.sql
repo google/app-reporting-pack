@@ -1,7 +1,7 @@
 -- Table for creative_excellence for on campaign_id level. Some information on
 -- ad_group level is available. Contains aggregated performance data
 -- (cost, installs, inapps) for the last 7 days.
-CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.creative_excellence
+CREATE OR REPLACE TABLE {target_dataset}.creative_excellence
 AS (
 WITH
     -- Calculate ad_group level cost for the last 7 days
@@ -10,8 +10,8 @@ WITH
             PARSE_DATE("%Y-%m-%d", date) AS day,
             campaign_id,
             SUM(cost) AS cost
-        FROM {bq_project}.{bq_dataset}.ad_group_performance AS C
-        LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+        FROM {bq_dataset}.ad_group_performance AS C
+        LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
             ON C.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
@@ -21,7 +21,7 @@ WITH
         SELECT
             campaign_id,
             COUNT(*) AS n_active_days,
-            `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
+            `{bq_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
         FROM CostDynamicsTable
         GROUP BY 1
     ),
@@ -31,8 +31,8 @@ WITH
             Conv.ad_group_id,
             SUM(IF(Conv.conversion_category = "DOWNLOAD", Conv.conversions, 0)) AS installs,
             SUM(IF(Conv.conversion_category != "DOWNLOAD", Conv.conversions, 0)) AS inapps
-        FROM {bq_project}.{bq_dataset}.ad_group_conversion_split AS Conv
-        LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+        FROM {bq_dataset}.ad_group_conversion_split AS Conv
+        LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
             ON Conv.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
@@ -53,7 +53,7 @@ WITH
             target_roas,
             LAG(target_roas) OVER(
                 PARTITION BY campaign_id ORDER BY day) AS target_roas_last_day
-        FROM `{bq_project}.{bq_dataset}.bid_budgets_*`
+        FROM `{bq_dataset}.bid_budgets_*`
         WHERE day >= DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY)
     ),
     -- Average bid and budget data for each campaign for the last 7 days;
@@ -84,10 +84,10 @@ WITH
                     ),
                 1, 0)
             ) AS dramatic_target_roas_changes,
-            AVG(`{bq_project}.{bq_dataset}.NormalizeMillis`(budget_amount)) AS average_budget_7_days,
-            SUM(`{bq_project}.{bq_dataset}.NormalizeMillis`(budget_amount)) AS sum_budget_7_days,
+            AVG(`{bq_dataset}.NormalizeMillis`(budget_amount)) AS average_budget_7_days,
+            SUM(`{bq_dataset}.NormalizeMillis`(budget_amount)) AS sum_budget_7_days,
             COALESCE(
-                AVG(`{bq_project}.{bq_dataset}.NormalizeMillis`(target_cpa)),
+                AVG(`{bq_dataset}.NormalizeMillis`(target_cpa)),
                 AVG(target_roas)
             ) AS average_bid_7_days
         FROM BidBudget7DaysTable
@@ -112,8 +112,8 @@ SELECT
     M.ad_group_name,
     M.ad_group_status,
     ACS.n_of_target_conversions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.budget_amount) AS budget_amount,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(B.target_cpa) AS target_cpa,
+    `{bq_dataset}.NormalizeMillis`(B.budget_amount) AS budget_amount,
+    `{bq_dataset}.NormalizeMillis`(B.target_cpa) AS target_cpa,
     B.target_roas AS target_roas,
     -- For Installs campaigns the recommend budget amount it 50 times target_cpa
     -- for Action campaigns - 10 times target_cpa
@@ -129,13 +129,13 @@ SELECT
         ELSE "Not Applicable"
         END AS enough_budget,
     -- number of active assets of a certain type
-    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
+    `{bq_dataset}.GetNumberOfElements`(
         install_videos, engagement_videos, pre_registration_videos) AS n_videos,
-    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
+    `{bq_dataset}.GetNumberOfElements`(
         install_images, engagement_images, pre_registration_images) AS n_images,
-    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
+    `{bq_dataset}.GetNumberOfElements`(
         install_headlines, engagement_headlines, pre_registration_headlines) AS n_headlines,
-    `{bq_project}.{bq_dataset}.GetNumberOfElements`(
+    `{bq_dataset}.GetNumberOfElements`(
         install_descriptions, engagement_descriptions, pre_registration_descriptions) AS n_descriptions,
     ARRAY_LENGTH(SPLIT(install_media_bundles, "|")) - 1 AS n_html5,
     S.ad_strength AS ad_strength,
@@ -165,12 +165,12 @@ SELECT
         Avg7Days.dramatic_target_cpa_changes,
         Avg7Days.dramatic_target_roas_changes
     ) AS dramatic_bid_changes
-FROM {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
-LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+FROM {bq_dataset}.account_campaign_ad_group_mapping AS M
+LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN {bq_project}.{bq_dataset}.bid_budget AS B
+LEFT JOIN {bq_dataset}.bid_budget AS B
     ON M.campaign_id = B.campaign_id
-LEFT JOIN {bq_project}.{bq_dataset}.asset_structure AS S
+LEFT JOIN {bq_dataset}.asset_structure AS S
   ON M.ad_group_id = S.ad_group_id
 LEFT JOIN AdGroupCostTable AS C
   ON M.campaign_id = C.campaign_id

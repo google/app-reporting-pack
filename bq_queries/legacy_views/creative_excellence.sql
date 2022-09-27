@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.uachygiene AS
+CREATE OR REPLACE VIEW {legacy_dataset}.uachygiene AS
 SELECT
     "" AS CID,
     account_id,
@@ -43,4 +43,4 @@ SELECT
     average_bid_7_days AS AverageBid7Days,
     dramatic_bid_changes AS DramaticBidChanges,
     dramatic_budget_changes AS DramaticBudgetChanges
-FROM {bq_project}.{target_dataset}.creative_excellence;
+FROM {target_dataset}.creative_excellence;

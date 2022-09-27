@@ -1,5 +1,5 @@
 -- Get number of elements in first non-emtpy array.
-CREATE OR REPLACE FUNCTION `{bq_project}.{bq_dataset}.GetNumberOfElements` (first_element STRING, second_element STRING, third_element STRING)
+CREATE OR REPLACE FUNCTION `{bq_dataset}.GetNumberOfElements` (first_element STRING, second_element STRING, third_element STRING)
 RETURNS INT64
 AS (
     ARRAY_LENGTH(SPLIT(
@@ -10,7 +10,7 @@ AS (
     );
 
 -- Convert millis to human-readable values
-CREATE OR REPLACE FUNCTION `{bq_project}.{bq_dataset}.NormalizeMillis` (value INT64)
+CREATE OR REPLACE FUNCTION `{bq_dataset}.NormalizeMillis` (value INT64)
 RETURNS FLOAT64
 AS (ROUND(value / 1e6, 2)
 );

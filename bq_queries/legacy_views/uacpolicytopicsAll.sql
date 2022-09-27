@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.uacpolicytopicsAll AS
+CREATE OR REPLACE VIEW {legacy_dataset}.uacpolicytopicsAll AS
 SELECT
     Day,
     campaign_id AS CampaignID,
@@ -34,4 +34,4 @@ SELECT
     approval_status AS PolicyTopicType,
     "" AS PolicyURL,
     policy_topics AS PolicyTopic
-FROM {bq_project}.{target_dataset}.approval_statuses;
+FROM {target_dataset}.approval_statuses;

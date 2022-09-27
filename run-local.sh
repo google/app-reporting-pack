@@ -101,7 +101,7 @@ ask_for_cohorts() {
 generate_parameters() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
 	bq_dataset_legacy=$(echo $bq_dataset"_legacy")
-	macros="--macro.bq_project=$project --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
+	macros="--macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts"
 }
 
 

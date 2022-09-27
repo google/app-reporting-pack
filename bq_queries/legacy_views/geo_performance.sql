@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW {bq_project}.{legacy_dataset}.geo_performance AS
+CREATE OR REPLACE VIEW {legacy_dataset}.geo_performance AS
 SELECT
     Day,
     campaign_id AS CampaignID,
@@ -20,4 +20,4 @@ SELECT
     installs,
     inapps,
     conversions_value AS conversion_value
-FROM {bq_project}.{target_dataset}.geo_performance;
+FROM {target_dataset}.geo_performance;

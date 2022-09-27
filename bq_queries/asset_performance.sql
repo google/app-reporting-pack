@@ -6,15 +6,15 @@ AS (
     arr[SAFE_OFFSET(day)]
 );
 
-CREATE OR REPLACE TABLE {bq_project}.{target_dataset}.asset_performance
+CREATE OR REPLACE TABLE {target_dataset}.asset_performance
 AS (
 WITH CampaignCostTable AS (
     SELECT
         AP.date,
         M.campaign_id,
-        `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS campaign_cost,
-    FROM {bq_project}.{bq_dataset}.ad_group_performance AS AP
-    LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+        `{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS campaign_cost,
+    FROM {bq_dataset}.ad_group_performance AS AP
+    LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
       ON AP.ad_group_id = M.ad_group_id
     GROUP BY 1, 2
 )
@@ -67,10 +67,10 @@ SELECT
     AP.network AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
-    `{bq_project}.{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
+    `{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     ANY_VALUE(CampCost.campaign_cost) AS campaign_cost,
     -- TODO: provide correct enums
-    SUM(IF(bidding_strategy = "", 0, `{bq_project}.{bq_dataset}.NormalizeMillis`(AP.cost))) AS cost_non_install_campaigns,
+    SUM(IF(bidding_strategy = "", 0, `{bq_dataset}.NormalizeMillis`(AP.cost))) AS cost_non_install_campaigns,
     SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
             AP.installs, AP.inapps)) AS conversions,
     SUM(AP.installs) AS installs,
@@ -92,32 +92,32 @@ SELECT
         SUM(GetCohort(AssetCohorts.lag_data.inapps, {{day}})) AS inapps_{{day}}_day,
         SUM(GetCohort(AssetCohorts.lag_data.conversions_value, {{day}})) AS conversions_value_{{day}}_day,
     {% endfor %}
-FROM {bq_project}.{bq_dataset}.asset_performance AS AP
-LEFT JOIN {bq_project}.{bq_dataset}.account_campaign_ad_group_mapping AS M
+FROM {bq_dataset}.asset_performance AS AP
+LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
 LEFT JOIN CampaignCostTable AS CampCost
     ON AP.date = CampCost.date
       AND M.campaign_id = CampCost.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.AppCampaignSettingsView` AS ACS
+LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.GeoLanguageView` AS G
+LEFT JOIN `{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
-LEFT JOIN `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
+LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
     ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInstalls.adjustment_date
         AND AP.network = LagAdjustmentsInstalls.network
         AND ACS.install_conversion_id = LagAdjustmentsInstalls.conversion_id
-LEFT JOIN `{bq_project}.{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
+LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
     ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInapps.adjustment_date
         AND AP.network = LagAdjustmentsInapps.network
         AND ACS.inapp_conversion_id = LagAdjustmentsInapps.conversion_id
-LEFT JOIN {bq_project}.{bq_dataset}.asset_reference AS R
+LEFT JOIN {bq_dataset}.asset_reference AS R
   ON AP.asset_id = R.asset_id
     AND AP.ad_group_id = R.ad_group_id
-LEFT JOIN {bq_project}.{bq_dataset}.asset_mapping AS Assets
+LEFT JOIN {bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
-LEFT JOIN {bq_project}.{bq_dataset}.mediafile AS MediaFile
+LEFT JOIN {bq_dataset}.mediafile AS MediaFile
   ON Assets.youtube_video_id = MediaFile.video_id
-LEFT JOIN `{bq_project}.{bq_dataset}.AssetCohorts` AS AssetCohorts
+LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction
         AND AP.ad_group_id = AssetCohorts.ad_group_id
         AND AP.network = AssetCohorts.network
