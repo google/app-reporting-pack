@@ -9,6 +9,7 @@ SELECT
         DAY) AS lag,
     M.ad_group_id,
     AP.asset_id,
+    AP.field_type,
     AP.network AS network,
     SUM(AP.installs) AS installs,
     SUM(AP.inapps) AS inapps,
@@ -17,4 +18,4 @@ SELECT
 FROM {bq_dataset}.asset_performance AS AP
 LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
-GROUP BY 1, 2, 3, 4, 5);
+GROUP BY 1, 2, 3, 4, 5, 6);

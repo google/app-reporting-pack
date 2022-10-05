@@ -1,6 +1,6 @@
-# Performs association between each asset_id and its corresponding meta
-# information (size for images and HTML5, actual text for headlines and
-# descriptions, etc.)
+-- Performs association between each asset_id and its corresponding meta
+-- information (size for images and HTML5, actual text for headlines and
+-- descriptions, etc.)
 
 SELECT
     asset.id AS id,
@@ -10,8 +10,7 @@ SELECT
     asset.image_asset.full_size.width_pixels AS width,
     asset.image_asset.full_size.url AS url,
     asset.type AS type,
-    ad_group_ad_asset_view.field_type AS field_type,
     asset.image_asset.mime_type AS mime_type,
     asset.youtube_video_asset.youtube_video_id AS youtube_video_id,
     asset.youtube_video_asset.youtube_video_title AS youtube_video_title
-FROM ad_group_ad_asset_view
+FROM asset

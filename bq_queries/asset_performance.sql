@@ -61,7 +61,7 @@ SELECT
     ROUND(MediaFile.video_duration / 1000) AS video_duration,
     0 AS video_aspect_ratio,
     Assets.type AS asset_type,
-    Assets.field_type AS field_type,
+    AP.field_type AS field_type,
     R.performance_label AS performance_label,
     IF(R.enabled, "ENABLED", "DELETED") AS asset_status,
     AP.network AS network,
@@ -113,9 +113,10 @@ LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
 LEFT JOIN {bq_dataset}.asset_reference AS R
   ON AP.asset_id = R.asset_id
     AND AP.ad_group_id = R.ad_group_id
+    AND AP.field_type = R.field_type
 LEFT JOIN {bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
-LEFT JOIN {bq_dataset}.mediafile AS MediaFile
+LEFT JOIN (SELECT video_id, video_duration FROM {bq_dataset}.mediafile WHERE video_id != "")  AS MediaFile
   ON Assets.youtube_video_id = MediaFile.video_id
 LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction

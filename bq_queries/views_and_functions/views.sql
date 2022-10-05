@@ -49,6 +49,7 @@ CREATE OR REPLACE VIEW `{bq_dataset}.AssetCohorts` AS (
         day_of_interaction,
         ad_group_id,
         asset_id,
+        field_type,
         network,
         STRUCT(
             ARRAY_AGG(lag ORDER BY lag) AS lags,
@@ -61,5 +62,5 @@ CREATE OR REPLACE VIEW `{bq_dataset}.AssetCohorts` AS (
     WHERE
         day_of_interaction IS NOT NULL
         AND lag <= 90
-    GROUP BY 1, 2, 3, 4
+    GROUP BY 1, 2, 3, 4, 5
 );
