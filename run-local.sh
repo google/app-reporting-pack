@@ -28,6 +28,10 @@ case $1 in
 		shift
 		loglevel=$1
 		;;
+	-g|--google-ads-config)
+		shift
+		google_ads_config=$1
+		;;
 	-h|--help)
 		echo -e $usage;
 		exit
@@ -42,7 +46,9 @@ done
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
 
 check_ads_config() {
-	if [[ -f "$HOME/google-ads.yaml" ]]; then
+	if [[ -n $google_ads_config ]]; then
+		ads_config=$google_ads_config
+	elif [[ -f "$HOME/google-ads.yaml" ]]; then
 		ads_config=$HOME/google-ads.yaml
 	else
 		echo -n "Enter full path to google-ads.yaml file: "
