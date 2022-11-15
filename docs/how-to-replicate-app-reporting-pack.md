@@ -12,13 +12,12 @@ Before replicating the dashboard you need to make copies of datasources that pow
 Replication of the datasources is important since they contains multiple calculated metrics which could be problematic to create from scratch.
 
 Make a copy of each of the following datasources used in the template dashboard.
-* [Asset Performance](https://datastudio.google.com/c/u/0/datasources/c0cbd3e6-b0ba-4ee2-9a3e-bb645e9dc88://datastudio.google.com/c/u/0/datasources/c0cbd3e6-b0ba-4ee2-9a3e-bb645e9dc88e)
-* [Disapprovals](https://datastudio.google.com/c/u/0/datasources/2f25f95c-3307-4a13-97a3-3b5ce3d60340)
-* [Creative Excellence](https://datastudio.google.com/c/u/0/datasources/124eb3dd-d299-4d57-946b-ab4a98fdc3d6)
-* [Change History](https://datastudio.google.com/c/u/0/datasources/9fc9197c-1eaa-4343-a673-0af374d32149)
-* [Performance Grouping Changes](https://datastudio.google.com/c/u/0/datasources/7100d995-e5c4-4390-be7c-d7b1d4fd6c44)
-* [Ad Group Network Split ](https://datastudio.google.com/c/u/0/datasources/c37d8e08-2fbb-4d33-911c-d81130e90786)
-* [Cannibalization](https://datastudio.google.com/c/u/0/datasources/79b2e275-3427-4eaf-a61a-5f4b550787fe)
+* [asset_performance](https://datastudio.google.com/c/u/0/datasources/cb655b63-49c0-48d6-babf-aa956c369b15)
+* [approval_statuses](https://datastudio.google.com/c/u/0/datasources/cdbfb99c-203c-4eeb-9a57-3d99f34546ee)
+* [creative_excellence](https://datastudio.google.com/c/u/0/datasources/636bab56-3bff-4143-92a2-106206c4ad03)
+* [change_history](https://datastudio.google.com/c/u/0/datasources/e82e7458-f386-419f-9556-31b932d68463)
+* [performance_grouping](https://datastudio.google.com/c/u/0/datasources/e211b30c-0209-4940-98b5-61517fdb8f13)
+* [ad_group_network_split](https://datastudio.google.com/c/u/0/datasources/36341813-dee7-4aef-8b9b-bf015e4657d6)
 
 
 In order to replicate a datasource, please do the following:
@@ -54,11 +53,11 @@ Now that you’ve copied each of the datasources, make a copy of the dashboard a
 
 > Please ensure that ALL datasources are created before proceeding to replication of the dashboard.
 
-You can access the template version of the dashboard [here](https://datastudio.google.com/c/u/0/reporting/6b7ef4da-2337-4178-bf9b-2c3097e6eae8/page/0hcO).
+You can access the template version of the dashboard [here](https://datastudio.google.com/c/u/0/reporting/187f1f41-16bc-434d-8437-7988bed6e8b9/page/0hcO).
 
 In order to replicate dashboard please do the following:
 
-* make a [copy of the dashboard](https://support.google.com/datastudio/answer/7175478?hl=en#zippy=%2Cin-this-article) by clicking on *More options - Make a copy*.
+* make a [copy of the dashboard](https://datastudio.google.com/c/u/0/reporting/187f1f41-16bc-434d-8437-7988bed6e8b9/page/0hcO) by clicking on *More options - Make a copy*.
 
 	![copy dashboard](src/copy_dashboard.png)
 
