@@ -1,7 +1,7 @@
 SELECT
     ad_group.id AS ad_group_id,
+    ad_group_ad.ad.id AS ad_id,
     ad_group_ad.ad.type AS type,
-    ad_group_ad.ad_strength AS ad_strength,
     ad_group_ad.ad.app_ad.descriptions AS install_descriptions,
     ad_group_ad.ad.app_ad.headlines AS install_headlines,
     ad_group_ad.ad.app_ad.html5_media_bundles AS install_media_bundles,

@@ -39,7 +39,8 @@ SELECT
     M.ad_group_status,
     AP.asset_id,
     CASE Assets.type
-        WHEN "TEXT" THEN Assets.text WHEN "IMAGE" THEN Assets.asset_name
+        WHEN "TEXT" THEN Assets.text
+        WHEN "IMAGE" THEN Assets.asset_name
         WHEN "MEDIA_BUNDLE" THEN Assets.asset_name
         WHEN "YOUTUBE_VIDEO" THEN Assets.youtube_video_title
         ELSE NULL
@@ -52,6 +53,11 @@ SELECT
         ELSE NULL
         END AS asset_link,
     CASE Assets.type
+        WHEN "IMAGE" THEN Assets.url
+        WHEN "YOUTUBE_VIDEO" THEN CONCAT("https://img.youtube.com/vi/", Assets.youtube_video_id, "/hqdefault.jpg")
+        ELSE NULL
+        END AS asset_preview_link,
+    CASE Assets.type
         WHEN "TEXT" THEN ""
         WHEN "IMAGE" THEN CONCAT(Assets.height, "x", Assets.width)
         WHEN "MEDIA_BUNDLE" THEN CONCAT(Assets.height, "x", Assets.width)
@@ -61,17 +67,22 @@ SELECT
     ROUND(MediaFile.video_duration / 1000) AS video_duration,
     0 AS video_aspect_ratio,
     Assets.type AS asset_type,
-    AP.field_type AS field_type,
+    `{bq_dataset}.ConvertAssetFieldType`(AP.field_type) AS field_type,
     R.performance_label AS performance_label,
     IF(R.enabled, "ENABLED", "DELETED") AS asset_status,
-    AP.network AS network,
+    CASE Assets.type
+        WHEN "TEXT" THEN `{bq_dataset}.BinText`(AP.field_type, LENGTH(Assets.text))
+        WHEN "IMAGE" THEN `{bq_dataset}.BinBanners`(Assets.height, Assets.width)
+        WHEN "MEDIA_BUNDLE" THEN `{bq_dataset}.BinBanners`(Assets.height, Assets.width)
+        WHEN "YOUTUBE_VIDEO" THEN ""  --TODO
+        END AS asset_dimensions,
+    `{bq_dataset}.ConvertAdNetwork`(AP.network) AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
     `{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,
     ANY_VALUE(CampCost.campaign_cost) AS campaign_cost,
-    -- TODO: provide correct enums
-    SUM(IF(bidding_strategy = "", 0, `{bq_dataset}.NormalizeMillis`(AP.cost))) AS cost_non_install_campaigns,
-    SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+    SUM(IF(ACS.bidding_strategy IN ("Installs", "Installs Advanced"), 0, `{bq_dataset}.NormalizeMillis`(AP.cost))) AS cost_non_install_campaigns,
+    SUM(IF(ACS.bidding_strategy ="Installs",
             AP.installs, AP.inapps)) AS conversions,
     SUM(AP.installs) AS installs,
     SUM(
@@ -123,4 +134,5 @@ LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
         AND AP.ad_group_id = AssetCohorts.ad_group_id
         AND AP.network = AssetCohorts.network
         AND AP.asset_id = AssetCohorts.asset_id
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29);
+        AND AP.field_type = AssetCohorts.field_type
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);

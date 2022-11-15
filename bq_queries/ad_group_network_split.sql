@@ -20,7 +20,7 @@ SELECT
     M.ad_group_id,
     M.ad_group_name,
     M.ad_group_status,
-    AP.network AS network,
+    `{bq_dataset}.ConvertAdNetwork`(AP.network) AS network,
     SUM(AP.clicks) AS clicks,
     SUM(AP.impressions) AS impressions,
     `{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS cost,

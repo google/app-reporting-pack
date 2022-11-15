@@ -14,5 +14,6 @@ SELECT
     metrics.conversions_value AS conversions_value
 FROM ad_group_ad_asset_view
 WHERE
-    segments.date >= "{start_date}"
+    campaign.advertising_channel_type = "MULTI_CHANNEL"
+    AND segments.date >= "{start_date}"
     AND segments.date <= "{end_date}"

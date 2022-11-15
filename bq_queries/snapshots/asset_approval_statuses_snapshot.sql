@@ -7,8 +7,9 @@ SELECT
     A.asset_id,
     A.field_type,
     A.approval_status,
-    A.policy_topics,
     A.review_status,
-    A.policy_summary
+    A.policy_topic_type,
+    A.policy_topics,
+    "" AS evidences
 FROM {bq_dataset}.asset_reference AS A
 );

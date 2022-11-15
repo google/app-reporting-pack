@@ -118,13 +118,13 @@ SELECT
     -- For Installs campaigns the recommend budget amount it 50 times target_cpa
     -- for Action campaigns - 10 times target_cpa
     CASE
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+        WHEN ACS.bidding_strategy = "Installs"
             AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) >= 50 THEN "OK"
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+        WHEN ACS.bidding_strategy = "Installs"
             AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) < 50 THEN "50x needed"
-        WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST"
+        WHEN ACS.bidding_strategy = "Actions"
             AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) >= 10 THEN "OK"
-        WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST"
+        WHEN ACS.bidding_strategy = "Actions"
             AND SAFE_DIVIDE(B.budget_amount, B.target_cpa) < 10 THEN "10x needed"
         ELSE "Not Applicable"
         END AS enough_budget,
@@ -138,19 +138,19 @@ SELECT
     `{bq_dataset}.GetNumberOfElements`(
         install_descriptions, engagement_descriptions, pre_registration_descriptions) AS n_descriptions,
     ARRAY_LENGTH(SPLIT(install_media_bundles, "|")) - 1 AS n_html5,
-    S.ad_strength AS ad_strength,
+    COALESCE(AdStrength.ad_strength, "UNSPECIFIED") AS ad_strength,
     IFNULL(C.cost_last_7_days, 0) AS cost_last_7_days,
     IFNULL(
-        IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
+        IF(ACS.bidding_strategy = "Installs",
             Conv.installs, Conv.inapps),
         0) AS conversions_last_7_days,
     Conv.installs AS installs_last_7_days,
     Conv.inapps AS inapps_last_7_days,
     CASE
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+        WHEN ACS.bidding_strategy = "Installs"
             AND SUM(Conv.installs) OVER (PARTITION BY Conv.campaign_id) > 10
             THEN TRUE
-        WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST"
+        WHEN ACS.bidding_strategy = "Actions"
             AND SUM(Conv.inapps) OVER (PARTITION BY Conv.campaign_id) > 10
             THEN TRUE
         ELSE FALSE
@@ -172,6 +172,8 @@ LEFT JOIN {bq_dataset}.bid_budget AS B
     ON M.campaign_id = B.campaign_id
 LEFT JOIN {bq_dataset}.asset_structure AS S
   ON M.ad_group_id = S.ad_group_id
+LEFT JOIN {bq_dataset}.ad_strength AS AdStrength
+  ON S.ad_id = AdStrength.ad_id
 LEFT JOIN AdGroupCostTable AS C
   ON M.campaign_id = C.campaign_id
 LEFT JOIN ConversionSplitTable AS Conv
@@ -179,4 +181,5 @@ LEFT JOIN ConversionSplitTable AS Conv
   AND M.ad_group_id = Conv.ad_group_id
 LEFT JOIN BidBudgetAvg7DaysTable AS Avg7Days
     ON M.campaign_id = Avg7Days.campaign_id
+WHERE cost_last_7_days > 0
 );

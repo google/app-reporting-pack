@@ -7,7 +7,15 @@ AS (
         campaign_sub_type,
         app_id,
         app_store,
-        bidding_strategy,
+        CASE
+            WHEN bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" THEN "Installs"
+            WHEN bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_INSTALL_COST" THEN "Installs Advanced"
+            WHEN bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST" THEN "Actions"
+            WHEN bidding_strategy = "OPTIMIZE_INSTALLS_WITHOUT_TARGET_INSTALL_COST" THEN "Maximize Conversions"
+            WHEN bidding_strategy = "OPTIMIZE_RETURN_ON_ADVERTISING_SPEND" THEN "Target ROAS"
+            WHEN bidding_strategy = "OPTIMIZE_PRE_REGISTRATION_CONVERSION_VOLUME" THEN "Preregistrations"
+            ELSE "Unknown"
+            END AS bidding_strategy,
         start_date,
         IF(conversion_type = "DOWNLOAD", conversion_id, NULL) AS install_conversion_id,
         IF(conversion_type != "DOWNLOAD", conversion_id, NULL) AS inapp_conversion_id,
