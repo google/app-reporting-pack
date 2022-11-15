@@ -6,6 +6,7 @@ Helper script for running App Reporting Pack queries.\n\n
 -h|--help - show this help message\n
 -c|--config <config> - path to config.yaml file, i.e., path/to/app_reporting_pack.yaml\n
 -q|--quiet - skips all confirmation prompts and starts running scripts based on config files
+--legacy - generates legacy views that can be plugin into existing legacy dashboard
 "
 
 solution_name="App Reporting Pack"
@@ -31,6 +32,10 @@ case $1 in
 	-g|--google-ads-config)
 		shift
 		google_ads_config=$1
+		;;
+	--legacy)
+		shift
+		legacy="Y"
 		;;
 	-h|--help)
 		echo -e $usage;
@@ -200,8 +205,10 @@ run_with_config() {
 	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating final tables===${NC}"
 	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
-	echo -e "${COLOR}===generating legacy views===${NC}"
-	gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+	if [[ $legacy = "Y" ]]; then
+		echo -e "${COLOR}===generating legacy views===${NC}"
+		gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+	fi
 
 }
 
@@ -230,5 +237,7 @@ else
 	generate_snapshots $save_config --log=$loglevel
 	generate_bq_views $save_config --log=$loglevel
 	generate_output_tables $save_config --log=$loglevel
-	generate_legacy_views $save_config --log=$loglevel
+	if [[ $legacy = "Y" ]]; then
+		generate_legacy_views $save_config --log=$loglevel
+	fi
 fi
