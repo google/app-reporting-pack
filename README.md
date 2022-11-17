@@ -54,10 +54,13 @@ a DataStudio dashboard for App Reporting Pack.
 In order to run App Reporting Pack please follow the steps outlined below:
 
 * clone this repository `git clone https://professional-services.googlesource.com/solution/uac-reporting-pack`
-* configure virtual environment and install a single dependency:
+* (Recommended) configure virtual environment:
     ```
     python -m venv app-reporting-pack
     source app-reporting-pack/bin/activate
+    ```
+* install dependencies:
+    ```
     pip install -r requirements.txt
     ```
 
@@ -87,6 +90,9 @@ When running `run-local.sh` scripts you can specify two options which are useful
 
 * `-c <config>`- path to `app_reporting_pack.yaml` config file. Comes handy when you have multiple config files or the configuration is located outside of current folder.
 * `-q` - skips all confirmation prompts and starts running scripts based on config file.
+
+> `run-local.sh` support `--legacy` command line flag which is used to generate dashboard in the format compatible with existing dashboard.
+> If you're migrating existing datasources `--legacy` option might be extremely handy.
 
 
 ### Running queries in a Docker container
