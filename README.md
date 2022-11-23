@@ -1,24 +1,15 @@
 # App Reporting Pack
-
-## Problem statement
+***
+##### Centralized platform and dashboard for Google Ads App campaign data 
 
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
-
-## Solution
-
-App Reporting Pack fetches all necessary data from Ads API and returns ready-to-use tables that show different aspects of App campaigns performance and settings.
-
-Key pillars of App Reporting Pack:
-
-*   Deep Dive Performance Analysis
-*   Creatives Insights
-*   Campaign Debugging
+App Reporting Pack fetches all necessary data from Ads API and creates a centralized dashboard showing different aspects of App campaign's performance and settings. All data is stored in BigQuery tables that can be used for any other need the client might have.
 
 
-## Deliverable
+## Deliverables
 
-Tables in BigQuery that are ready to be used to build
-a DataStudio dashboard for App Reporting Pack.
+1. A centralized dashboard with deep app campaign and assets performance views
+2. The following data tables in BigQuery that can be used independently:
 
 * `asset_performance`
 * `creative_excellence`
@@ -29,14 +20,49 @@ a DataStudio dashboard for App Reporting Pack.
 * `geo_performance`
 * `cannibalization`
 
-## Deployment
 ## Prerequisites
+
+1. [A Google Ads Developer token](https://developers.google.com/google-ads/api/docs/first-call/dev-token#:~:text=A%20developer%20token%20from%20Google,SETTINGS%20%3E%20SETUP%20%3E%20API%20Center.)
+
+1. A new GCP project with billing account attached
+
+## Installation
+
+1. Create an [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent), make it of type "**External**"
+
+1. Create an [OAuth Credentials](https://console.cloud.google.com/apis/credentials/oauthclient) - **Client ID**, **Client secret** and Google Ads enabled **Refresh Token**.
+Follow instructions in [this video](https://www.youtube.com/watch?v=KFICa7Ngzng) or:
+    1. Set Application type to "**Web application**"
+    1. Under Authorized redirect URIs, add a line with: https://developers.google.com/oauthplayground
+    1. Save and take note of the **Client ID** and **Client Secret** presented to you
+    1. Go to [OAuth2 Playground](https://developers.google.com/oauthplayground/#step1&scopes=https%3A//www.googleapis.com/auth/adwords&url=https%3A//&content_type=application/json&http_method=GET&useDefaultOauthCred=checked&oauthEndpointSelect=Google&oauthAuthEndpointValue=https%3A//accounts.google.com/o/oauth2/v2/auth&oauthTokenEndpointValue=https%3A//oauth2.googleapis.com/token&includeCredentials=unchecked&accessTokenType=bearer&autoRefreshToken=unchecked&accessType=offline&forceAprovalPrompt=checked&response_type=code) to generate a refresh token. This link is already pre-populated with the right scope.
+    1. On the right side under settings, in "OAuth Client ID" add your client ID and under "OAuth Client secret" add your client secret
+    1. Click "Authorize APIs and sign-in with a user that has access to your Google Ads account"
+    1. Click "Exchange authorization code for tokens"
+    1. Take note of the "Refresh Token"
+
+1. Click the big blue button to deploy:
+
+   [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?revision=sso)
+
+1. Choose the Google Cloud Project you created for this tool
+
+1. Select the region where you want to deploy
+
+1. When prompted, paste in your client ID, client secret, refresh token, developer token and MCC ID
+
+1. Wait for the deployment to finish. Once finished you will be given your ***URL***
+
+1. Click on "Run URP" to manually run the queries and create tables for the first time. The queries are then scheduled to run daily automatically
+
+1. Wait a few minutes and click "Create Dashboard". This will create your own private copy of the URP dashboard. Once you are done save the dashboard's URL or bookmark it.
+
+## Installation alternatives
+
+### Prerequisites for alternative installation methods
 
 * Google Ads API access and [google-ads.yaml](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md#setting-up-using-google-adsyaml) file - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
 * Python 3.8+
-* Access to repository configured. In order to clone this repository you need to do the following:
-    * Visit https://professional-services.googlesource.com/new-password and login with your account
-    * Once authenticated please copy all lines in box and paste them in the terminal.
 * [Service account](https://cloud.google.com/iam/docs/creating-managing-service-accounts#creating) created and [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating) downloaded in order to write data to BigQuery.
     * Once you downloaded service account key export it as an environmental variable
         ```
@@ -48,26 +74,7 @@ a DataStudio dashboard for App Reporting Pack.
          gcloud auth application-default login
          ```
 
-
-## Installation
-
-In order to run App Reporting Pack please follow the steps outlined below:
-
-* clone this repository `git clone https://professional-services.googlesource.com/solution/uac-reporting-pack`
-* (Recommended) configure virtual environment:
-    ```
-    python -m venv app-reporting-pack
-    source app-reporting-pack/bin/activate
-    ```
-* install dependencies:
-    ```
-    pip install -r requirements.txt
-    ```
-
-## Usage
-
 ### Running queries locally
-
 In order to generate all necessary tables for App Reporting Pack please run `run-local.sh` script in a terminal:
 
 ```shell
