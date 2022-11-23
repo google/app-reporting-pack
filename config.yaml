@@ -1,0 +1,22 @@
+gaarf:
+  output: bq
+  bq:
+    project: YOUR-BQ-PROJECT
+    dataset: app_reporting_pack
+  # Do not change API version manually
+  api_version: 10
+  account: 'MCC-ID'
+  params:
+    macro:
+      start_date: ":YYYYMMDD-91"
+      end_date: ":YYYYMMDD-1"
+gaarf-bq:
+  project: YOUR-BQ-PROJECT
+  params:
+    macro:
+      bq_dataset: app_reporting_pack
+      output_dataset: app_reporting_pack_output
+      target_dataset: app_reporting_pack_target
+      legacy_dataset: app_reporting_pack_legacy
+    template:
+      cohort_days: 0,1,3,5,7,14,30
