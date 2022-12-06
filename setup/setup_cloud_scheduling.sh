@@ -45,3 +45,7 @@ gcloud pubsub subscriptions create $subscription \
 
 echo -n -e "${COLOR}Extending service timeout limit..."
 gcloud run services update app-reporting-pack --timeout=3600 --region=${GOOGLE_CLOUD_REGION}
+
+
+echo -n -e "${COLOR}Triggering first queries run..."
+gcloud pubsub topics publish $topic_name --message="Initial run"
