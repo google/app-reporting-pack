@@ -1,5 +1,5 @@
 # App Reporting Pack
-***
+
 ##### Centralized platform and dashboard for Google Ads App campaign data 
 
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
@@ -26,36 +26,26 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 1. A new GCP project with billing account attached
 
-## Installation
+1. Membership in app-reporting-pack-readers-external group(join [here](https://groups.google.com/a/google.com/g/app-reporting-pack-readers-external))
 
-1. Create an [OAuth Consent Screen](https://console.cloud.google.com/apis/credentials/consent), make it of type "**External**"
+1. Oauth2 credentials (Client ID, Client Secret, Refresh token) with Google Ads access. [Instructions video](https://www.youtube.com/watch?v=KFICa7Ngzng)
 
-1. Create an [OAuth Credentials](https://console.cloud.google.com/apis/credentials/oauthclient) - **Client ID**, **Client secret** and Google Ads enabled **Refresh Token**.
-Follow instructions in [this video](https://www.youtube.com/watch?v=KFICa7Ngzng) or:
-    1. Set Application type to "**Web application**"
-    1. Under Authorized redirect URIs, add a line with: https://developers.google.com/oauthplayground
-    1. Save and take note of the **Client ID** and **Client Secret** presented to you
-    1. Go to [OAuth2 Playground](https://developers.google.com/oauthplayground/#step1&scopes=https%3A//www.googleapis.com/auth/adwords&url=https%3A//&content_type=application/json&http_method=GET&useDefaultOauthCred=checked&oauthEndpointSelect=Google&oauthAuthEndpointValue=https%3A//accounts.google.com/o/oauth2/v2/auth&oauthTokenEndpointValue=https%3A//oauth2.googleapis.com/token&includeCredentials=unchecked&accessTokenType=bearer&autoRefreshToken=unchecked&accessType=offline&forceAprovalPrompt=checked&response_type=code) to generate a refresh token. This link is already pre-populated with the right scope.
-    1. On the right side under settings, in "OAuth Client ID" add your client ID and under "OAuth Client secret" add your client secret
-    1. Click "Authorize APIs and sign-in with a user that has access to your Google Ads account"
-    1. Click "Exchange authorization code for tokens"
-    1. Take note of the "Refresh Token"
+## Setup
 
 1. Click the big blue button to deploy:
 
-   [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?revision=sso)
+   [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
 
-1. Choose the Google Cloud Project you created for this tool
-
-1. Select the region where you want to deploy
+1. Select your GCP project and choose your region
 
 1. When prompted, paste in your client ID, client secret, refresh token, developer token and MCC ID
 
 1. Wait for the deployment to finish. Once finished you will be given your ***URL***
 
-1. Click on "Run URP" to manually run the queries and create tables for the first time. The queries are then scheduled to run daily automatically
+1. Click on "Run Queries" to manually run the queries. The queries are scheduled to run daily automatically.
 
-1. Wait a few minutes and click "Create Dashboard". This will create your own private copy of the URP dashboard. Once you are done save the dashboard's URL or bookmark it.
+1. Once the tables are created click "Create Dashboard". This will create your own private copy of the App Reporting Pack dashboard. Change your dashboard's name and save it's URL or bookmark it.
+
 
 ## Installation alternatives
 
