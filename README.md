@@ -1,6 +1,6 @@
 # App Reporting Pack
 
-##### Centralized platform and dashboard for Google Ads App campaign data 
+##### Centralized platform and dashboard for Google Ads App campaign data
 
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
 App Reporting Pack fetches all necessary data from Ads API and creates a centralized dashboard showing different aspects of App campaign's performance and settings. All data is stored in BigQuery tables that can be used for any other need the client might have.
@@ -65,7 +65,20 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
          ```
 
 ### Running queries locally
-In order to generate all necessary tables for App Reporting Pack please run `run-local.sh` script in a terminal:
+
+In order to run App Reporting Pack locally please follow the steps outlined below:
+
+* clone this repository `git clone https://professional-services.googlesource.com/solution/uac-reporting-pack`
+* (Recommended) configure virtual environment if you starting testing the solution:
+    ```
+    python -m venv app-reporting-pack
+    source app-reporting-pack/bin/activate
+    ```
+* install dependencies:
+    ```
+    pip install -r requirements.txt
+    ```
+Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
 ```shell
 bash run-local.sh
@@ -76,8 +89,8 @@ It will guide you through a series of questions to get all necessary parameters 
 * `account_id` - id of Google Ads MCC account (no dashes, 111111111 format)
 * `BigQuery project_id` - id of BigQuery project where script will store the data (i.e. `my_project`)
 * `BigQuery dataset` - id of BigQuery dataset where script will store the data (i.e. `my_dataset`)
-* `start date` - first date from which you want to get performance data (i.e., `2022-01-01`)
-* `end date` - last date from which you want to get performance data (i.e., `2022-12-31`)
+* `start date` - first date from which you want to get performance data (i.e., `2022-01-01`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
+* `end date` - last date from which you want to get performance data (i.e., `2022-12-31`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
 * `Ads config` - path to `google-ads.yaml` file.
 
 After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
@@ -123,6 +136,3 @@ sudo docker run \
 
 ## Disclaimer
 This is not an officially supported Google product.
-
-Copyright 2022 Google LLC. This solution, including any related sample code or data, is made available on an “as is,” “as available,” and “with all faults” basis, solely for illustrative purposes, and without warranty or representation of any kind. This solution is experimental, unsupported and provided solely for your convenience. Your use of it is subject to your agreements with Google, as applicable, and may constitute a beta feature as defined under those agreements. To the extent that you make any data available to Google in connection with your use of the solution, you represent and warrant that you have all necessary and appropriate rights, consents and permissions to permit Google to use and process that data. By using any portion of this solution, you acknowledge, assume and accept all risks, known and unknown, associated with its usage, including with respect to your deployment of any portion of this solution in your systems, or usage in connection with your business, if at all.
-

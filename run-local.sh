@@ -82,9 +82,9 @@ setup() {
 	read -r project
 	echo -n "Enter BigQuery dataset: "
 	read -r bq_dataset
-	echo -n "Enter start_date in YYYY-MM-DD format: "
+	echo -n "Enter start_date in YYYY-MM-DD format (or use :YYYYMMDD-30 for last 30 days): "
 	read -r start_date
-	echo -n "Enter end_date in YYYY-MM-DD format: "
+	echo -n "Enter end_date in YYYY-MM-DD format (or use :YYYYMMDD-1 for yesterday): "
 	read -r end_date
 	ask_for_cohorts
 	echo  "Script are expecting google-ads.yaml file in your home directory"
