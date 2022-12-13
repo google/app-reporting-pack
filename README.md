@@ -68,15 +68,24 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 In order to run App Reporting Pack locally please follow the steps outlined below:
 
-* clone this repository `git clone https://professional-services.googlesource.com/solution/uac-reporting-pack`
+* clone this repository
+    ```
+    git clone https://github.com/google/app-reporting-pack
+    cd app-reporting-pack
+    ```
 * (Recommended) configure virtual environment if you starting testing the solution:
     ```
-    python -m venv app-reporting-pack
+    sudo apt-get install python3-venv
+    python3 -m venv app-reporting-pack
     source app-reporting-pack/bin/activate
+    ```
+* Make sure that that pip is updated to the latest version:
+    ```
+    python3 -m pip install --upgrade pip
     ```
 * install dependencies:
     ```
-    pip install -r requirements.txt
+    pip install -r requirements.in
     ```
 Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
@@ -133,6 +142,16 @@ sudo docker run \
 
 > Don't forget to change /path/to/google-ads.yaml and /path/to/service_account.json with valid paths.
 
+### Dashboard Replication
+
+Once queries ran successfully you can proceed with dashboard replication.\
+Run the following command in the terminal to create a copy of the dashboard:
+
+```
+bash scripts/create_dashboard.sh -c app-reporting-pack.yaml
+```
+
+For more details on dashboard please refer to [how-to-replicate-app-reporting-pack](docs/how-to-replicate-app-reporting-pack.md) document.
 
 ## Disclaimer
 This is not an officially supported Google product.

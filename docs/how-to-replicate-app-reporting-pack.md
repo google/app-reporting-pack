@@ -1,7 +1,21 @@
 # Creating App Reporting Pack in DataStudio
 
 Once data for App Reporting Pack data are generated and stored in BigQuery you can
-proceed with replication which consists of two steps:
+proceed with replication
+
+## Automatic creation
+
+1. Go to [`scripts`](../scripts) folder
+
+2. Run `bash create_dashboard.sh -p <YOUR_BQ_PROJECT_ID> -d <YOUR_BQ_DATASET_ID>` command in the terminal, there YOUR_BQ_PROJECT_ID and YOUR_BQ_DATASET_ID are the names of the BQ project and dataset that contains App Reporting Pack data.\
+You can provide optional arguments to the script:
+* `--name="<YOUR_NAME_FOR_THE_DASHBOARD>"` - where YOUR_NAME_FOR_THE_DASHBOARD is the name of the generated dashboard.
+* `--lite` - if you want to install [simplified version of App Reporting Pack](https://datastudio.google.com/c/u/0/reporting/6c386d70-7a1f-4b31-a29b-173f5b671310/page/0hcO)
+
+
+## Manual creation
+
+The process of manual replication consists of two steps:
 
 * Replication of datasources
 * Replication of dashboard
@@ -53,7 +67,8 @@ Now that you’ve copied each of the datasources, make a copy of the dashboard a
 
 > Please ensure that ALL datasources are created before proceeding to replication of the dashboard.
 
-You can access the template version of the dashboard [here](https://datastudio.google.com/c/u/0/reporting/187f1f41-16bc-434d-8437-7988bed6e8b9/page/0hcO).
+[Here](https://datastudio.google.com/c/u/0/reporting/187f1f41-16bc-434d-8437-7988bed6e8b9/page/0hcO) you can access the template version of the dashboard.
+>  [Lite version](https://datastudio.google.com/c/u/0/reporting/6c386d70-7a1f-4b31-a29b-173f5b671310/page/0hcO) of the dashboard is also available.
 
 In order to replicate dashboard please do the following:
 

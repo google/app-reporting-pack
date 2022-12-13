@@ -1,5 +1,5 @@
-https://datastudio.google.com/c/reporting/create?c.mode=edit&c.reportId=187f1f41-16bc-434d-8437-7988bed6e8b9&
-r.reportName=app_reporting_pack_copy&
+https://datastudio.google.com/c/reporting/create?c.mode=edit&c.reportId=REPORT_ID&
+r.reportName=REPORT_NAME&
 ds.*.refreshFields=false&
 ds.excellence.connector=bigQuery&
 ds.excellence.datasourceName=creative_excellence_copy&
