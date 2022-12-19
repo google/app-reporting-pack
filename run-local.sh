@@ -28,12 +28,12 @@ solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 	tr ' ' '_')
 
 config_file="$solution_name_lowercase.yaml"
-quiet="N"
+quiet="n"
 
 while :; do
 case $1 in
 	-q|--quiet)
-		quiet="Y"
+		quiet="y"
 		;;
 	-c|--config)
 		shift
@@ -49,7 +49,7 @@ case $1 in
 		;;
 	--legacy)
 		shift
-		legacy="Y"
+		legacy="y"
 		;;
 	-h|--help)
 		echo -e $usage;
@@ -75,6 +75,10 @@ check_ads_config() {
 	fi
 }
 
+convert_answer() {
+	echo "$1" | tr '[:upper:]' '[:lower:]' | cut -c1
+}
+
 setup() {
 	echo -n "Enter account_id: "
 	read -r customer_id
@@ -90,7 +94,8 @@ setup() {
 	echo  "Script are expecting google-ads.yaml file in your home directory"
 	echo -n "Is the file there (Y/n): "
 	read -r ads_config_answer
-	if [[ $ads_config_answer = "Y" ]]; then
+	ads_config_answer=$(convert_answer $ads_config_answer)
+	if [[ $ads_config_answer = "y" ]]; then
 		ads_config=$HOME/google-ads.yaml
 	else
 		echo -n "Enter full path to google-ads.yaml file: "
@@ -98,8 +103,11 @@ setup() {
 	fi
 	echo -n "Do you want to save this config (Y/n): "
 	read -r save_config_answer
-	if [[ $save_config_answer = "Y" ]]; then
+	save_config_answer=$(convert_answer $save_config_answer)
+	if [[ $save_config_answer = "y" ]]; then
 		save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
+	elif [[ $save_config_answer = "q" ]]; then
+		exit 1
 	fi
 	print_configuration
 }
@@ -108,8 +116,9 @@ setup() {
 deploy() {
 	echo -n -e "${COLOR}Deploy $solution_name? Y/n/q: ${NC}"
 	read -r answer
+	answer=$(convert_answer $answer)
 
-	if [[ $answer = "Y" ]]; then
+	if [[ $answer = "y" ]]; then
 		echo "Deploying..."
 	elif [[ $answer = "q" ]]; then
 		exit 1
@@ -123,7 +132,8 @@ ask_for_cohorts() {
 	default_cohorts=(0 1 3 5 7 14 30)
 	echo -n -e "${COLOR}Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to adjust it? [Y/n]: ${NC}"
 	read -r cohorts_answer
-	if [[ $cohorts_answer = "Y" ]]; then
+	ads_config_answer=$(convert_answer $cohorts_answer)
+	if [[ $cohorts_answer = "y" ]]; then
 		echo -n -e "${COLOR}Please enter cohort number in the following format 1,2,3,4,5: ${NC}"
 		read -r cohorts_string
 	fi
@@ -233,13 +243,21 @@ if [[ -z ${loglevel} ]]; then
 fi
 
 if [[ -f "$config_file" ]]; then
-	if [[ $quiet = "N" ]]; then
-		echo -e "${COLOR}Found saved configuration at $solution_name_lowercase.yaml${NC}"
-		cat $solution_name_lowercase.yaml
-		echo -n -e "${COLOR}Do you want to use it (Y/n): ${NC}"
+	if [[ $quiet = "n" ]]; then
+		echo -e "${COLOR}Found saved configuration at $config_file${NC}"
+		cat $config_file
+		echo -n -e "${COLOR}Do you want to use it (Y/n/q): ${NC}"
 		read -r setup_config_answer
-		if [[ $setup_config_answer = "Y" ]]; then
+		setup_config_answer=$(convert_answer $setup_config_answer)
+		if [[ $setup_config_answer = "y" ]]; then
 			echo -e "${COLOR}Using saved configuration...${NC}"
+			run_with_config
+		elif [[ $setup_config_answer = "q" ]]; then
+			exit 1
+		else
+			echo
+			welcome
+			get_input
 		fi
 	fi
 	run_with_config
@@ -251,7 +269,7 @@ else
 	generate_snapshots $save_config --log=$loglevel
 	generate_bq_views $save_config --log=$loglevel
 	generate_output_tables $save_config --log=$loglevel
-	if [[ $legacy = "Y" ]]; then
+	if [[ $legacy = "y" ]]; then
 		generate_legacy_views $save_config --log=$loglevel
 	fi
 fi
