@@ -164,7 +164,7 @@ fetch_reports() {
 
 conversion_lag_adjustment() {
 	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
-	$(which python) scripts/conv_lag_adjustment.py \
+	$(which python3) scripts/conv_lag_adjustment.py \
 		--account=$customer_id --ads-config=$ads_config \
 		--bq.project=$project --bq.dataset=$bq_dataset
 }
@@ -220,7 +220,7 @@ run_with_config() {
 	gaarf google_ads_queries/**/*.sql -c=$solution_name_lowercase.yaml \
 		--ads-config=$ads_config --log=$loglevel
 	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
-	$(which python) scripts/conv_lag_adjustment.py \
+	$(which python3) scripts/conv_lag_adjustment.py \
 		-c=$solution_name_lowercase.yaml \
 		--ads-config=$ads_config --log=$loglevel
 	echo -e "${COLOR}===generating snapshots===${NC}"
