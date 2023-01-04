@@ -13,17 +13,10 @@
 # limitations under the License.
 
 SELECT
-    segments.date AS date,
-    ad_group.id AS ad_group_id,
-    segments.ad_network_type AS network,
+    segments.external_conversion_source AS conversion_source,
     segments.conversion_action_name AS conversion_name,
-    segments.conversion_action_category AS conversion_category,
-    segments.conversion_action~0 AS conversion_id,
-    metrics.conversions AS conversions,
-    metrics.all_conversions AS all_conversions,
-    metrics.conversions_value AS conversions_value
-FROM ad_group
-WHERE
-    campaign.advertising_channel_type = "MULTI_CHANNEL"
-    AND segments.date >= "{start_date}"
-    AND segments.date <= "{end_date}"
+    segments.conversion_action_category AS conversion_type,
+    segments.conversion_action~0 AS conversion_id
+FROM campaign
+WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"
+

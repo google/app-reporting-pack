@@ -31,7 +31,40 @@ WITH CampaignCostTable AS (
     LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
       ON AP.ad_group_id = M.ad_group_id
     GROUP BY 1, 2
-)
+    ),
+    ConversionCategoryMapping AS (
+        SELECT DISTINCT
+            conversion_id,
+            conversion_type AS conversion_category
+        FROM {bq_dataset}.app_conversions_mapping
+    ),
+    AssetsConversionsAdjustedTable AS (
+        SELECT
+            ConvSplit.date,
+            ConvSplit.network,
+            ConvSplit.ad_group_id,
+            ConvSplit.asset_id,
+            ConvSplit.field_type,
+            SUM(ConvSplit.conversions) AS conversions,
+            SUM(
+                IF(LagAdjustments.lag_adjustment IS NULL,
+                    IF(M.conversion_category = "DOWNLOAD", conversions, 0),
+                    ROUND(IF(M.conversion_category = "DOWNLOAD", conversions, 0) / LagAdjustments.lag_adjustment))
+            ) AS installs_adjusted,
+            SUM(
+                IF(LagAdjustments.lag_adjustment IS NULL,
+                    IF(M.conversion_category != "DOWNLOAD", conversions, 0),
+                    ROUND(IF(M.conversion_category != "DOWNLOAD", conversions, 0) / LagAdjustments.lag_adjustment))
+            ) AS inapps_adjusted
+        FROM {bq_dataset}.asset_conversion_split AS ConvSplit
+        LEFT JOIN ConversionCategoryMapping AS M
+            ON ConvSplit.conversion_id = M.conversion_id
+        LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustments
+            ON PARSE_DATE("%Y-%m-%d", ConvSplit.date) = LagAdjustments.adjustment_date
+                AND ConvSplit.network = LagAdjustments.network
+                AND ConvSplit.conversion_id = LagAdjustments.conversion_id
+        GROUP BY 1, 2, 3, 4, 5
+    )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
     M.account_id,
@@ -99,17 +132,9 @@ SELECT
     SUM(IF(ACS.bidding_strategy ="Installs",
             AP.installs, AP.inapps)) AS conversions,
     SUM(AP.installs) AS installs,
-    SUM(
-        IF(LagAdjustmentsInstalls.lag_adjustment IS NULL,
-            AP.installs,
-            ROUND(AP.installs / LagAdjustmentsInstalls.lag_adjustment))
-    ) AS installs_adjusted,
+    SUM(ConvSplit.installs_adjusted) AS installs_adjusted,
     SUM(AP.inapps) AS inapps,
-    SUM(
-        IF(LagAdjustmentsInapps.lag_adjustment IS NULL,
-            AP.inapps,
-            ROUND(AP.inapps / LagAdjustmentsInapps.lag_adjustment))
-    ) AS inapps_adjusted,
+    SUM(ConvSplit.inapps_adjusted) AS inapps_adjusted,
     SUM(AP.view_through_conversions) AS view_through_conversions,
     SUM(AP.conversions_value) AS conversions_value,
     {% for day in cohort_days %}
@@ -118,6 +143,12 @@ SELECT
         SUM(GetCohort(AssetCohorts.lag_data.conversions_value, {{day}})) AS conversions_value_{{day}}_day,
     {% endfor %}
 FROM {bq_dataset}.asset_performance AS AP
+LEFT JOIN AssetsConversionsAdjustedTable AS ConvSplit
+    ON AP.date = ConvSplit.date
+        AND Ap.ad_group_id = ConvSplit.ad_group_id
+        AND AP.network = ConvSplit.network
+        AND AP.asset_id = ConvSplit.asset_id
+        AND AP.field_type = ConvSplit.field_type
 LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
   ON AP.ad_group_id = M.ad_group_id
 LEFT JOIN CampaignCostTable AS CampCost
@@ -127,14 +158,6 @@ LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
 LEFT JOIN `{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
-LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
-    ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInstalls.adjustment_date
-        AND AP.network = LagAdjustmentsInstalls.network
-        AND ACS.install_conversion_id = LagAdjustmentsInstalls.conversion_id
-LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
-    ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInapps.adjustment_date
-        AND AP.network = LagAdjustmentsInapps.network
-        AND ACS.inapp_conversion_id = LagAdjustmentsInapps.conversion_id
 LEFT JOIN {bq_dataset}.asset_reference AS R
   ON AP.asset_id = R.asset_id
     AND AP.ad_group_id = R.ad_group_id

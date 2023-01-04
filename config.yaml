@@ -18,7 +18,7 @@ gaarf:
     project: YOUR-BQ-PROJECT
     dataset: app_reporting_pack
   # Do not change API version manually
-  api_version: 10
+  api_version: 12
   account: 'MCC-ID'
   params:
     macro:

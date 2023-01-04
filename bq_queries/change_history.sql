@@ -15,45 +15,52 @@
 -- Contains daily changes (bids, budgets, assets, etc) on campaign level.
 CREATE OR REPLACE TABLE {target_dataset}.change_history
 AS (
-    WITH CampaignPerformance AS (
+    WITH ConversionsTable AS (
+        SELECT
+            ConvSplit.date,
+            ConvSplit.network,
+            ConvSplit.ad_group_id,
+            SUM(ConvSplit.conversions) AS conversions,
+            SUM(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
+            SUM(
+                IF(LagAdjustments.lag_adjustment IS NULL,
+                    IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
+                    ROUND(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0) / LagAdjustments.lag_adjustment))
+            ) AS installs_adjusted,
+            SUM(IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0)) AS inapps,
+            SUM(
+                IF(LagAdjustments.lag_adjustment IS NULL,
+                    IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0),
+                    ROUND(IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0) / LagAdjustments.lag_adjustment))
+            ) AS inapps_adjusted
+        FROM {bq_dataset}.ad_group_conversion_split AS ConvSplit
+        LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustments
+            ON PARSE_DATE("%Y-%m-%d", ConvSplit.date) = LagAdjustments.adjustment_date
+                AND ConvSplit.network = LagAdjustments.network
+                AND ConvSplit.conversion_id = LagAdjustments.conversion_id
+        GROUP BY 1, 2, 3
+    ),
+    CampaignPerformance AS (
         SELECT
             PARSE_DATE("%Y-%m-%d", date) AS day,
             M.campaign_id,
             SUM(clicks) AS clicks,
             SUM(impressions) AS impressions,
             SUM(cost) AS cost,
-            SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST",
-                IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
-                IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0))) AS conversions,
-            SUM(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
-            SUM(
-                IF(LagAdjustmentsInstalls.lag_adjustment IS NULL,
-                    IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0),
-                    ROUND(IF(ConvSplit.conversion_category = "DOWNLOAD", conversions, 0) / LagAdjustmentsInstalls.lag_adjustment))
-            ) AS installs_adjusted,
-            SUM(IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0)) AS inapps,
-            SUM(
-                IF(LagAdjustmentsInapps.lag_adjustment IS NULL,
-                    IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0),
-                    ROUND(IF(ConvSplit.conversion_category != "DOWNLOAD", conversions, 0) / LagAdjustmentsInapps.lag_adjustment))
-            ) AS inapps_adjusted,
+            SUM(conversions) AS conversions,
+            SUM(installs) AS installs,
+            SUM(installs_adjusted) AS installs_adjusted,
+            SUM(inapps) AS inapps,
+            SUM(inapps_adjusted) AS inapps_adjusted,
             SUM(view_through_conversions) AS view_through_conversions,
             SUM(AP.conversions_value) AS conversions_value
         FROM {bq_dataset}.ad_group_performance AS AP
-        LEFT JOIN {bq_dataset}.ad_group_conversion_split AS ConvSplit
+        LEFT JOIN ConversionsTable AS ConvSplit
             USING(date, ad_group_id, network)
         LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
             USING(ad_group_id)
         LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
           ON M.campaign_id = ACS.campaign_id
-        LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInstalls
-            ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInstalls.adjustment_date
-                AND AP.network = LagAdjustmentsInstalls.network
-                AND ACS.install_conversion_id = LagAdjustmentsInstalls.conversion_id
-        LEFT JOIN `{bq_dataset}.ConversionLagAdjustments` AS LagAdjustmentsInapps
-            ON PARSE_DATE("%Y-%m-%d", AP.date) = LagAdjustmentsInapps.adjustment_date
-                AND AP.network = LagAdjustmentsInapps.network
-                AND ACS.inapp_conversion_id = LagAdjustmentsInapps.conversion_id
         GROUP BY 1, 2
     ),
     CampaignMapping AS (

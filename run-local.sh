@@ -63,6 +63,7 @@ done
 
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
+API_VERSION="12"
 
 check_ads_config() {
 	if [[ -n $google_ads_config ]]; then
@@ -218,11 +219,11 @@ get_input() {
 run_with_config() {
 	echo -e "${COLOR}===fetching reports===${NC}"
 	gaarf google_ads_queries/**/*.sql -c=$solution_name_lowercase.yaml \
-		--ads-config=$ads_config --log=$loglevel
+		--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
 	$(which python3) scripts/conv_lag_adjustment.py \
 		-c=$solution_name_lowercase.yaml \
-		--ads-config=$ads_config --log=$loglevel
+		--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 	echo -e "${COLOR}===generating snapshots===${NC}"
 	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating views and functions===${NC}"
@@ -264,8 +265,9 @@ if [[ -f "$config_file" ]]; then
 else
 	welcome
 	get_input
-	fetch_reports $save_config --log=$loglevel
-	conversion_lag_adjustment --customer--ids-query="$customer_ids_query"
+	fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
+	conversion_lag_adjustment --customer--ids-query="$customer_ids_query" \
+		--api-version=$API_VERSION
 	generate_snapshots $save_config --log=$loglevel
 	generate_bq_views $save_config --log=$loglevel
 	generate_output_tables $save_config --log=$loglevel

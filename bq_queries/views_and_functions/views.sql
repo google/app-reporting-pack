@@ -16,28 +16,69 @@
 -- final tables for dashboards
 CREATE OR REPLACE VIEW `{bq_dataset}.AppCampaignSettingsView`
 AS (
-    SELECT
+    WITH RawConversionIds AS (
+        SELECT
+        ACS.campaign_id,
+        ACS.campaign_sub_type,
+        ACS.app_id,
+        ACS.app_store,
+        CASE
+            WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" THEN "Installs"
+            WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_INSTALL_COST" THEN "Installs Advanced"
+            WHEN ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST" THEN "Actions"
+            WHEN ACS.bidding_strategy = "OPTIMIZE_INSTALLS_WITHOUT_TARGET_INSTALL_COST" THEN "Maximize Conversions"
+            WHEN ACS.bidding_strategy = "OPTIMIZE_RETURN_ON_ADVERTISING_SPEND" THEN "Target ROAS"
+            WHEN ACS.bidding_strategy = "OPTIMIZE_PRE_REGISTRATION_CONVERSION_VOLUME" THEN "Preregistrations"
+            ELSE "Unknown"
+            END AS bidding_strategy,
+        ACS.start_date,
+        conversion_id,
+        conversion_source,
+        conversion_type,
+        conversion_name
+    FROM {bq_dataset}.app_campaign_settings AS ACS,
+    UNNEST(SPLIT(ACS.target_conversions, "|")) AS conversion_ids
+    LEFT JOIN {bq_dataset}.app_conversions_mapping AS Mapping
+        ON conversion_ids = CAST(Mapping.conversion_id AS STRING)
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+    ),
+    InstallConversionId AS (
+        SELECT
+            campaign_id,
+            STRING_AGG(conversion_id) AS install_conversion_id,
+            ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_name ORDER BY conversion_name), " | ") AS install_target_conversions,
+            ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_source ORDER BY conversion_source), " | ") AS install_conversion_sources,
+            COUNT(DISTINCT conversion_id) AS n_of_install_target_conversions
+        FROM RawConversionIds
+        WHERE conversion_type = "DOWNLOAD"
+        GROUP BY 1
+    ),
+    InappConversionIds AS (
+        SELECT
+            campaign_id,
+            STRING_AGG(conversion_id) AS inapp_conversion_ids,
+            ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_name ORDER BY conversion_name), " | ") AS inapp_target_conversions,
+            ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_source ORDER BY conversion_source), " | ") AS inapp_conversion_sources,
+            COUNT(DISTINCT conversion_id) AS n_of_inapp_target_conversions
+        FROM RawConversionIds
+        WHERE conversion_type != "DOWNLOAD"
+        GROUP BY 1
+    )
+    SELECT DISTINCT
         campaign_id,
         campaign_sub_type,
         app_id,
         app_store,
-        CASE
-            WHEN bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST" THEN "Installs"
-            WHEN bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_INSTALL_COST" THEN "Installs Advanced"
-            WHEN bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST" THEN "Actions"
-            WHEN bidding_strategy = "OPTIMIZE_INSTALLS_WITHOUT_TARGET_INSTALL_COST" THEN "Maximize Conversions"
-            WHEN bidding_strategy = "OPTIMIZE_RETURN_ON_ADVERTISING_SPEND" THEN "Target ROAS"
-            WHEN bidding_strategy = "OPTIMIZE_PRE_REGISTRATION_CONVERSION_VOLUME" THEN "Preregistrations"
-            ELSE "Unknown"
-            END AS bidding_strategy,
+        bidding_strategy,
         start_date,
-        IF(conversion_type = "DOWNLOAD", conversion_id, NULL) AS install_conversion_id,
-        IF(conversion_type != "DOWNLOAD", conversion_id, NULL) AS inapp_conversion_id,
-        ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_source ORDER BY conversion_source), "|") AS conversion_sources,
-        ARRAY_TO_STRING(ARRAY_AGG(DISTINCT conversion_name ORDER BY conversion_name), " | ") AS target_conversions,
-        COUNT(conversion_name) AS n_of_target_conversions
-    FROM {bq_dataset}.app_campaign_settings
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+        install_conversion_id,
+        inapp_conversion_ids,
+        COALESCE(inapp_target_conversions, install_target_conversions) AS target_conversions,
+        COALESCE(inapp_conversion_sources, install_conversion_sources) AS conversion_sources,
+        COALESCE(n_of_inapp_target_conversions, n_of_install_target_conversions) AS n_of_target_conversions
+    FROM RawConversionIds
+    LEFT JOIN InstallConversionId USING(campaign_id)
+    LEFT JOIN InappConversionIds USING(campaign_id)
 );
 
 -- Campaign level geo and language targeting

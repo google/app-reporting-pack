@@ -14,15 +14,15 @@
 
 SELECT
     segments.date AS date,
-    ad_group.id AS ad_group_id,
     segments.ad_network_type AS network,
-    segments.conversion_action_name AS conversion_name,
-    segments.conversion_action_category AS conversion_category,
+    ad_group.id AS ad_group_id,
+    asset.id AS asset_id,
+    ad_group_ad_asset_view.field_type AS field_type,
     segments.conversion_action~0 AS conversion_id,
     metrics.conversions AS conversions,
     metrics.all_conversions AS all_conversions,
     metrics.conversions_value AS conversions_value
-FROM ad_group
+FROM ad_group_ad_asset_view
 WHERE
     campaign.advertising_channel_type = "MULTI_CHANNEL"
     AND segments.date >= "{start_date}"
