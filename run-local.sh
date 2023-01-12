@@ -260,8 +260,9 @@ if [[ -f "$config_file" ]]; then
 			welcome
 			get_input
 		fi
+	else
+		run_with_config
 	fi
-	run_with_config
 else
 	welcome
 	get_input
