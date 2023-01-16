@@ -31,6 +31,9 @@ gcloud projects add-iam-policy-binding ${GOOGLE_CLOUD_PROJECT} \
      --member=serviceAccount:$service_account_email\
      --role=roles/iam.serviceAccountTokenCreator
 
+echo -n -e "${COLOR}Enabling Google Ads API..."
+gcloud services enable googleads.googleapis.com
+
 echo -n -e "${COLOR}Creating PubSub scheduler..."
 
 gcloud pubsub topics create $topic_name
