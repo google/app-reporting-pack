@@ -29,7 +29,7 @@
     },
     "options": {
       "allow-unauthenticated": true,
-      "memory": "4096Mi",
+      "memory": "8192Mi",
       "cpu": "2"
     },
     "build": {
