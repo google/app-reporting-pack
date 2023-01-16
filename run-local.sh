@@ -230,7 +230,7 @@ run_with_config() {
 	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating final tables===${NC}"
 	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
-	if [[ $legacy = "Y" ]]; then
+	if [[ $legacy = "y" ]]; then
 		echo -e "${COLOR}===generating legacy views===${NC}"
 		gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	fi
