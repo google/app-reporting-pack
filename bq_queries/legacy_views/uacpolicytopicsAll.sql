@@ -41,7 +41,7 @@ SELECT
     target_conversions AS TargetConversions,
     disapproval_level AS AffectedCreative,
     "" AS LinkToCampaign,
-    policy_summary AS evidence_list,
+    evidences AS evidence_list,
     asset AS AdAsset,
     asset_id,
     asset_link AS Link,
