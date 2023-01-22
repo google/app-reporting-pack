@@ -40,8 +40,7 @@ gcloud scheduler jobs create http daily-data-refresh \
     --location=${GOOGLE_CLOUD_REGION} \
     --schedule="0 4 * * *" \
     --uri=${SERVICE_URL}/run-queries \
-    --description="Triggering queries run" \
-    --oauth-service-account-email=$service_account_email
+    --description="Triggering queries run"
 
 echo -n -e "${COLOR}Extending service timeout limit..."
 gcloud run services update app-reporting-pack --timeout=3600 --region=${GOOGLE_CLOUD_REGION}
