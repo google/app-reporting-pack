@@ -37,6 +37,7 @@ gcloud services enable googleads.googleapis.com
 
 echo -n -e "${COLOR}Creating Scheduler..."
 gcloud scheduler jobs create http daily-data-refresh \
+    --location=${GOOGLE_CLOUD_REGION} \
     --schedule="0 4 * * *" \
     --uri=${SERVICE_URL}/run-queries \
     --description="Triggering queries run" \
