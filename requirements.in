@@ -1,4 +1,4 @@
-google-ads-api-report-fetcher
+google-ads-api-report-fetcher >= 0.1.11
 db-dtypes
 flask
 gunicorn
