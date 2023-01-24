@@ -46,4 +46,4 @@ echo -n -e "${COLOR}Extending service timeout limit..."
 gcloud run services update app-reporting-pack --timeout=3600 --region=${GOOGLE_CLOUD_REGION}
 
 echo -n -e "${COLOR}Triggering first queries run..."
-gcloud scheduler jobs run daily-data-refresh
+gcloud scheduler jobs run daily-data-refresh --location=${GOOGLE_CLOUD_REGION}
