@@ -24,8 +24,20 @@ SELECT
     campaign_id AS CampaignID,
     app_store AS Store,
     app_id AS AppId,
-    campaign_status AS CampaignStatus,
-    bidding_strategy AS UACType,
+    CASE campaign_status
+        WHEN "ENABLED" THEN "Active"
+        WHEN "PAUSED" THEN "Paused"
+        WHEN "REMOVED" THEN "Deleted"    
+    END AS CampaignStatus,
+    CASE  
+        WHEN bidding_strategy = "Installs" THEN "UAC Installs"
+        WHEN bidding_strategy = "Installs Advanced" THEN "UAC Installs Advanced"
+        WHEN bidding_strategy = "Actions" THEN "UAC Actions"
+        WHEN bidding_strategy = "Maximize Conversions" THEN "UAC Maximize Conversions"
+        WHEN bidding_strategy = "Target ROAS" THEN "UAC ROAS"
+        WHEN bidding_strategy = "Preregistrations" THEN "UAC Pre-Registrations"
+        ELSE "Unknown"
+    END AS UACType,
     start_date AS StartDate,
     FALSE AS VideoModeOnly,
     -- firebase_bidding_status,

@@ -36,7 +36,15 @@ SELECT
         WHEN "PAUSED" THEN "Paused"
         WHEN "REMOVED" THEN "Deleted"
     END AS AdGroupStatus,
-    bidding_strategy AS UACType,
+    CASE  
+        WHEN bidding_strategy = "Installs" THEN "UAC Installs"
+        WHEN bidding_strategy = "Installs Advanced" THEN "UAC Installs Advanced"
+        WHEN bidding_strategy = "Actions" THEN "UAC Actions"
+        WHEN bidding_strategy = "Maximize Conversions" THEN "UAC Maximize Conversions"
+        WHEN bidding_strategy = "Target ROAS" THEN "UAC ROAS"
+        WHEN bidding_strategy = "Preregistrations" THEN "UAC Pre-Registrations"
+        ELSE "Unknown"
+    END AS UACType,
     target_conversions AS TargetConversions,
     Currency,
     geos AS country_code,

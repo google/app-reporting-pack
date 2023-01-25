@@ -86,7 +86,8 @@ CREATE OR REPLACE VIEW `{bq_dataset}.GeoLanguageView` AS (
     SELECT
         COALESCE(CampaignGeoTarget.campaign_id, CampaignLanguages.campaign_id) AS campaign_id,
         ARRAY_TO_STRING(ARRAY_AGG(DISTINCT country_code ORDER BY country_code), " | ") AS geos,
-        ARRAY_TO_STRING(ARRAY_AGG(DISTINCT language ORDER BY language), " | ") AS languages
+        ARRAY_TO_STRING(ARRAY_AGG(DISTINCT language ORDER BY language), " | ") AS languages,
+        ARRAY_TO_STRING(ARRAY_AGG(DISTINCT geo_target ORDER BY geo_target), " | ") AS geo_ids
     FROM {bq_dataset}.campaign_geo_targets AS CampaignGeoTarget
     LEFT JOIN {bq_dataset}.geo_target_constant AS GeoTargetConstant
         ON CampaignGeoTarget.geo_target = CAST(GeoTargetConstant.constant_id AS STRING)

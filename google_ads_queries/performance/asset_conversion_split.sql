@@ -21,7 +21,9 @@ SELECT
     segments.conversion_action~0 AS conversion_id,
     metrics.conversions AS conversions,
     metrics.all_conversions AS all_conversions,
-    metrics.conversions_value AS conversions_value
+    metrics.all_conversions_value AS all_conversions_value,
+    metrics.conversions_value AS conversions_value,
+    metrics.view_through_conversions AS view_through_conversions
 FROM ad_group_ad_asset_view
 WHERE
     campaign.advertising_channel_type = "MULTI_CHANNEL"

@@ -23,7 +23,11 @@ SELECT
     account_id,
     campaign_sub_type AS CampaignSubType,
     campaign_name AS CampaignName,
-    campaign_status AS CampaignStatus,
+    CASE campaign_status
+        WHEN "ENABLED" THEN "Active"
+        WHEN "PAUSED" THEN "Paused"
+        WHEN "REMOVED" THEN "Deleted"
+    END AS CampaignStatus,
     ad_group_name AS AdGroupName,
     ad_group_id AS AdGroupId,
     Network,
