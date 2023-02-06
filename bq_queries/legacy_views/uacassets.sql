@@ -19,7 +19,11 @@ SELECT
     account_id,
     "" AS CID,
     campaign_sub_type AS CampaignSubType,
-    app_store AS Store,
+    CASE app_store
+        WHEN 'GOOGLE_APP_STORE' THEN 'Google Play'
+        WHEN 'APPLE_APP_STORE' THEN 'App Store'
+        ELSE 'Other'
+    END AS Store,
     app_id AS AppId,
     campaign_name AS CampaignName,
     campaign_id AS CampaignID,
@@ -36,7 +40,7 @@ SELECT
         WHEN "PAUSED" THEN "Paused"
         WHEN "REMOVED" THEN "Deleted"
     END AS AdGroupStatus,
-    CASE  
+    CASE
         WHEN bidding_strategy = "Installs" THEN "UAC Installs"
         WHEN bidding_strategy = "Installs Advanced" THEN "UAC Installs Advanced"
         WHEN bidding_strategy = "Actions" THEN "UAC Actions"
@@ -127,7 +131,7 @@ SELECT
     impressions,
     cost,
     cost_non_install_campaigns AS CostNonInstalls,
-    conversions,
+    inapps + installs AS conversions,
     view_through_conversions,
     installs,
     installs_adjusted,
@@ -136,18 +140,9 @@ SELECT
     0 AS non_click_interactions,
     0 AS engagements,
     conversions_value AS conversion_value,
-    0 AS InApp_day_0,
-    0 AS InApp_day_1,
-    0 AS InApp_day_3,
-    0 AS InApp_day_5,
-    0 AS InApp_day_7,
-    0 AS InApp_day_14,
-    0 AS InApp_day_30,
-    0 AS conversion_value_day_0,
-    0 AS conversion_value_day_1,
-    0 AS conversion_value_day_3,
-    0 AS conversion_value_day_5,
-    0 AS conversion_value_day_7,
-    0 AS conversion_value_day_14,
-    0 AS conversion_value_day_30,
+    {% for day in cohort_days %}
+            installs_{{day}}_day,
+            inapps_{{day}}_day AS InApp_day{{day}},
+            conversions_value_{{day}}_day AS conversion_value_day{{day}},
+        {% endfor %}
 FROM {target_dataset}.asset_performance;

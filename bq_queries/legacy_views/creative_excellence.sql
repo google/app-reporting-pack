@@ -32,7 +32,7 @@ SELECT
         WHEN "PAUSED" THEN "Paused"
         WHEN "REMOVED" THEN "Deleted"
     END  AS AdGroupStatus,
-    CASE  
+    CASE
         WHEN bidding_strategy = "Installs" THEN "UAC Installs"
         WHEN bidding_strategy = "Installs Advanced" THEN "UAC Installs Advanced"
         WHEN bidding_strategy = "Actions" THEN "UAC Actions"
@@ -42,7 +42,11 @@ SELECT
         ELSE "Unknown"
     END AS UACType,
     firebase_bidding_status,
-    app_store AS Store,
+    CASE app_store
+        WHEN 'GOOGLE_APP_STORE' THEN 'Google Play'
+        WHEN 'APPLE_APP_STORE' THEN 'App Store'
+        ELSE 'Other'
+    END AS Store,
     app_id AS App,
     target_conversions AS ConvNames,
     n_of_target_conversions,

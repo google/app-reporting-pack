@@ -32,7 +32,7 @@ WITH
     FROM
       {bq_dataset}.AppCampaignSettingsView
     JOIN
-      (SELECT DISTINCT campaign_id, campaign_status, campaign_name FROM 
+      (SELECT DISTINCT campaign_id, campaign_status, campaign_name FROM
           {bq_dataset}.account_campaign_ad_group_mapping
       ) USING (campaign_id)
     LEFT JOIN
@@ -257,7 +257,7 @@ WITH
         criteria_id,
         languages AS Language,
         app_id AS AppId,
-        CASE  
+        CASE
             WHEN bidding_strategy = "Installs" THEN "UAC Installs"
             WHEN bidding_strategy = "Installs Advanced" THEN "UAC Installs Advanced"
             WHEN bidding_strategy = "Actions" THEN "UAC Actions"
@@ -293,7 +293,7 @@ WITH
           FROM
             {bq_dataset}.AppCampaignSettingsView
           JOIN
-            (SELECT DISTINCT campaign_id, account_id, account_name, campaign_name FROM 
+            (SELECT DISTINCT campaign_id, account_id, account_name, campaign_name FROM
                 {bq_dataset}.account_campaign_ad_group_mapping
             ) USING (campaign_id)
 

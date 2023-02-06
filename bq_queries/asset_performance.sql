@@ -164,7 +164,7 @@ LEFT JOIN {bq_dataset}.asset_reference AS R
     AND AP.field_type = R.field_type
 LEFT JOIN {bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
-LEFT JOIN (SELECT video_id, video_duration FROM {bq_dataset}.mediafile WHERE video_id != "")  AS MediaFile
+LEFT JOIN (SELECT DISTINCT video_id, video_duration FROM {bq_dataset}.mediafile WHERE video_id != "")  AS MediaFile
   ON Assets.youtube_video_id = MediaFile.video_id
 LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction

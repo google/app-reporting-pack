@@ -18,7 +18,11 @@ SELECT
     campaign_id AS CampaignID,
     account_name AS AccountName,
     app_id AS AppId,
-    app_store AS Store,
+    CASE app_store
+        WHEN 'GOOGLE_APP_STORE' THEN 'Google Play'
+        WHEN 'APPLE_APP_STORE' THEN 'App Store'
+        ELSE 'Other'
+    END AS Store,
     "" AS CID,
     account_id,
     campaign_sub_type AS CampaignSubType,
