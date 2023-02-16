@@ -20,7 +20,11 @@ Helper script for running App Reporting Pack queries.\n\n
 -h|--help - show this help message\n
 -c|--config <config> - path to config.yaml file, i.e., path/to/app_reporting_pack.yaml\n
 -q|--quiet - skips all confirmation prompts and starts running scripts based on config files
+-g|--google-ads-config - path to google-ads.yaml file (by default it expects it in $HOME directory)\n
+-l|--loglevel - loglevel (DEBUG, INFO, WARNING, ERROR), INFO by default.
 --legacy - generates legacy views that can be plugin into existing legacy dashboard
+--backfill - whether to perform backfill of the bid and budgets snapshots
+--backfill-only - perform only backfill of the bid and budgets snapshots
 "
 
 solution_name="App Reporting Pack"
@@ -50,6 +54,14 @@ case $1 in
 	--legacy)
 		shift
 		legacy="y"
+		;;
+	--backfill)
+		shift
+		backfill="y"
+		;;
+	--backfill-only)
+		shift
+		backfill_only="y"
 		;;
 	-h|--help)
 		echo -e $usage;
@@ -170,6 +182,12 @@ conversion_lag_adjustment() {
 		--bq.project=$project --bq.dataset=$bq_dataset
 }
 
+backfill_snapshots() {
+	echo -e "${COLOR}===backfilling snapshots===${NC}"
+	$(which python3) scripts/backfill_snapshots.py \
+		--account=$customer_id --ads-config=$ads_config "$@"
+}
+
 generate_bq_views() {
 	echo -e "${COLOR}===generating views and functions===${NC}"
 	gaarf-bq bq_queries/views_and_functions/*.sql \
@@ -217,6 +235,13 @@ get_input() {
 
 
 run_with_config() {
+	if [[ $backfill_only = "y" ]]; then
+		echo -e "${COLOR}===backfilling snapshots===${NC}"
+			$(which python3) scripts/backfill_snapshots.py \
+				-c=$solution_name_lowercase.yaml \
+				--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+			exit
+	fi
 	echo -e "${COLOR}===fetching reports===${NC}"
 	gaarf google_ads_queries/**/*.sql -c=$solution_name_lowercase.yaml \
 		--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
@@ -226,6 +251,12 @@ run_with_config() {
 		--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 	echo -e "${COLOR}===generating snapshots===${NC}"
 	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+	if [[ $backfill = "y" ]]; then
+		echo -e "${COLOR}===backfilling snapshots===${NC}"
+			$(which python3) scripts/backfill_snapshots.py \
+				-c=$solution_name_lowercase.yaml \
+				--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+	fi
 	echo -e "${COLOR}===generating views and functions===${NC}"
 	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
 	echo -e "${COLOR}===generating final tables===${NC}"
@@ -270,6 +301,10 @@ else
 	conversion_lag_adjustment --customer--ids-query="$customer_ids_query" \
 		--api-version=$API_VERSION
 	generate_snapshots $save_config --log=$loglevel
+	if [[ $backfill = "y" ]]; then
+		backfill_snapshots --customer--ids-query="$customer_ids_query" \
+			--api-version=$API_VERSION
+	fi
 	generate_bq_views $save_config --log=$loglevel
 	generate_output_tables $save_config --log=$loglevel
 	if [[ $legacy = "y" ]]; then

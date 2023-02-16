@@ -23,14 +23,7 @@ from gaarf.cli.utils import GaarfConfigBuilder
 
 from src.queries import ConversionLagQuery
 from src.conv_lag_builder import ConversionLagBuilder
-
-
-def write_lag_data(bq_client, cumulative_lag_data, table_id):
-    job_config = bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE", )
-    job = bq_client.load_table_from_dataframe(cumulative_lag_data,
-                                              table_id,
-                                              job_config=job_config)
-    job.result()
+from src.utils import write_data_to_bq
 
 
 def main():
@@ -72,7 +65,7 @@ def main():
                                             ["network", "conversion_id"])
 
     conv_lag_table = conv_lag_builder.calculate_reference_values()
-    write_lag_data(bq_client, conv_lag_table,
+    write_data_to_bq(bq_client, conv_lag_table,
                    f"{project}.{dataset}.conversion_lag_adjustments")
 
 

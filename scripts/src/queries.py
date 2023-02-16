@@ -33,3 +33,23 @@ class ConversionLagQuery(BaseQuery):
             segments.date >= '{start_date}'
             AND segments.date <= '{end_date}'
         """
+
+
+class ChangeHistory(BaseQuery):
+    """Fetches change history for bids and budgets."""
+    def __init__(self, start_date: str, end_date: str) -> None:
+        self.query_text = f"""
+        SELECT
+            change_event.change_date_time AS change_date,
+            campaign.id AS campaign_id,
+            change_event.old_resource:campaign_budget.amount_micros AS old_budget_amount,
+            change_event.new_resource:campaign_budget.amount_micros AS new_budget_amount,
+            change_event.old_resource:campaign.target_cpa.target_cpa_micros AS old_target_cpa,
+            change_event.new_resource:campaign.target_cpa.target_cpa_micros AS new_target_cpa
+        FROM change_event
+        WHERE
+            change_event.change_date_time >= '{start_date}'
+            AND change_event.change_date_time <= '{end_date}'
+            AND change_event.change_resource_type IN ("CAMPAIGN_BUDGET", "CAMPAIGN")
+        LIMIT 10000
+        """
