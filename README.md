@@ -105,6 +105,8 @@ It will guide you through a series of questions to get all necessary parameters 
 After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
 When you run `bash run-local.sh` next time it will automatically pick up created configuration.
 
+#### Schedule running `run-local.sh` as a cronjob
+
 When running `run-local.sh` scripts you can specify two options which are useful when running queries periodically (i.e. as a cron job):
 
 * `-c <config>`- path to `app_reporting_pack.yaml` config file. Comes handy when you have multiple config files or the configuration is located outside of current folder.
@@ -112,6 +114,14 @@ When running `run-local.sh` scripts you can specify two options which are useful
 
 > `run-local.sh` support `--legacy` command line flag which is used to generate dashboard in the format compatible with existing dashboard.
 > If you're migrating existing datasources `--legacy` option might be extremely handy.
+
+If you installed all requirements in a virtual environment you can use the trick below to run the proper cronjob:
+
+```
+* 1 * * * /usr/bin/env bash -c "source /path/to/your/venv/bin/activate && bash /path/to/app-reporting-pack/run-local.sh -c /path/to/app_reporting_pack.yaml -g /path/to/google-ads.yaml -q"
+```
+
+This command will execute App Reporting Pack queries every day at 1 AM.
 
 
 ### Running queries in a Docker container
