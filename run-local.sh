@@ -19,12 +19,12 @@ usage="bash run-local.sh -c|--config <config> -q|--quiet\n\n
 Helper script for running App Reporting Pack queries.\n\n
 -h|--help - show this help message\n
 -c|--config <config> - path to config.yaml file, i.e., path/to/app_reporting_pack.yaml\n
--q|--quiet - skips all confirmation prompts and starts running scripts based on config files
+-q|--quiet - skips all confirmation prompts and starts running scripts based on config files\n
 -g|--google-ads-config - path to google-ads.yaml file (by default it expects it in $HOME directory)\n
--l|--loglevel - loglevel (DEBUG, INFO, WARNING, ERROR), INFO by default.
---legacy - generates legacy views that can be plugin into existing legacy dashboard
---backfill - whether to perform backfill of the bid and budgets snapshots
---backfill-only - perform only backfill of the bid and budgets snapshots
+-l|--loglevel - loglevel (DEBUG, INFO, WARNING, ERROR), INFO by default.\n
+--legacy - generates legacy views that can be plugin into existing legacy dashboard.\n
+--backfill - whether to perform backfill of the bid and budgets snapshots.\n
+--backfill-only - perform only backfill of the bid and budgets snapshots.\n
 "
 
 solution_name="App Reporting Pack"
@@ -83,6 +83,7 @@ check_ads_config() {
 	elif [[ -f "$HOME/google-ads.yaml" ]]; then
 		ads_config=$HOME/google-ads.yaml
 	else
+		echo -n -e "${COLOR}Cannot find the google-ads.yaml file${NC}"
 		echo -n "Enter full path to google-ads.yaml file: "
 		read -r ads_config
 	fi
@@ -104,21 +105,15 @@ setup() {
 	echo -n "Enter end_date in YYYY-MM-DD format (or use :YYYYMMDD-1 for yesterday): "
 	read -r end_date
 	ask_for_cohorts
-	echo  "Script are expecting google-ads.yaml file in your home directory"
-	echo -n "Is the file there (Y/n): "
-	read -r ads_config_answer
-	ads_config_answer=$(convert_answer $ads_config_answer)
-	if [[ $ads_config_answer = "y" ]]; then
-		ads_config=$HOME/google-ads.yaml
-	else
-		echo -n "Enter full path to google-ads.yaml file: "
-		read -r ads_config
-	fi
+	generate_bq_macros
 	echo -n "Do you want to save this config (Y/n): "
 	read -r save_config_answer
 	save_config_answer=$(convert_answer $save_config_answer)
 	if [[ $save_config_answer = "y" ]]; then
 		save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
+		echo -e "${COLOR}Saving configuration to $solution_name_lowercase.yaml${NC}"
+		fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+		generate_output_tables $save_config --log=$loglevel --dry-run
 	elif [[ $save_config_answer = "q" ]]; then
 		exit 1
 	fi
@@ -126,19 +121,17 @@ setup() {
 }
 
 
-deploy() {
-	echo -n -e "${COLOR}Deploy $solution_name? Y/n/q: ${NC}"
+prompt_running() {
+	echo -n -e "${COLOR}Start running $solution_name? Y/n: ${NC}"
 	read -r answer
 	answer=$(convert_answer $answer)
 
 	if [[ $answer = "y" ]]; then
-		echo "Deploying..."
-	elif [[ $answer = "q" ]]; then
-		exit 1
+		echo "Running..."
 	else
-		setup
+		echo "Exiting the script..."
+		exit
 	fi
-	generate_parameters
 }
 
 ask_for_cohorts() {
@@ -157,7 +150,7 @@ ask_for_cohorts() {
 	cohorts_final=$(echo ${_cohorts// /,})
 }
 
-generate_parameters() {
+generate_bq_macros() {
 	bq_dataset_output=$(echo $bq_dataset"_output")
 	bq_dataset_legacy=$(echo $bq_dataset"_legacy")
 	macros="--macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts_final"
@@ -165,8 +158,7 @@ generate_parameters() {
 
 
 fetch_reports() {
-	echo -e "${COLOR}===fetching reports===${NC}"
-	gaarf google_ads_queries/*/*.sql \
+	gaarf $(dirname $0)/google_ads_queries/*/*.sql \
 	--account=$customer_id \
 	--output=bq \
 	--customer-ids-query="$customer_ids_query" \
@@ -176,40 +168,34 @@ fetch_reports() {
 }
 
 conversion_lag_adjustment() {
-	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
-	$(which python3) scripts/conv_lag_adjustment.py \
+	$(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
 		--account=$customer_id --ads-config=$ads_config \
 		--bq.project=$project --bq.dataset=$bq_dataset
 }
 
 backfill_snapshots() {
-	echo -e "${COLOR}===backfilling snapshots===${NC}"
-	$(which python3) scripts/backfill_snapshots.py \
+	$(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
 		--account=$customer_id --ads-config=$ads_config "$@"
 }
 
 generate_bq_views() {
-	echo -e "${COLOR}===generating views and functions===${NC}"
-	gaarf-bq bq_queries/views_and_functions/*.sql \
+	gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql \
 		--project=$project --target=$bq_dataset $macros "$@"
 }
 
 
 generate_snapshots() {
-	echo -e "${COLOR}===generating snapshots===${NC}"
-	gaarf-bq bq_queries/snapshots/*.sql \
+	gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql \
 		--project=$project --target=$bq_dataset $macros "$@"
 }
 
 generate_output_tables() {
-	echo -e "${COLOR}===generating final tables===${NC}"
-	gaarf-bq bq_queries/*.sql \
+	gaarf-bq $(dirname $0)/bq_queries/*.sql \
 		--project=$project --target=$bq_dataset_output $macros "$@"
 }
 
 generate_legacy_views() {
-	echo -e "${COLOR}===generating legacy views===${NC}"
-	gaarf-bq bq_queries/legacy_views/*.sql \
+	gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql \
 		--project=$project --target=$bq_dataset_legacy $macros "$@"
 }
 
@@ -228,44 +214,64 @@ welcome() {
 	echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
 }
 
-get_input() {
-	setup
-	deploy
-}
-
-
 run_with_config() {
+	echo
+	echo -e "${COLOR}Running with $config_file${NC}"
+	cat $config_file
 	if [[ $backfill_only = "y" ]]; then
 		echo -e "${COLOR}===backfilling snapshots===${NC}"
-			$(which python3) scripts/backfill_snapshots.py \
-				-c=$solution_name_lowercase.yaml \
+			$(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
+				-c=$config_file \
 				--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 			exit
 	fi
 	echo -e "${COLOR}===fetching reports===${NC}"
-	gaarf google_ads_queries/**/*.sql -c=$solution_name_lowercase.yaml \
+	gaarf $(dirname $0)/google_ads_queries/**/*.sql -c=$config_file \
 		--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
-	$(which python3) scripts/conv_lag_adjustment.py \
-		-c=$solution_name_lowercase.yaml \
+	$(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
+		-c=$config_file \
 		--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 	echo -e "${COLOR}===generating snapshots===${NC}"
-	gaarf-bq bq_queries/snapshots/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+	gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql -c=$config_file --log=$loglevel
 	if [[ $backfill = "y" ]]; then
 		echo -e "${COLOR}===backfilling snapshots===${NC}"
-			$(which python3) scripts/backfill_snapshots.py \
-				-c=$solution_name_lowercase.yaml \
+			$(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
+				-c=$config_file \
 				--ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 	fi
 	echo -e "${COLOR}===generating views and functions===${NC}"
-	gaarf-bq bq_queries/views_and_functions/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+	gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql -c=$config_file --log=$loglevel
 	echo -e "${COLOR}===generating final tables===${NC}"
-	gaarf-bq bq_queries/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+	gaarf-bq $(dirname $0)/bq_queries/*.sql -c=$config_file --log=$loglevel
 	if [[ $legacy = "y" ]]; then
 		echo -e "${COLOR}===generating legacy views===${NC}"
-		gaarf-bq bq_queries/legacy_views/*.sql -c=$solution_name_lowercase.yaml --log=$loglevel
+		gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
 	fi
 
+}
+
+run_with_parameters() {
+	echo -e "${COLOR}===fetching reports===${NC}"
+	fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
+	echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
+	conversion_lag_adjustment --customer--ids-query="$customer_ids_query" \
+		--api-version=$API_VERSION
+	echo -e "${COLOR}===generating snapshots===${NC}"
+	generate_snapshots $save_config --log=$loglevel
+	if [[ $backfill = "y" ]]; then
+		echo -e "${COLOR}===backfilling snapshots===${NC}"
+		backfill_snapshots --customer--ids-query="$customer_ids_query" \
+			--api-version=$API_VERSION
+	fi
+	echo -e "${COLOR}===generating views and functions===${NC}"
+	generate_bq_views $save_config --log=$loglevel
+	echo -e "${COLOR}===generating final tables===${NC}"
+	generate_output_tables $save_config --log=$loglevel
+	if [[ $legacy = "y" ]]; then
+		echo -e "${COLOR}===generating legacy views===${NC}"
+		generate_legacy_views $save_config --log=$loglevel
+	fi
 }
 
 check_ads_config
@@ -284,30 +290,36 @@ if [[ -f "$config_file" ]]; then
 		if [[ $setup_config_answer = "y" ]]; then
 			echo -e "${COLOR}Using saved configuration...${NC}"
 			run_with_config
+		elif [[ $setup_config_answer = "n" ]]; then
+			echo -n -e "${COLOR}Choose [N]ew configuration or [S]tart over: (N/S): ${NC}"
+			read -r new_config_start_over
+			new_config_start_over=$(convert_answer $new_config_start_over)
+			if [[ $new_config_start_over = "n" ]]; then
+				echo -n -e "${COLOR}Provide full path to saved configuration: ${NC}"
+				read -r config_file
+				run_with_config
+			elif [[ $new_config_start_over = "s" ]]; then
+				setup
+				prompt_running
+				run_with_parameters
+			else
+				echo "Unknown command, exiting"
+				exit
+			fi
 		elif [[ $setup_config_answer = "q" ]]; then
 			exit 1
 		else
 			echo
 			welcome
-			get_input
+			setup
+			prompt_running
 		fi
 	else
 		run_with_config
 	fi
 else
 	welcome
-	get_input
-	fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
-	conversion_lag_adjustment --customer--ids-query="$customer_ids_query" \
-		--api-version=$API_VERSION
-	generate_snapshots $save_config --log=$loglevel
-	if [[ $backfill = "y" ]]; then
-		backfill_snapshots --customer--ids-query="$customer_ids_query" \
-			--api-version=$API_VERSION
-	fi
-	generate_bq_views $save_config --log=$loglevel
-	generate_output_tables $save_config --log=$loglevel
-	if [[ $legacy = "y" ]]; then
-		generate_legacy_views $save_config --log=$loglevel
-	fi
+	setup
+	prompt_running
+	run_with_parameters
 fi
