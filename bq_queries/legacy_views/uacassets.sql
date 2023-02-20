@@ -65,7 +65,7 @@ SELECT
     asset AS FeedData,
     performance_label AS PerformanceGrouping,
     0 AS mediaid,
-    asset_link AS sourceUrl,
+    asset_preview_link AS sourceUrl,
     0 AS mediafilesize,
     "" AS LinkToCampaign,
     IF(asset_type = "YOUTUBE_VIDEO", asset_orientation, "")  AS Link,

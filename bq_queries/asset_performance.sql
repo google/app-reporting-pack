@@ -64,6 +64,14 @@ WITH CampaignCostTable AS (
                 AND ConvSplit.network = LagAdjustments.network
                 AND ConvSplit.conversion_id = LagAdjustments.conversion_id
         GROUP BY 1, 2, 3, 4, 5
+    ),
+    VideoDurations AS (
+        SELECT
+            video_id,
+            ANY_VALUE(video_duration) AS video_duration
+        FROM {bq_dataset}.mediafile
+        WHERE video_id != ""
+        GROUP BY 1
     )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
@@ -111,7 +119,7 @@ SELECT
         WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO
         ELSE NULL
         END AS asset_orientation,
-    ROUND(MediaFile.video_duration / 1000) AS video_duration,
+    ROUND(VideoDurations.video_duration / 1000) AS video_duration,
     0 AS video_aspect_ratio,
     Assets.type AS asset_type,
     `{bq_dataset}.ConvertAssetFieldType`(AP.field_type) AS field_type,
@@ -164,8 +172,8 @@ LEFT JOIN {bq_dataset}.asset_reference AS R
     AND AP.field_type = R.field_type
 LEFT JOIN {bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
-LEFT JOIN (SELECT DISTINCT video_id, video_duration FROM {bq_dataset}.mediafile WHERE video_id != "")  AS MediaFile
-  ON Assets.youtube_video_id = MediaFile.video_id
+LEFT JOIN VideoDurations
+  ON Assets.youtube_video_id = VideoDurations.video_id
 LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction
         AND AP.ad_group_id = AssetCohorts.ad_group_id
