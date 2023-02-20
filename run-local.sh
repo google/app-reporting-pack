@@ -52,15 +52,12 @@ case $1 in
 		google_ads_config=$1
 		;;
 	--legacy)
-		shift
 		legacy="y"
 		;;
 	--backfill)
-		shift
 		backfill="y"
 		;;
 	--backfill-only)
-		shift
 		backfill_only="y"
 		;;
 	-h|--help)
