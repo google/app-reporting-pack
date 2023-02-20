@@ -26,9 +26,8 @@ from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.utils import get_customer_ids
 from gaarf.query_executor import AdsReportFetcher
 from gaarf.cli.utils import GaarfConfigBuilder
-from gaarf.bq_executor import BigQueryExecutor
 
-from src.queries import ChangeHistory
+import src.queries as queries
 from src.utils import write_data_to_bq
 
 
@@ -119,7 +118,7 @@ def main():
 
     # extract change history report
     change_history = report_fetcher.fetch(
-        ChangeHistory(days_ago_29, days_ago_1)).to_pandas()
+        queries.ChangeHistory(days_ago_29, days_ago_1)).to_pandas()
 
     logger.info("Restoring change history for %d accounts: %s",
                 len(customer_ids), customer_ids)
@@ -133,29 +132,35 @@ def main():
         logger.info("no budgets events were found")
 
     # Filter rows where bid change occurred
-    bids = change_history.loc[change_history["old_target_cpa"] > 0]
-    if not bids.empty:
-        bids = format_partial_change_history(bids, "target_cpa")
-        logger.info("%d target_cpa events were found", len(bids))
+    target_cpas = change_history.loc[change_history["old_target_cpa"] > 0]
+    if not target_cpas.empty:
+        target_cpas = format_partial_change_history(target_cpas, "target_cpa")
+        logger.info("%d target_cpa events were found", len(target_cpas))
     else:
         logger.info("no target_cpa events were found")
 
-    bq_executor = BigQueryExecutor(project_id=bq_project)
-
+    target_roas = change_history.loc[change_history["old_target_roas"] > 0]
+    if not target_roas.empty:
+        target_roas = format_partial_change_history(target_roas, "target_roas")
+        logger.info("%d target_roas events were found", len(target_roas))
+    else:
+        logger.info("no target_roas events were found")
     # get all campaigns with an non-zero impressions to build placeholders df
-    campaign_ids = bq_executor.execute(
-        query_text=
-        f"SELECT DISTINCT campaign_id FROM {bq_project}.{bq_dataset}.asset_performance",
-        script_name=None,
-        params=None)
+    campaign_ids = report_fetcher.fetch(
+        queries.CampaignsWithSpend(days_ago_29, days_ago_1)).to_pandas()
     logger.info("Change history will be restored for %d campaign_ids",
                 len(campaign_ids))
 
     # get latest bids and budgets to replace values in campaigns without any changes
-    current_bids_budgets = bq_executor.execute(
-        query_text=f"SELECT * FROM {bq_project}.{bq_dataset}.bid_budget",
-        script_name=None,
-        params=None)
+    current_bids_budgets_active_campaigns = report_fetcher.fetch(
+        queries.BidsBudgetsActiveCampaigns()).to_pandas()
+    current_bids_budgets_inactive_campaigns = report_fetcher.fetch(
+        queries.BidsBudgetsInactiveCampaigns(days_ago_29, days_ago_1)).to_pandas()
+    current_bids_budgets = pd.concat([
+        current_bids_budgets_inactive_campaigns,
+        current_bids_budgets_active_campaigns
+    ],
+                                     sort=False).drop_duplicates()
 
     # generate a placeholder dataframe that contain possible variations of
     # campaign_ids with non-zero impressions and last 29 days date range
@@ -165,9 +170,9 @@ def main():
 
     restored_budgets = restore_history(placeholders, budgets,
                                        current_bids_budgets, "budget_amount")
-    restored_target_cpas = restore_history(placeholders, bids,
+    restored_target_cpas = restore_history(placeholders, target_cpas,
                                            current_bids_budgets, "target_cpa")
-    restored_target_roas = restore_history(placeholders, bids,
+    restored_target_roas = restore_history(placeholders, target_roas,
                                            current_bids_budgets, "target_roas")
     # Combine restored change histories
     restored_bid_budget_history = reduce(

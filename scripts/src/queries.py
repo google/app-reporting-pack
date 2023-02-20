@@ -45,7 +45,9 @@ class ChangeHistory(BaseQuery):
             change_event.old_resource:campaign_budget.amount_micros AS old_budget_amount,
             change_event.new_resource:campaign_budget.amount_micros AS new_budget_amount,
             change_event.old_resource:campaign.target_cpa.target_cpa_micros AS old_target_cpa,
-            change_event.new_resource:campaign.target_cpa.target_cpa_micros AS new_target_cpa
+            change_event.new_resource:campaign.target_cpa.target_cpa_micros AS new_target_cpa,
+            change_event.old_resource:campaign.target_roas.target_roas AS old_target_roas,
+            change_event.new_resource:campaign.target_roas.target_roas AS new_target_roas
         FROM change_event
         WHERE
             change_event.change_date_time >= '{start_date}'
@@ -53,3 +55,52 @@ class ChangeHistory(BaseQuery):
             AND change_event.change_resource_type IN ("CAMPAIGN_BUDGET", "CAMPAIGN")
         LIMIT 10000
         """
+
+
+class BidsBudgetsActiveCampaigns(BaseQuery):
+    """Fetches bids and budget values for active campaigns."""
+    def __init__(self) -> None:
+        self.query_text = """
+        SELECT
+            campaign.id AS campaign_id,
+            campaign_budget.amount_micros AS budget_amount,
+            campaign.target_cpa.target_cpa_micros AS target_cpa,
+            campaign.target_roas.target_roas AS target_roas
+        FROM campaign
+        WHERE
+            campaign.advertising_channel_type = 'MULTI_CHANNEL'
+            AND campaign.status = 'ENABLED'
+        """
+
+class BidsBudgetsInactiveCampaigns(BaseQuery):
+    """Fetches bids and budget values for inactive campaigns with non-zero impressions."""
+    def __init__(self, start_date: str, end_date: str) -> None:
+        self.query_text = f"""
+        SELECT
+            campaign.id AS campaign_id,
+            campaign_budget.amount_micros AS budget_amount,
+            campaign.target_cpa.target_cpa_micros AS target_cpa,
+            campaign.target_roas.target_roas AS target_roas
+        FROM campaign
+        WHERE
+            campaign.advertising_channel_type = 'MULTI_CHANNEL'
+            AND campaign.status != 'ENABLED'
+            AND segments.date >= '{start_date}'
+            AND segments.date <= '{end_date}'
+            AND metrics.impressions > 0
+        """
+
+
+class CampaignsWithSpend(BaseQuery):
+    """Fetches campaign_ids with non-zero impressions."""
+    def __init__(self, start_date: str, end_date: str) -> None:
+        self.query_text = f"""
+        SELECT
+            campaign.id
+        FROM campaign
+        WHERE
+            segments.date >= '{start_date}'
+            AND segments.date <= '{end_date}'
+            AND metrics.impressions > 0
+
+    """
