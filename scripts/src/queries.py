@@ -50,7 +50,8 @@ class ChangeHistory(BaseQuery):
             change_event.new_resource:campaign.target_roas.target_roas AS new_target_roas
         FROM change_event
         WHERE
-            change_event.change_date_time >= '{start_date}'
+            campaign.advertising_channel_type = 'MULTI_CHANNEL'
+            AND change_event.change_date_time >= '{start_date}'
             AND change_event.change_date_time <= '{end_date}'
             AND change_event.change_resource_type IN ("CAMPAIGN_BUDGET", "CAMPAIGN")
         LIMIT 10000
@@ -99,7 +100,8 @@ class CampaignsWithSpend(BaseQuery):
             campaign.id
         FROM campaign
         WHERE
-            segments.date >= '{start_date}'
+            campaign.advertising_channel_type = 'MULTI_CHANNEL'
+            AND segments.date >= '{start_date}'
             AND segments.date <= '{end_date}'
             AND metrics.impressions > 0
 

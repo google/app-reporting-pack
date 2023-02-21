@@ -21,6 +21,7 @@ from functools import reduce
 import pandas as pd
 import numpy as np
 from google.api_core.exceptions import Conflict
+from google.cloud import bigquery
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.utils import get_customer_ids
@@ -181,12 +182,13 @@ def main():
         [restored_budgets, restored_target_cpas, restored_target_roas])
 
     # Writer data for each date to BigQuery dated table (with _YYYYMMDD suffix)
+    bq_client = bigquery.Client(bq_project)
     for date in dates:
         daily_history = restored_bid_budget_history.loc[
             restored_bid_budget_history["date"] == date]
         table_id = f"{bq_project}.{bq_dataset}.bid_budgets_{date.replace('-','')}"
         try:
-            write_data_to_bq(bq_client=bq_executor.client,
+            write_data_to_bq(bq_client=bq_client,
                              data=daily_history,
                              table_id=table_id,
                              write_disposition="WRITE_EMPTY")
