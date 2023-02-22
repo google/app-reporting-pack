@@ -39,7 +39,7 @@ def restore_history(placeholder_df: pd.DataFrame,
     if not partial_history.empty:
         joined = pd.merge(placeholder_df,
                           partial_history,
-                          on=["campaign_id", "date"],
+                          on=["campaign_id", "day"],
                           how="left")
         joined["filled_backward"] = joined.groupby(
             "campaign_id")["value_old"].bfill()
@@ -58,18 +58,18 @@ def restore_history(placeholder_df: pd.DataFrame,
                           how="left")
     if name != "target_roas":
         joined[name] = joined[name].astype(int)
-    return joined[["date", "campaign_id", name]]
+    return joined[["day", "campaign_id", name]]
 
 
 def format_partial_change_history(df: pd.DataFrame,
                                   dimension_name: str) -> pd.DataFrame:
     """Performs renaming and selecting last value for the date."""
-    df["date"] = df["change_date"].str.split(expand=True)[0]
+    df["day"] = df["change_date"].str.split(expand=True)[0]
     df = df.rename(columns={
         f"old_{dimension_name}": "value_old",
         f"new_{dimension_name}": "value_new"
-    })[["date", "campaign_id", "value_old", "value_new"]]
-    return df.groupby(["date", "campaign_id"]).last()
+    })[["day", "campaign_id", "value_old", "value_new"]]
+    return df.groupby(["day", "campaign_id"]).last()
 
 
 def main():
@@ -167,7 +167,7 @@ def main():
     # campaign_ids with non-zero impressions and last 29 days date range
     placeholders = pd.DataFrame(data=list(
         itertools.product(list(campaign_ids.campaign_id.values), dates)),
-                                columns=["campaign_id", "date"])
+                                columns=["campaign_id", "day"])
 
     restored_budgets = restore_history(placeholders, budgets,
                                        current_bids_budgets, "budget_amount")
@@ -178,20 +178,21 @@ def main():
     # Combine restored change histories
     restored_bid_budget_history = reduce(
         lambda left, right: pd.merge(
-            left, right, on=["date", "campaign_id"], how="left"),
+            left, right, on=["day", "campaign_id"], how="left"),
         [restored_budgets, restored_target_cpas, restored_target_roas])
 
     # Writer data for each date to BigQuery dated table (with _YYYYMMDD suffix)
     bq_client = bigquery.Client(bq_project)
     for date in dates:
         daily_history = restored_bid_budget_history.loc[
-            restored_bid_budget_history["date"] == date]
+            restored_bid_budget_history["day"] == date]
         table_id = f"{bq_project}.{bq_dataset}.bid_budgets_{date.replace('-','')}"
         try:
             write_data_to_bq(bq_client=bq_client,
                              data=daily_history,
                              table_id=table_id,
                              write_disposition="WRITE_EMPTY")
+            logger.info("table '%s' has been created", table_id)
         except Conflict as e:
             logger.warning("table '%s' already exists", table_id)
 
