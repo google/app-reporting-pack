@@ -54,12 +54,7 @@ SELECT
     geos AS country_code,
     languages AS Language,
     REGEXP_CONTAINS(languages, r"en|All") AS English,
-    CASE asset_type
-        WHEN "TEXT" THEN "Text"
-        WHEN "YOUTUBE_VIDEO" THEN "Video"
-        WHEN "IMAGE" THEN "Image"
-        WHEN "MEDIA_BUNDLE" THEN "Html5"
-    END AS AssetType,
+    field_type AS AssetType,
     asset AS AdAsset,
     asset_id AS FeedDataOriginal,
     asset AS FeedData,
@@ -69,7 +64,11 @@ SELECT
     0 AS mediafilesize,
     "" AS LinkToCampaign,
     IF(asset_type = "YOUTUBE_VIDEO", asset_orientation, "")  AS Link,
-    asset_orientation AS ImageSize,
+    CASE
+        WHEN video_duration > 0 THEN CAST(video_duration AS STRING)
+        WHEN asset_type = "TEXT" THEN CAST(LENGTH(asset) AS STRING)
+        ELSE asset_orientation
+        END AS ImageSize,
     asset_orientation AS VideoOrientation,
     CASE
         WHEN ROUND(video_aspect_ratio, 2) = 1.78 THEN "16:9"
@@ -142,7 +141,7 @@ SELECT
     conversions_value AS conversion_value,
     {% for day in cohort_days %}
             installs_{{day}}_day,
-            inapps_{{day}}_day AS InApp_day{{day}},
-            conversions_value_{{day}}_day AS conversion_value_day{{day}},
+            inapps_{{day}}_day AS InApp_day_{{day}},
+            conversions_value_{{day}}_day AS conversion_value_day_{{day}},
         {% endfor %}
 FROM {target_dataset}.asset_performance;
