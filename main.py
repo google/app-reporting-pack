@@ -73,7 +73,7 @@ def run_queries():
     """Run the App Reporting Pack queries and save results to BQ."""
     print("Request recieved. Running queries")
     try:
-        subprocess.check_call(["./run-docker.sh", "google_ads_queries/*/*.sql", "bq_queries", "/google-ads.yaml"])
+        subprocess.check_call(["./run-docker.sh", "google_ads_queries/*/*.sql", "bq_queries", "/google-ads.yaml", "/config.yaml"])
         return ("", 204)
     except Exception as e:
         print("Failed running queries", str(e))

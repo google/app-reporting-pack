@@ -1,0 +1,19 @@
+{
+  "name": "cse-common-arch--long-running-app--create-vm-cf",
+  "version": "1.0.0",
+  "dependencies": {
+    "@google-cloud/compute": "^2.6.0",
+    "@google-cloud/functions-framework": "^3.1.3",
+    "@google-cloud/resource-manager": "^4.1.3",
+    "google-auth-library": "^8.7.0"
+  },
+  "description": "This folder contains source code for Cloud Function `create-vm`. The function's purpose is to create a VM in Compute Engine as a host for a Docker container with an image that is fetched from Container Registry.  The VM uses `workload` image from project's registry with `latest` tag.   See `index.js` for details. On deployment to a new project variables' values in `index.js` should be adjusted, see below.   The configuration for a VM being created is in `vmConfig` variable. The JSON config was got from UI wizard \"creating a new VM\" and then changed: * removed disk configuration because it contains hard-coded image url, instead root key was added `\"os\": \"cos\"` (note: cos stands for Container OS, a special OS for hosting Docker containers in GCP)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "private": true,
+  "license": "ISC"
+}
