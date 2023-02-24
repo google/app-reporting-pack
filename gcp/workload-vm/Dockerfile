@@ -9,8 +9,7 @@ COPY google_ads_queries/ google_ads_queries/
 COPY bq_queries/ bq_queries/
 COPY scripts/ scripts/
 COPY run-docker.sh .
-COPY google-ads.yaml . # TODO: remove
-COPY config.yaml .  # TODO: remove
+COPY run-local.sh . # TODO: use run-local.sh instead of run-docker.sh when it works
 COPY gcp/workload-vm/main.sh main.sh
 
 # Run the app

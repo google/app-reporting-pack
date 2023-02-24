@@ -91,8 +91,15 @@ async function getDefaultServiceAccount(projectId) {
 
 functions.cloudEvent('createInstance', async (cloudEvent) => {
   const base64data = cloudEvent.data.message.data;
-  const data = base64data ? JSON.parse(Buffer.from(base64data, 'base64').toString()) : {};
-  console.log(data);
+  const data_str = base64data ? Buffer.from(base64data, 'base64').toString() : "";
+  let data = {};
+  try {
+    data = data_str ? JSON.parse(data_str) : {};
+  } catch(e) {
+    console.error(e);
+    throw new Error(`Failed to parse event data: ${data_str}\n${e.message}`);
+  }
+  console.log(JSON.stringify({event_data:data}));
 
   // get project id where create a VM, by default the current project is used
   let projectId = data.project_id || process.env.GCP_PROJECT 
@@ -114,7 +121,7 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
   console.log(`serviceAccount: ${serviceAccount}`)
 
   // initialize a machine type for VM to use
-  const machineType = data.machine_type || process.env.MACHINE_TYPE || 'n1-standard-1'; // the cheapest "f1-micro"
+  const machineType = data.machine_type || process.env.MACHINE_TYPE || 'n1-standard-1'; // note: the cheapest is "f1-micro"
 
   const vmConfig = getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType);
 
@@ -123,7 +130,7 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
     vmConfig.metadata.items.splice(idx, 1)
   }
 
-  // Get a config uri (config.yaml for app.py) from the pub/sub message payload,
+  // Get a config uri (config.yaml) and ads config uri (google-ads.yaml) from the pub/sub message payload,
   // And if it exists pass it as a custom metadata key-value to VM
   const config_uri = data.config_uri;
   if (config_uri && config_uri.trim().length > 1) {
@@ -132,18 +139,24 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
       "value": config_uri.trim()
     });
   }
+  const ads_config_uri = data.ads_config_uri;
+  if (ads_config_uri && ads_config_uri.trim().length > 1) {
+    vmConfig.metadata.items.push({
+      "key": "ads_config_uri",
+      "value": ads_config_uri.trim()
+    });
+  }
 
   const vmName = instanceName + '-' + Date.now();
 
-  console.log(`Creating a VM '${vmName}' with config: ` + JSON.stringify(vmConfig))
+  console.log(JSON.stringify({message: `Creating a VM '${vmName}' (see vm config in jsonPayload)`, vmConfig: vmConfig}));
   compute.zone(zone)
     .createVM(vmName, vmConfig)
     .then(data => {
       // Operation pending.
       const vm = data[0];
       const operation = data[1];
-      console.log(`VM being created: ${vm.id}`);
-      console.log(`Operation info: ${operation.id}`);
+      console.log(`VM creation operation submitted (VM id: ${vm.id}, operation: ${operation.id})`);
       return operation.promise();
     })
     .then(() => {

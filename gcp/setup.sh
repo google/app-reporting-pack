@@ -76,10 +76,33 @@ deploy_cf() {
 
 deploy_config() {
   echo 'Deploying config to GCS'
-  GCS_BASE_PATH=gs://$PROJECT_ID/arp
-  gsutil -h "Content-Type:text/plain" -m cp -R ./config.json $GCS_BASE_PATH/arp/config.json
+  NAME=$(git config -f ./settings.ini config.name)
+  GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
+  gsutil -h "Content-Type:text/plain" -m cp -R ./../config.yaml $GCS_BASE_PATH/config.yaml
+  gsutil -h "Content-Type:text/plain" -m cp -R ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
 }
 
+
+get_run_data() {
+  # arguments for the CF (to be passed via pubsub message and scheduler job's arguments):
+  #   * project_id
+  #   * machine_type
+  #   * service_account
+  NAME=$(git config -f ./settings.ini config.name)
+  GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
+  data='{
+    "docker_image": "'$REPOSITORY_LOCATION'-docker.pkg.dev/'$PROJECT_ID'/docker/'$IMAGE_NAME'", 
+    "config_uri": "'$GCS_BASE_PATH'/config.yaml",
+    "ads_config_uri": "'$GCS_BASE_PATH'/google-ads.yaml"
+  }'
+  echo $data
+}
+
+get_run_data_escaped() {
+  local DATA=$(get_run_data)
+  ESCAPED_DATA="$(echo "$DATA" | sed 's/"/\\"/g')"
+  echo $ESCAPED_DATA
+}
 
 start() {
   # args for the cloud function (create-vm) passed via pub/sub event:
@@ -89,22 +112,26 @@ start() {
   #       europe-docker.pkg.dev/$PROJECT_ID/docker/workload
   #   * service_account 
   # --message="{\"project_id\":\"$PROJECT_ID\", \"docker_image\":\"europe-docker.pkg.dev/$PROJECT_ID/docker/workload\", \"service_account\":\"$SERVICE_ACCOUNT\"}"
-  gcloud pubsub topics publish $TOPIC --message="{\"docker_image\":\"$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME\"}"
+
+  local DATA=$(get_run_data)
+  echo 'Publishing a pubsub with args: '$DATA
+  gcloud pubsub topics publish $TOPIC --message="$DATA"
 }
 
 schedule_run() {
   JOB_NAME=$(git config -f ./settings.ini scheduler.name)
   SCHEDULE=$(git config -f ./settings.ini scheduler.schedule)
   SCHEDULE=${SCHEDULE:-"0 0 * * *"} # by default at midnight
+  local DATA=$(get_run_data_escaped)
+  echo 'Scheduling a job with args: '$DATA
 
-  gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
+  gcloud scheduler jobs delete $JOB_NAME --location $CF_REGION --quiet
 
   gcloud scheduler jobs create pubsub $JOB_NAME \
     --schedule="$SCHEDULE" \
-    --location=$REGION \
+    --location=$CF_REGION \
     --topic=$TOPIC \
-    --message-body="{\"argument\": \"$ESCAPED_WF_DATA\"}" \
-    --oauth-service-account-email="$SERVICE_ACCOUNT" \
+    --message-body="{\"argument\": \"$DATA\"}" \
     --time-zone="Etc/UTC"
 }
 
@@ -114,7 +141,8 @@ deploy_all() {
   create_registry
   build_docker_image
   deploy_cf
-#  deploy_config
+  deploy_config
+  schedule_run
 }
 
 
