@@ -22,6 +22,8 @@ import pandas as pd
 import numpy as np
 from google.api_core.exceptions import Conflict
 from google.cloud import bigquery
+from smart_open import open
+import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.utils import get_customer_ids
@@ -109,7 +111,9 @@ def main():
     bq_project = config.writer_params.get("project")
     bq_dataset = config.writer_params.get("dataset")
 
-    google_ads_client = GoogleAdsApiClient(path_to_config=args[0].ads_config,
+    with open(args[0].ads_config, "r", encoding="utf-8") as f:
+        google_ads_config_dict = yaml.safe_load(f)
+    google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
     customer_ids = get_customer_ids(google_ads_client, config.account,
                                     config.customer_ids_query)

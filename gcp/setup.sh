@@ -175,5 +175,10 @@ deploy_all() {
 
 
 for i in "$@"; do
-    "$i"
+  "$i"
+  exitcode=$?
+  if [ $exitcode -ne 0 ]; then
+    echo "Breaking script as command '$i' failed"
+    exit $exitcode
+  fi
 done

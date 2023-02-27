@@ -15,6 +15,8 @@
 import argparse
 from google.cloud import bigquery
 from datetime import datetime, timedelta
+from smart_open import open
+import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.utils import get_customer_ids
@@ -47,7 +49,9 @@ def main():
     project, dataset = config.writer_params.get(
         "project"), config.writer_params.get("dataset")
 
-    google_ads_client = GoogleAdsApiClient(path_to_config=args[0].ads_config,
+    with open(args[0].ads_config, "r", encoding="utf-8") as f:
+        google_ads_config_dict = yaml.safe_load(f)
+    google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
     customer_ids = get_customer_ids(google_ads_client, config.account,
                                     args[0].customer_ids_query)

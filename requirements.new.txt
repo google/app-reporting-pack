@@ -1,3 +1,4 @@
 google-ads-api-report-fetcher >= 0.1.13.1
 db-dtypes
 pyyaml
+smart_open[gcs]
