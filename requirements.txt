@@ -145,6 +145,10 @@ db-dtypes==1.0.4 \
     --hash=sha256:6527cd2ae956e1d91c6c79387fb2a2217938139efc14449f6c662bd768994e9e \
     --hash=sha256:996c0250051c0c3faef8a9bd02b30a182d553e6a9b8d34b5344a30fe2fb9de33
     # via -r requirements.in
+faker==17.3.0 \
+    --hash=sha256:1dfffa43b4492b899a839619f2056060b585ba0bc76f329525194ca04dde0988 \
+    --hash=sha256:26b2864a5332094f2c7f3968deebabce69be39ed5db4dbf22b4fa0ba3d1acdae
+    # via google-ads-api-report-fetcher
 flask==2.2.2 \
     --hash=sha256:642c450d19c4ad482f96729bd2a8f6d32554aa1e231f4f6b4e7e5264b16cca2b \
     --hash=sha256:b9c46cc36662a7949f34b52d8ec7bb59c0d74ba08ba6cb9ce9adc1d8676d9526
@@ -153,8 +157,8 @@ google-ads==19.0.0 \
     --hash=sha256:7a58d9f0a6c42acdc8a1388f6e74fd4ecd1b51da758d8a4210bfe3e8a32421fa \
     --hash=sha256:cf4ff08714d5466d1cb407448faf8ed63067b613d138b2294a31db798fd9a071
     # via google-ads-api-report-fetcher
-google-ads-api-report-fetcher==0.1.11 \
-    --hash=sha256:d15da609f18d6728fb1f112715ac04f153d7ada3c1bf5f53bbf5652ab25b0d66
+google-ads-api-report-fetcher==1.0.0 \
+    --hash=sha256:792991510009d6419565f0b35eb2c62d0d866cf7573cf3d6ea4d62e58bfbb282
     # via -r requirements.in
 google-api-core[grpc]==2.10.1 \
     --hash=sha256:92d17123cfe399b5ef7e026c63babf978d8475e1ac877919eb7933e25dea2273 \
@@ -643,6 +647,7 @@ python-dateutil==2.8.2 \
     --hash=sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9
     # via
     #   botocore
+    #   faker
     #   google-ads-api-report-fetcher
     #   google-cloud-bigquery
     #   pandas
