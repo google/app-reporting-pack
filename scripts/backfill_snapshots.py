@@ -66,7 +66,7 @@ def restore_history(placeholder_df: pd.DataFrame,
 def format_partial_change_history(df: pd.DataFrame,
                                   dimension_name: str) -> pd.DataFrame:
     """Performs renaming and selecting last value for the date."""
-    df["day"] = df["change_date"].str.split(expand=True)[0]
+    df.loc[:, ("day")] = df["change_date"].str.split(expand=True)[0]
     df = df.rename(columns={
         f"old_{dimension_name}": "value_old",
         f"new_{dimension_name}": "value_new"
@@ -160,7 +160,8 @@ def main():
     current_bids_budgets_active_campaigns = report_fetcher.fetch(
         queries.BidsBudgetsActiveCampaigns()).to_pandas()
     current_bids_budgets_inactive_campaigns = report_fetcher.fetch(
-        queries.BidsBudgetsInactiveCampaigns(days_ago_29, days_ago_1)).to_pandas()
+        queries.BidsBudgetsInactiveCampaigns(days_ago_29,
+                                             days_ago_1)).to_pandas()
     current_bids_budgets = pd.concat([
         current_bids_budgets_inactive_campaigns,
         current_bids_budgets_active_campaigns
@@ -190,6 +191,8 @@ def main():
     for date in dates:
         daily_history = restored_bid_budget_history.loc[
             restored_bid_budget_history["day"] == date]
+        daily_history.loc[:, ("day")] = datetime.strptime(date,
+                                                          "%Y-%m-%d").date()
         table_id = f"{bq_project}.{bq_dataset}.bid_budgets_{date.replace('-','')}"
         try:
             write_data_to_bq(bq_client=bq_client,
