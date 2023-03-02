@@ -63,13 +63,19 @@ set_iam_permissions() {
 }
 
 
+create_topic() {
+  TOPIC_EXISTS=$(gcloud pubsub topics list --filter="name.scope(topic):'$TOPIC'" --format="get(name)")
+  if [[ ! -n $TOPIC_EXISTS ]]; then
+    gcloud pubsub topics create $TOPIC
+  fi
+}
+
 deploy_cf() {
   echo "Deploying Cloud Function"
   CF_REGION=$(git config -f $SETTING_FILE function.region)
   CF_NAME=$(git config -f $SETTING_FILE function.name)
 
-  # it might fail and that's ok (make sure you haven't enabled `set -e` though)
-  gcloud pubsub topics create $TOPIC
+  create_topic
 
   # create env.yaml from env.yaml.template if it doesn't exist
   if [ ! -f ./cloud-functions/create-vm/env.yaml ]; then
@@ -101,9 +107,11 @@ deploy_cf() {
 deploy_config() {
   echo 'Deploying config to GCS'
   NAME=$(git config -f $SETTING_FILE config.name)
+  gsutil mb -b on gs://$PROJECT_ID
+
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
-  gsutil -h "Content-Type:text/plain" -m cp -R ./../config.yaml $GCS_BASE_PATH/config.yaml
-  gsutil -h "Content-Type:text/plain" -m cp -R ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
+  gsutil -h "Content-Type:text/plain" cp ./../config.yaml $GCS_BASE_PATH/config.yaml
+  gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
 }
 
 

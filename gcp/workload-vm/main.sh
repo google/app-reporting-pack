@@ -1,5 +1,4 @@
 #!/bin/bash
-set -e  # break at first non-zero exitcode
 
 LOG_NAME=arp-vm
 
@@ -16,6 +15,7 @@ if [ -z "$config_uri" ]; then
   config_uri="config.yaml" # by default we assume a local config (inside the current container)
   echo $config_uri
 fi
+
 ads_config_uri=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/ads_config_uri -s --fail)
 if [ -z "$ads_config_uri" ]; then
   ads_config_uri="google-ads.yaml"
@@ -25,10 +25,15 @@ fi
 gcloud logging write $LOG_NAME "[$(hostname)] Starting ARP application (config: $config_uri, google-ads-config: $ads_config_uri)"
 
 # run ARP
-./run-docker.sh "google_ads_queries/*/*.sql" "bq_queries" "$ads_config_uri" "$config_uri"
-#./run-local.sh --quiet --config $config_uri --google-ads-config $ads_config_uri 
-
-gcloud logging write $LOG_NAME "[$(hostname)] ARP application has finished execution"
+#./run-docker.sh "google_ads_queries/*/*.sql" "bq_queries" "$ads_config_uri" "$config_uri"
+# TODO: --backfill, --legacy
+./run-local.sh --quiet --config $config_uri --google-ads-config $ads_config_uri 
+exitcode=$?
+if [ $exitcode -ne 0 ]; then
+  gcloud logging write $LOG_NAME "[$(hostname)] ARP application has finished execution with an error" --severity ERROR
+else
+  gcloud logging write $LOG_NAME "[$(hostname)] ARP application has finished execution successfully"
+fi
 
 
 # Delete the VM (fetch a custom metadata key, it can be absent, so returns 404 - handling it with --fail options)

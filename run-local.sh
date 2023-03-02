@@ -214,7 +214,9 @@ welcome() {
 run_with_config() {
   echo
   echo -e "${COLOR}Running with $config_file${NC}"
-  cat $config_file
+  if [[ -f "$config_file" ]]; then
+    cat $config_file
+  fi
   if [[ $backfill_only = "y" ]]; then
     echo -e "${COLOR}===backfilling snapshots===${NC}"
       $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
@@ -277,10 +279,12 @@ if [[ -z ${loglevel} ]]; then
   loglevel="INFO"
 fi
 
-if [[ -f "$config_file" ]]; then
+if [[ -n "$config_file" ]]; then
   if [[ $quiet = "n" ]]; then
     echo -e "${COLOR}Found saved configuration at $config_file${NC}"
-    cat $config_file
+    if [[ -f "$config_file" ]]; then
+      cat $config_file
+    fi
     echo -n -e "${COLOR}Do you want to use it (Y/n/q): ${NC}"
     read -r setup_config_answer
     setup_config_answer=$(convert_answer $setup_config_answer)
