@@ -13,6 +13,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+. ./scripts/shell_utils/app_reporting_pack.sh
+. ./scripts/shell_utils/gaarf.sh
+. ./scripts/shell_utils/functions.sh
+
+
 COLOR='\033[0;36m' # Cyan
 NC='\033[0m' # No color
 usage="bash run-local.sh -c|--config <config> -q|--quiet\n\n
@@ -74,34 +79,25 @@ done
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
 API_VERSION="12"
 
-check_ads_config() {
-  if [[ -n $google_ads_config ]]; then
-    ads_config=$google_ads_config
-  elif [[ -f "$HOME/google-ads.yaml" ]]; then
-    ads_config=$HOME/google-ads.yaml
-  else
-    echo -e "${COLOR}Cannot find the google-ads.yaml file${NC}"
-    echo -n "Enter full path to google-ads.yaml file: "
-    read -r ads_config
-  fi
-}
-
-convert_answer() {
-  echo "$1" | tr '[:upper:]' '[:lower:]' | cut -c1
+welcome() {
+  echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
 }
 
 setup() {
-  echo -n "Enter account_id: "
+  echo -n "Enter account_id in XXXXXXXXXX format: "
   read -r customer_id
   echo -n "Enter BigQuery project_id: "
   read -r project
   echo -n "Enter BigQuery dataset: "
   read -r bq_dataset
-  echo -n "Enter start_date in YYYY-MM-DD format (or use :YYYYMMDD-30 for last 30 days): "
+  echo -n "Enter start_date in YYYY-MM-DD format (or use :YYYYMMDD-90 for last 90 days): "
   read -r start_date
   echo -n "Enter end_date in YYYY-MM-DD format (or use :YYYYMMDD-1 for yesterday): "
   read -r end_date
+  start_date=${start_date:-:YYYYMMDD-90}
+  end_date=${end_date:-:YYYYMMDD-1}
   ask_for_cohorts
+  ask_for_video_orientation
   generate_bq_macros
   echo -n "Do you want to save this config (Y/n): "
   read -r save_config_answer
@@ -117,85 +113,6 @@ setup() {
   print_configuration
 }
 
-
-prompt_running() {
-  echo -n -e "${COLOR}Start running $solution_name? Y/n: ${NC}"
-  read -r answer
-  answer=$(convert_answer $answer)
-
-  if [[ $answer = "y" ]]; then
-    echo "Running..."
-  else
-    echo "Exiting the script..."
-    exit
-  fi
-}
-
-ask_for_cohorts() {
-  default_cohorts=(0 1 3 5 7 14 30)
-  echo -n -e "${COLOR}Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to adjust it? [Y/n]: ${NC}"
-  read -r cohorts_answer
-  ads_config_answer=$(convert_answer $cohorts_answer)
-  if [[ $cohorts_answer = "y" ]]; then
-    echo -n -e "${COLOR}Please enter cohort number in the following format 1,2,3,4,5: ${NC}"
-    read -r cohorts_string
-  fi
-  IFS="," read -ra cohorts_array <<< $cohorts_string
-  combined_cohorts=("${default_cohorts[@]}" "${cohorts_array[@]}")
-  unique_cohorts=($(for f in "${combined_cohorts[@]}"; do echo "${f}"; done | sort -u -n))
-  _cohorts="${unique_cohorts[@]}"
-  cohorts_final=$(echo ${_cohorts// /,})
-}
-
-generate_bq_macros() {
-  bq_dataset_output=$(echo $bq_dataset"_output")
-  bq_dataset_legacy=$(echo $bq_dataset"_legacy")
-  macros="--macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts_final"
-}
-
-
-fetch_reports() {
-  gaarf $(dirname $0)/google_ads_queries/*/*.sql \
-  --account=$customer_id \
-  --output=bq \
-  --customer-ids-query="$customer_ids_query" \
-  --bq.project=$project --bq.dataset=$bq_dataset \
-  --macro.start_date=$start_date --macro.end_date=$end_date \
-  --ads-config=$ads_config "$@"
-}
-
-conversion_lag_adjustment() {
-  $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
-    --account=$customer_id --ads-config=$ads_config \
-    --bq.project=$project --bq.dataset=$bq_dataset
-}
-
-backfill_snapshots() {
-  $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
-    --account=$customer_id --ads-config=$ads_config "$@"
-}
-
-generate_bq_views() {
-  gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql \
-    --project=$project --target=$bq_dataset $macros "$@"
-}
-
-
-generate_snapshots() {
-  gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql \
-    --project=$project --target=$bq_dataset $macros "$@"
-}
-
-generate_output_tables() {
-  gaarf-bq $(dirname $0)/bq_queries/*.sql \
-    --project=$project --target=$bq_dataset_output $macros "$@"
-}
-
-generate_legacy_views() {
-  gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql \
-    --project=$project --target=$bq_dataset_legacy $macros "$@"
-}
-
 print_configuration() {
   echo "Your configuration:"
   echo "  account_id: $customer_id"
@@ -205,14 +122,10 @@ print_configuration() {
   echo "  End date: $end_date"
   echo "  Ads config: $ads_config"
   echo "  Cohorts: $cohorts_final"
-}
-
-welcome() {
-  echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
+  echo "  Video parsing mode: $video_parsing_mode_output"
 }
 
 run_with_config() {
-  echo
   echo -e "${COLOR}Running with $config_file${NC}"
   if [[ -f "$config_file" ]]; then
     cat $config_file
@@ -241,6 +154,10 @@ run_with_config() {
   fi
   echo -e "${COLOR}===generating views and functions===${NC}"
   gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql -c=$config_file --log=$loglevel
+  echo -e "${COLOR}===getting video orientation===${NC}"
+  $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
+    -c=$config_file \
+    --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
   echo -e "${COLOR}===generating final tables===${NC}"
   gaarf-bq $(dirname $0)/bq_queries/*.sql -c=$config_file --log=$loglevel
   if [[ $legacy = "y" ]]; then
@@ -265,6 +182,8 @@ run_with_parameters() {
   fi
   echo -e "${COLOR}===generating views and functions===${NC}"
   generate_bq_views $save_config --log=$loglevel
+  echo -e "${COLOR}===getting video orientation===${NC}"
+  fetch_video_orientation $save_config --log=$loglevel --api-version=$API_VERSION
   echo -e "${COLOR}===generating final tables===${NC}"
   generate_output_tables $save_config --log=$loglevel
   if [[ $legacy = "y" ]]; then

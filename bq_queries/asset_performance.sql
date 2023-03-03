@@ -116,7 +116,7 @@ SELECT
         WHEN "TEXT" THEN ""
         WHEN "IMAGE" THEN CONCAT(Assets.height, "x", Assets.width)
         WHEN "MEDIA_BUNDLE" THEN CONCAT(Assets.height, "x", Assets.width)
-        WHEN "YOUTUBE_VIDEO" THEN "Placeholder" --TODO
+        WHEN "YOUTUBE_VIDEO" THEN VideoOrientation.video_orientation
         ELSE NULL
         END AS asset_orientation,
     ROUND(VideoDurations.video_duration / 1000) AS video_duration,
@@ -129,7 +129,7 @@ SELECT
         WHEN "TEXT" THEN `{bq_dataset}.BinText`(AP.field_type, LENGTH(Assets.text))
         WHEN "IMAGE" THEN `{bq_dataset}.BinBanners`(Assets.height, Assets.width)
         WHEN "MEDIA_BUNDLE" THEN `{bq_dataset}.BinBanners`(Assets.height, Assets.width)
-        WHEN "YOUTUBE_VIDEO" THEN ""  --TODO
+        WHEN "YOUTUBE_VIDEO" THEN VideoOrientation.video_orientation
         END AS asset_dimensions,
     `{bq_dataset}.ConvertAdNetwork`(AP.network) AS network,
     SUM(AP.clicks) AS clicks,
@@ -174,6 +174,8 @@ LEFT JOIN {bq_dataset}.asset_mapping AS Assets
   ON AP.asset_id = Assets.id
 LEFT JOIN VideoDurations
   ON Assets.youtube_video_id = VideoDurations.video_id
+LEFT JOIN `{bq_dataset}.video_orientation` AS VideoOrientation
+    ON Assets.youtube_video_id = VideoOrientation.video_id
 LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction
         AND AP.ad_group_id = AssetCohorts.ad_group_id
