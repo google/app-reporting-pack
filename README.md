@@ -158,7 +158,7 @@ Once queries ran successfully you can proceed with dashboard replication.\
 Run the following command in the terminal to create a copy of the dashboard:
 
 ```
-bash scripts/create_dashboard.sh -c app-reporting-pack.yaml
+bash scripts/create_dashboard.sh -c app_reporting_pack.yaml
 ```
 
 For more details on dashboard please refer to [how-to-replicate-app-reporting-pack](docs/how-to-replicate-app-reporting-pack.md) document.
