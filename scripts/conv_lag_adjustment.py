@@ -34,7 +34,7 @@ def main():
     parser.add_argument("--output", dest="save", default="bq")
     parser.add_argument("--ads-config", dest="ads_config")
     parser.add_argument("--account", dest="customer_id")
-    parser.add_argument("--api-version", dest="api_version", default="10")
+    parser.add_argument("--api-version", dest="api_version", default="12")
     parser.add_argument("--customer-ids-query",
                         dest="customer_ids_query",
                         default=None)
