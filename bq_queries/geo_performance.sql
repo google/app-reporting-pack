@@ -15,6 +15,18 @@
 -- Contains dynamics by approval status.
 CREATE OR REPLACE TABLE {target_dataset}.geo_performance
 AS (
+    WITH ConversionsTable AS (
+        SELECT
+            date,
+            network,
+            ad_group_id,
+            country_id,
+            SUM(conversions) AS conversions,
+            SUM(IF(conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
+            SUM(IF(conversion_category != "DOWNLOAD", conversions, 0)) AS inapps
+        FROM {bq_dataset}.geo_performance_conversion_split
+        GROUP BY 1, 2, 3, 4
+    )
     SELECT
         PARSE_DATE("%Y-%m-%d", GP.date) AS day,
         M.account_id,
@@ -37,13 +49,13 @@ AS (
         SUM(clicks) AS clicks,
         SUM(impressions) AS impressions,
         `{bq_dataset}.NormalizeMillis`(SUM(GP.cost)) AS cost,
-        SUM(IF(ConversionSplit.conversion_category = "DOWNLOAD", conversions, 0)) AS installs,
-        SUM(IF(ConversionSplit.conversion_category != "DOWNLOAD", conversions, 0)) AS inapps,
+        SUM(ConversionSplit.installs) AS installs,
+        SUM(ConversionSplit.inapps) AS inapps,
         SUM(video_views) AS video_views,
         SUM(interactions) AS interactions,
         SUM(conversions_value) AS conversions_value
     FROM {bq_dataset}.geo_performance AS GP
-    LEFT JOIN {bq_dataset}.geo_performance_conversion_split AS ConversionSplit
+    LEFT JOIN ConversionsTable AS ConversionSplit
         USING(ad_group_id, network, date, country_id)
     LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
       ON GP.ad_group_id = M.ad_group_id
