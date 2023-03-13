@@ -124,14 +124,14 @@ If you installed all requirements in a virtual environment you can use the trick
 This command will execute App Reporting Pack queries every day at 1 AM.
 
 
-### Running queries in a Docker container
+### Running in a Docker container
 
 You can run App Reporting Pack queries inside a Docker container.
 
-1. Build `app-reporting-pack` image:
+1. Build `app-reporting-pack` image (using `Dockerfile.standalone`):
 
 ```
-sudo docker build . -t app-reporting-pack
+sudo docker build . -t app-reporting-pack -f Dockerfile.standalone
 ```
 
 It will create `app-reporting-pack` docker image you can use later on. It expects the following input:

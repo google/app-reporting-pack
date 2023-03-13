@@ -1,0 +1,13 @@
+# This is Dockerfile for running ARP app in Docker (not Cloud Run)
+FROM python:3.10
+
+WORKDIR /app
+COPY requirements.new.txt requirements.txt
+RUN pip install -r requirements.txt
+COPY google_ads_queries/ google_ads_queries/
+COPY bq_queries/ bq_queries/
+COPY scripts/ .
+ENV GOOGLE_APPLICATION_CREDENTIALS service_account.json
+
+ENTRYPOINT ["./run-docker.sh"]
+CMD ["google_ads_queries/*/*.sql", "bq_queries", "/google-ads.yaml", "/config.yaml"]
