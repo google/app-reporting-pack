@@ -106,3 +106,14 @@ class CampaignsWithSpend(BaseQuery):
             AND metrics.impressions > 0
 
     """
+
+
+class Videos(BaseQuery):
+    """Fetches campaign_ids with non-zero impressions."""
+    def __init__(self) -> None:
+        self.query_text = f"""
+        SELECT
+            media_file.video.youtube_video_id AS video_id
+        FROM media_file
+        WHERE media_file.type = 'VIDEO'
+    """
