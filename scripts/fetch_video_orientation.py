@@ -269,7 +269,7 @@ def main():
                     "orientation_position":
                     args[0].orientation_position or orientation_position,
                     "orientation_delimiter":
-                    args[0].orientation_delimiter or orientation_position
+                    args[0].orientation_delimiter or orientation_delimiter
                 }
             })
     else:

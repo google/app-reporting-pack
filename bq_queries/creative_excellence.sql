@@ -23,21 +23,23 @@ WITH
         SELECT
             PARSE_DATE("%Y-%m-%d", date) AS day,
             campaign_id,
+            C.ad_group_id,
             SUM(cost) AS cost
         FROM {bq_dataset}.ad_group_performance AS C
         LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
             ON C.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
-        GROUP BY 1, 2
+        GROUP BY 1, 2, 3
     ),
     AdGroupCostTable AS (
         SELECT
             campaign_id,
+            ad_group_id,
             COUNT(*) AS n_active_days,
             `{bq_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
         FROM CostDynamicsTable
-        GROUP BY 1
+        GROUP BY 1, 2
     ),
     ConversionSplitTable AS (
         SELECT
@@ -53,7 +55,7 @@ WITH
         GROUP BY 1, 2
     ),
     -- Helper to identify campaign level bid and budget snapshot data
-    -- for the last 7 days alonside corresponding lags
+    -- for the last 7 days alongside corresponding lags
     BidBudget7DaysTable AS (
         SELECT
             day,
@@ -190,6 +192,7 @@ LEFT JOIN {bq_dataset}.ad_strength AS AdStrength
   ON S.ad_id = AdStrength.ad_id
 LEFT JOIN AdGroupCostTable AS C
   ON M.campaign_id = C.campaign_id
+  AND M.ad_group_id = C.ad_group_id
 LEFT JOIN ConversionSplitTable AS Conv
   ON M.campaign_id = Conv.campaign_id
   AND M.ad_group_id = Conv.ad_group_id
