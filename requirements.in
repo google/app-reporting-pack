@@ -3,3 +3,4 @@ db-dtypes
 flask
 gunicorn
 pyyaml
+google-api-python-client
