@@ -36,7 +36,6 @@ solution_name="App Reporting Pack"
 solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
   tr ' ' '_')
 
-config_file="$solution_name_lowercase.yaml"
 quiet="n"
 
 while :; do
@@ -198,7 +197,8 @@ if [[ -z ${loglevel} ]]; then
   loglevel="INFO"
 fi
 
-if [[ -n "$config_file" ]]; then
+if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
+  config_file=${config_file:-$solution_name_lowercase.yaml}
   if [[ $quiet = "n" ]]; then
     echo -e "${COLOR}Found saved configuration at $config_file${NC}"
     if [[ -f "$config_file" ]]; then
@@ -226,7 +226,8 @@ if [[ -n "$config_file" ]]; then
         echo "Unknown command, exiting"
         exit
       fi
-    elif [[ $setup_config_answer = "q" ]]; then
+    elif [[ ! $setup_config_answer =~ "^[yn]" ]]; then
+      echo "Unknown command, exiting"
       exit 1
     else
       echo
