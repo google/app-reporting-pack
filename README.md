@@ -32,6 +32,8 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 ## Setup
 
+> WARNING: This method is going to be deprecated
+
 1. Click the big blue button to deploy:
 
    [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
@@ -90,7 +92,7 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
 Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
 ```shell
-bash run-local.sh
+bash ./run-local.sh
 ```
 
 It will guide you through a series of questions to get all necessary parameters to run the scripts:
@@ -151,6 +153,28 @@ sudo docker run \
 ```
 
 > Don't forget to change /path/to/google-ads.yaml and /path/to/service_account.json with valid paths.
+
+### Running in Compute Engine with Docker
+First follow the instructions for manual installation above. In the end you will need to have `config.yaml`
+`google-ads.yaml` files. After that you are ready to install.
+Go to gcp folder and run the following command:
+```
+./setup.sh deploy_all
+```
+This will do the followings:
+* enable APIs
+* grant required IAM permissions
+* create a repository in Artifact Repository
+* build a Docker image (using `gcp/workload-vm/Dockerfile` file)
+* publish the image into the repository
+* deploy Cloud Function `create-vm` (from gcp/cloud-functions/create-vm/) (using environment variables in env.yaml file)
+* deploy configs to GCS (config.yaml and google-ads.yaml) (to a bucket with a name of current GCP project id and 'arp' subfolder)
+* create a Scheduler job for publishing a pubsub message with arguments for the CF
+
+What happens when a pubsub message published:
+* the Cloud Function 'create-vm' get a message with arguments and create a virtual machine based a Docker container from the Docker image built during the installation
+* the VM on startup parses the arguments from the CF (via VM's attributes) and execute ARP in quite the same way as it executes locally (using `run-local.sh`). Additionally the VM's entrypoint script deletes the virtual machine upon completion of the run-local.sh.
+
 
 ### Dashboard Replication
 

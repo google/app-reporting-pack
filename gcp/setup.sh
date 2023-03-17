@@ -157,7 +157,7 @@ schedule_run() {
   REGION=$(git config -f $SETTING_FILE scheduler.region)
   SCHEDULE=$(git config -f $SETTING_FILE scheduler.schedule)
   SCHEDULE=${SCHEDULE:-"0 0 * * *"} # by default at midnight
-  local DATA=$(get_run_data_escaped)
+  local DATA=$(get_run_data)
   echo 'Scheduling a job with args: '$DATA
 
   gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
@@ -166,7 +166,7 @@ schedule_run() {
     --schedule="$SCHEDULE" \
     --location=$REGION \
     --topic=$TOPIC \
-    --message-body="{\"argument\": \"$DATA\"}" \
+    --message-body="$DATA" \
     --time-zone="Etc/UTC"
 }
 
