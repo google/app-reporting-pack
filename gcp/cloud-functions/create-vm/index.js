@@ -16,7 +16,7 @@ function getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType)  {
       "kind": "compute#instance",
       "zone": `projects/${projectId}/zones/${zone}`,
       "machineType": `projects/${projectId}/zones/${zone}/machineTypes/${machineType}`,
-      "os": "cos",
+      "os": "cos-stable",
       "displayDevice": {
         "enableDisplay": false
       },

@@ -32,8 +32,6 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 ## Setup
 
-> WARNING: This method is going to be deprecated
-
 1. Click the big blue button to deploy:
 
    [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
