@@ -13,57 +13,57 @@ const zone = process.env.ZONE || 'us-central1-a';
 
 function getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType)  {
   const vmConfig = {
-      "kind": "compute#instance",
-      "zone": `projects/${projectId}/zones/${zone}`,
-      "machineType": `projects/${projectId}/zones/${zone}/machineTypes/${machineType}`,
-      "os": "cos-stable",
-      "displayDevice": {
-        "enableDisplay": false
-      },
-      "metadata": {
-        "kind": "compute#metadata",
-        "items": [
-          {
-            key: "gce-container-declaration",
-            value: `spec:\n  containers:\n    - name: ${instanceName}\n      image: "${dockerImageUrl}"\n      stdin: false\n      tty: false\n  restartPolicy: Never\n\n# This container declaration format is not public API and may change without notice. Please\n# use gcloud command-line tool or Google Cloud Console to run Containers on Google Compute Engine.`
-          }, 
-          {
-            key: 'enable-oslogin',
-            value: 'TRUE'
-          },
-          // enabling logging for container - https://cloud.google.com/container-optimized-os/docs/how-to/logging#gcloud
-          {
-            key: 'google-logging-enabled',
-            value: 'TRUE'
-          },
-          {
-            key: "delete_vm",
-            value: "TRUE"
-          }
-        ]
-      },
-      "networkInterfaces": [
+    "kind": "compute#instance",
+    "zone": `projects/${projectId}/zones/${zone}`,
+    "machineType": `projects/${projectId}/zones/${zone}/machineTypes/${machineType}`,
+    "os": "cos-stable",
+    "displayDevice": {
+      "enableDisplay": false
+    },
+    "metadata": {
+      "kind": "compute#metadata",
+      "items": [
         {
-          "kind": "compute#networkInterface",
-          "subnetwork": `projects/${projectId}/regions/${region}/subnetworks/default`,
-          "accessConfigs": [
-            {
-              "kind": "compute#accessConfig",
-              "name": "External NAT",
-              "type": "ONE_TO_ONE_NAT",
-              "networkTier": "PREMIUM"
-            }
-          ]
-        }
-      ],
-      "serviceAccounts": [
+          key: "gce-container-declaration",
+          value: `spec:\n  containers:\n    - name: ${instanceName}\n      image: "${dockerImageUrl}"\n      stdin: false\n      tty: false\n  restartPolicy: Never\n\n# This container declaration format is not public API and may change without notice. Please\n# use gcloud command-line tool or Google Cloud Console to run Containers on Google Compute Engine.`
+        },
         {
-          "email": serviceAccount,
-          "scopes": [
-            "https://www.googleapis.com/auth/cloud-platform"
-          ]
+          key: 'enable-oslogin',
+          value: 'TRUE'
+        },
+        // enabling logging for container - https://cloud.google.com/container-optimized-os/docs/how-to/logging#gcloud
+        {
+          key: 'google-logging-enabled',
+          value: 'TRUE'
+        },
+        {
+          key: "delete_vm",
+          value: "TRUE"
         }
       ]
+    },
+    "networkInterfaces": [
+      {
+        "kind": "compute#networkInterface",
+        "subnetwork": `projects/${projectId}/regions/${region}/subnetworks/default`,
+        "accessConfigs": [
+          {
+            "kind": "compute#accessConfig",
+            "name": "External NAT",
+            "type": "ONE_TO_ONE_NAT",
+            "networkTier": "PREMIUM"
+          }
+        ]
+      }
+    ],
+    "serviceAccounts": [
+      {
+        "email": serviceAccount,
+        "scopes": [
+          "https://www.googleapis.com/auth/cloud-platform"
+        ]
+      }
+    ]
   };
   return vmConfig;
 }
@@ -102,7 +102,7 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
   console.log(JSON.stringify({event_data:data}));
 
   // get project id where create a VM, by default the current project is used
-  let projectId = data.project_id || process.env.GCP_PROJECT 
+  let projectId = data.project_id || process.env.GCP_PROJECT
   if (!projectId) {
     projectId = await getProject();
   }
@@ -147,23 +147,31 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
     });
   }
 
+  const gcs_base_path_public = data.gcs_base_path_public;
+  if (gcs_base_path_public && gcs_base_path_public.trim().length > 1) {
+    vmConfig.metadata.items.push({
+      "key": "gcs_base_path_public",
+      "value": gcs_base_path_public.trim()
+    });
+  }
+
   const vmName = instanceName + '-' + Date.now();
 
   console.log(JSON.stringify({message: `Creating a VM '${vmName}' (see vm config in jsonPayload)`, vmConfig: vmConfig}));
   compute.zone(zone)
-    .createVM(vmName, vmConfig)
-    .then(data => {
-      // Operation pending.
-      const vm = data[0];
-      const operation = data[1];
-      console.log(`VM creation operation submitted (VM id: ${vm.id}, operation: ${operation.id})`);
-      return operation.promise();
-    })
-    .then(() => {
-      const message = 'VM created with success, Cloud Function finished execution.';
-      console.log(message);
-    })
-    .catch(err => {
-      console.error(err);
-    });
+      .createVM(vmName, vmConfig)
+      .then(data => {
+        // Operation pending.
+        const vm = data[0];
+        const operation = data[1];
+        console.log(`VM creation operation submitted (VM id: ${vm.id}, operation: ${operation.id})`);
+        return operation.promise();
+      })
+      .then(() => {
+        const message = 'VM created with success, Cloud Function finished execution.';
+        console.log(message);
+      })
+      .catch(err => {
+        console.error(err);
+      });
 });

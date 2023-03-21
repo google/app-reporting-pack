@@ -25,19 +25,19 @@
       "description": "Your Google Ads MCC account ID",
       "required" : true,
       "order": 5
-    } 
+    }
   },
   "options": {
-    "allow-unauthenticated": true,
+    "allow-unauthenticated": false,
     "memory": "8192Mi",
     "cpu": "2"
   },
   "hooks": {
     "prebuild": {
-      "commands": ["./setup/setup_config.sh"]
-    },
-    "postcreate": {
-      "commands": ["./setup/setup_cloud_scheduling.sh"]
+      "commands": [
+        "./gcp/cloud-run-button/create_files.sh",
+        "./gcp/setup.sh deploy_public_index deploy_all start"
+      ]
     }
   }
 }

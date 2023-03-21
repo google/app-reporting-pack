@@ -12,7 +12,7 @@ case $1 in
 		project_id=`grep -A1 "gaarf-bq" $config | tail -n1 | cut -d ":" -f 2 | tr -d " "`
 		dataset_id=`grep target_dataset $config | tail -n1 | cut -d ":" -f 2 | tr -d " "`
 		;;
-		-p|--project)
+  -p|--project)
 		shift
 		project_id=$1
 		;;
