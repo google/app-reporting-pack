@@ -108,12 +108,12 @@ SELECT
         WHEN asset_orientation IN ("250x250", "500x500") THEN "250x250"
         WHEN asset_orientation IN ("240x400", "480x800") THEN "240x400"
         -- headlines
-        WHEN field_type = "HEADLINE" AND LENGTH(asset) <= 20 THEN "0-20 symbols"
-        WHEN field_type = "HEADLINE" AND LENGTH(asset) > 20 THEN "20+ symbols"
+        WHEN field_type = "Headline" AND LENGTH(asset) <= 20 THEN "0-20 symbols"
+        WHEN field_type = "Headline" AND LENGTH(asset) > 20 THEN "20+ symbols"
         -- description
-        WHEN field_type = "DESCRIPTION" AND LENGTH(asset) <= 30 THEN "0-23 symbols"
-        WHEN field_type = "DESCRIPTION" AND LENGTH(asset) <= 60 THEN "31-60 symbols"
-        WHEN field_type = "DESCRIPTION" AND LENGTH(asset) > 60 THEN "60+ symbols"
+        WHEN field_type = "Description" AND LENGTH(asset) <= 30 THEN "0-23 symbols"
+        WHEN field_type = "Description" AND LENGTH(asset) <= 60 THEN "31-60 symbols"
+        WHEN field_type = "Description" AND LENGTH(asset) > 60 THEN "60+ symbols"
         -- video
         ELSE asset_orientation
         END AS RefinedImageSize,
