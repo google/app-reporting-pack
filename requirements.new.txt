@@ -1,4 +1,5 @@
-google-ads-api-report-fetcher >= 0.1.13.1
+google-ads-api-report-fetcher>=1.2.0
 db-dtypes
 pyyaml
+google-api-python-client==2.80.0
 smart_open[gcs]

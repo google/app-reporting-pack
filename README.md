@@ -30,7 +30,7 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 1. Credentials for Google Ads API access - `google-ads.yaml`.
    See details here - https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md
-   Normally you need OAuth2 credentials (Client ID, Client Secret), a Google Ads developer token and a refresh token. 
+   Normally you need OAuth2 credentials (Client ID, Client Secret), a Google Ads developer token and a refresh token.
 
 
 ## Setup
@@ -131,29 +131,28 @@ This command will execute App Reporting Pack queries every day at 1 AM.
 
 You can run App Reporting Pack queries inside a Docker container.
 
-1. Build `app-reporting-pack` image (using `Dockerfile.standalone`):
-
-```
-sudo docker build . -t app-reporting-pack -f Dockerfile.standalone
-```
-
-It will create `app-reporting-pack` docker image you can use later on. It expects the following input:
-
-* `google-ads.yaml` - absolute path to `google-ads.yaml` file
-* `service_account.json` - absolute path to service account json file
-* `config.yaml` - absolute path to YAML config (to generate it please run `run-local.sh` script from *Running locally* section.
-
-2. Run:
-
 ```
 sudo docker run \
     -v /path/to/google-ads.yaml:/google-ads.yaml \
     -v /path/to/service_account.json:/service_account.json \
-    -v /path/to/apr-config.yaml:/config.yaml \
-    app-reporting-pack
+    -v /path/to/app_reporting_pack.yaml:/app_reporting_pack.yaml \
+    ghcr.io/google/app-reporting-pack \
+    -g google-ads.yaml -c app_reporting_pack.yaml --legacy --backfill
 ```
 
 > Don't forget to change /path/to/google-ads.yaml and /path/to/service_account.json with valid paths.
+
+You can provide configs as remote (for example Google Cloud Storage).
+In that case you don't need to mount `google-ads.yaml` and `app_reporting_pack.yaml`
+configs into the container:
+```
+sudo docker run \
+    -v /path/to/service_account.json:/service_account.json \
+    ghcr.io/google/app-reporting-pack \
+    -g gs://project_name/google-ads.yaml \
+    -c gs://project_name/app_reporting_pack.yaml \
+    --legacy --backfill
+```
 
 ### Running in Compute Engine with Docker
 First follow the instructions for manual installation above. In the end you will need to have `config.yaml`
