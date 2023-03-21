@@ -211,10 +211,10 @@ if [[ -n "$config_file" ]]; then
       echo -e "${COLOR}Using saved configuration...${NC}"
       run_with_config
     elif [[ $setup_config_answer = "n" ]]; then
-      echo -n -e "${COLOR}Choose [N]ew configuration or [S]tart over: (N/S): ${NC}"
+      echo -n -e "${COLOR}Choose [C]hoose an existing configuration or [S]tart over: (C/S): ${NC}"
       read -r new_config_start_over
       new_config_start_over=$(convert_answer $new_config_start_over)
-      if [[ $new_config_start_over = "n" ]]; then
+      if [[ $new_config_start_over = "c" ]]; then
         echo -n -e "${COLOR}Provide full path to saved configuration: ${NC}"
         read -r config_file
         run_with_config
