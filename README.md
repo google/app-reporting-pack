@@ -26,9 +26,10 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 1. A new GCP project with billing account attached
 
-1. Membership in app-reporting-pack-readers-external group(join [here](https://groups.google.com/a/google.com/g/app-reporting-pack-readers-external))
-
-1. Oauth2 credentials (Client ID, Client Secret, Refresh token) with Google Ads access. [Instructions video](https://www.youtube.com/watch?v=KFICa7Ngzng)
+1. Credentials for Google Ads API access - `google-ads.yaml`.
+   See details here - https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md
+   Normally you need OAuth2 credentials (Client ID, Client Secret), a Google Ads developent token and a refresh token. 
+   [Instructions video](https://www.youtube.com/watch?v=KFICa7Ngzng)
 
 ## Setup
 
