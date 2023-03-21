@@ -1,4 +1,11 @@
 SETTING_FILE="./settings.ini"
+SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
+SETTING_FILE="${SCRIPT_PATH}/settings.ini"
+
+# changing the cwd to the script's contining folder so all pathes inside can be local to it
+# (important as the script can be called via absolute path and as a nested path)
+pushd $SCRIPT_PATH
+
 while :; do
     case $1 in
   -s|--settings)
@@ -43,7 +50,7 @@ create_registry() {
 
 build_docker_image() {
   echo "Building and pushing Docker image to Artifact Registry"
-  gcloud builds submit --config=cloudbuild.yaml --substitutions=_REPOSITORY="docker",_IMAGE="$IMAGE_NAME",_REPOSITORY_LOCATION="$REPOSITORY_LOCATION" ./.. 
+  gcloud builds submit --config=cloudbuild.yaml --substitutions=_REPOSITORY="docker",_IMAGE="$IMAGE_NAME",_REPOSITORY_LOCATION="$REPOSITORY_LOCATION" ./..
 }
 
 
@@ -82,13 +89,22 @@ deploy_cf() {
     echo "creating env.yaml"
     cp ./cloud-functions/create-vm/env.yaml.template ./cloud-functions/create-vm/env.yaml
   fi
-  # initialize env.yaml - environment variables for CF
+  # initialize env.yaml - environment variables for CF:
+  #   - docker image url
   url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
   sed -i'.original' -e "s|#*[[:space:]]*DOCKER_IMAGE[[:space:]]*:[[:space:]]*.*$|DOCKER_IMAGE: $url|" ./cloud-functions/create-vm/env.yaml
+  #   - GCE VM name (base)
   instance=$(git config -f $SETTING_FILE compute.name)
   sed -i'.original' -e "s|#*[[:space:]]*INSTANCE_NAME[[:space:]]*:[[:space:]]*.*$|INSTANCE_NAME: $instance|" ./cloud-functions/create-vm/env.yaml
+  #   - GCE machine type
   machine_type=$(git config -f $SETTING_FILE compute.machine-type)
   sed -i'.original' -e "s|#*[[:space:]]*MACHINE_TYPE[[:space:]]*:[[:space:]]*.*$|MACHINE_TYPE: $machine_type|" ./cloud-functions/create-vm/env.yaml
+  #   - GCE Region
+  gce_region=$(git config -f $SETTING_FILE compute.region)
+  sed -i'.original' -e "s|#*[[:space:]]*REGION[[:space:]]*:[[:space:]]*.*$|REGION: $gce_region|" ./cloud-functions/create-vm/env.yaml
+  #   - GCE Zone
+  gce_zone=$(git config -f $SETTING_FILE compute.zone)
+  sed -i'.original' -e "s|#*[[:space:]]*ZONE[[:space:]]*:[[:space:]]*.*$|ZONE: $gce_zone|" ./cloud-functions/create-vm/env.yaml
 
   # deploy CF (pubsub triggered)
   gcloud functions deploy $CF_NAME \
@@ -120,10 +136,16 @@ get_run_data() {
   #   * project_id
   #   * machine_type
   #   * service_account
+  #   * ads_config_uri
+  #   * config_uri
+  #   * docker_image
   NAME=$(git config -f $SETTING_FILE config.name)
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
+  # NOTE for the commented code: 
+  # currently deploy_cf target puts a docker image url into env.yaml for CF, so there's no need to pass an image url via arguments, 
+  # but if you want to support several images simultaneously (e.g. with different tags) then image url can be passed via message as:
+  #    "docker_image": "'$REPOSITORY_LOCATION'-docker.pkg.dev/'$PROJECT_ID'/docker/'$IMAGE_NAME'", 
   data='{
-    "docker_image": "'$REPOSITORY_LOCATION'-docker.pkg.dev/'$PROJECT_ID'/docker/'$IMAGE_NAME'", 
     "config_uri": "'$GCS_BASE_PATH'/config.yaml",
     "ads_config_uri": "'$GCS_BASE_PATH'/google-ads.yaml"
   }'
@@ -190,3 +212,5 @@ for i in "$@"; do
     exit $exitcode
   fi
 done
+
+popd
