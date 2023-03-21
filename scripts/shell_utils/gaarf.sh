@@ -37,8 +37,10 @@ backfill_snapshots() {
 fetch_video_orientation() {
   $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
     --mode=$video_parsing_mode_output --account=$customer_id \
-    -c=$config_file --ads-config=$ads_config \
-    --project=$project --macro.bq_dataset=$bq_dataset --element-delimiter=$element_delimiter \
+    -c=$solution_name_lowercase.yaml --ads-config=$ads_config \
+    --youtube-config-path=$youtube_config_path \
+    --project=$project --macro.bq_dataset=$bq_dataset \
+    --element-delimiter=$element_delimiter \
     --orientation-position=$orientation_position \
     --orientation-delimiter=$orientation_delimiter "$@"
 }

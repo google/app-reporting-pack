@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 from dataclasses import dataclass, asdict
 import argparse
 import os
@@ -20,6 +20,7 @@ import logging
 import google
 from rich.logging import RichHandler
 import yaml
+from smart_open import open
 from googleapiclient.discovery import build
 
 from gaarf.api_clients import GoogleAdsApiClient
@@ -48,9 +49,10 @@ class VideoOrientationRegexp:
 
 
 def update_config(
-        path: str,
-        mode: str,
-        video_orientation_regexp: Optional[VideoOrientationRegexp] = None):
+    path: str,
+    mode: str,
+    youtube_config_path: str = None,
+    video_orientation_regexp: Optional[VideoOrientationRegexp] = None):
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -60,6 +62,9 @@ def update_config(
     if video_orientation_regexp:
         scripts_config["scripts"]["video_orientation"].update(
             asdict(video_orientation_regexp))
+    if youtube_config_path:
+        scripts_config["scripts"]["video_orientation"].update(
+            {"youtube_config_path": youtube_config_path})
     config.update(scripts_config)
     with open(path, "w", encoding="utf-8") as f:
         yaml.dump(config,
@@ -166,7 +171,12 @@ def main():
     parser.add_argument("--orientation-delimiter",
                         dest="orientation_delimiter",
                         default=None)
+    parser.add_argument("--youtube-config-path",
+                        dest="youtube_config_path",
+                        default=None)
+    parser.add_argument("--dry-run", dest="dry_run", action="store_true")
     parser.set_defaults(save_config=False)
+    parser.set_defaults(dry_run=False)
     args = parser.parse_known_args()
 
     logging.basicConfig(format="%(message)s",
@@ -183,23 +193,39 @@ def main():
         with open(args[0].gaarf_config, "r", encoding="utf-8") as f:
             gaarf_config = yaml.safe_load(f)
             if scripts := gaarf_config.get("scripts"):
-                video_orientation_config = scripts.get("video_orientation")
-                mode = video_orientation_config.get("mode")
-                element_delimiter = video_orientation_config.get(
-                    "element_delimiter")
-                orientation_position = video_orientation_config.get(
-                    "orientation_position")
-                orientation_delimiter = video_orientation_config.get(
-                    "orientation_delimiter")
+                if video_orientation_config := scripts.get(
+                        "video_orientation"):
+                    mode = video_orientation_config.get("mode")
+                    element_delimiter = video_orientation_config.get(
+                        "element_delimiter")
+                    orientation_position = video_orientation_config.get(
+                        "orientation_position")
+                    orientation_delimiter = video_orientation_config.get(
+                        "orientation_delimiter")
+                    youtube_config_path = video_orientation_config.get(
+                        "youtube_config_path")
             else:
                 element_delimiter = None
                 orientation_position = None
                 orientation_delimiter = None
 
+    save_config = args[0].save_config
+    dry_run = args[0].dry_run
+    if dry_run:
+        save_config = True
     bq_config = GaarfBqConfigBuilder(args).build()
     bq_executor = BigQueryExecutor(bq_config.project)
     if mode == "youtube":
+        if save_config:
+            update_config(path=args[0].gaarf_config,
+                          mode=mode,
+                          youtube_config_path=args[0].youtube_config_path)
+
+        if dry_run:
+            exit()
         logger.info("Getting video orientation from YouTube")
+        with open(args[0].youtube_config_path or youtube_config_path, "r", encoding="utf-8") as f:
+            youtube_config = yaml.safe_load(f)
         try:
             parsed_videos = bq_executor.execute(script_name="existing_videos",
                                                 query_text="""
@@ -229,10 +255,10 @@ def main():
         if videos:
             credentials = google.oauth2.credentials.Credentials(
                 None,
-                refresh_token=google_ads_config_dict.get("yt_refresh_token"),
+                refresh_token=youtube_config.get("refresh_token"),
                 token_uri="https://oauth2.googleapis.com/token",
-                client_id=google_ads_config_dict.get("client_id"),
-                client_secret=google_ads_config_dict.get("client_secret"))
+                client_id=youtube_config.get("client_id"),
+                client_secret=youtube_config.get("client_secret"))
             youtube_data_connector = YouTubeDataConnector(credentials)
             try:
                 video_orientations = youtube_data_connector.get_response(
@@ -250,36 +276,43 @@ def main():
             logger.info("No new videos to parse")
 
     elif mode == "regex":
-        logger.info("Parsing video orientation from asset name based on regexp")
+        logger.info(
+            "Parsing video orientation from asset name based on regexp")
         script_path = os.path.dirname(__file__)
         video_orientation_regexp = VideoOrientationRegexp(
             element_delimiter=args[0].element_delimiter,
             orientation_position=args[0].orientation_position,
             orientation_delimiter=args[0].orientation_delimiter)
+        if save_config:
+            update_config(path=args[0].gaarf_config,
+                          mode=mode,
+                          video_orientation_regexp=video_orientation_regexp)
+        if dry_run:
+            exit()
         bq_executor.execute(
             "video_orientation",
             FileReader().read(
-                os.path.join(script_path, "src/video_orientation.sql")
-            ), {
-                "macro": {
-                    "bq_dataset":
-                    bq_config.params.get("macro").get("bq_dataset"),
-                    "element_delimiter":
-                    args[0].element_delimiter or element_delimiter,
-                    "orientation_position":
-                    args[0].orientation_position or orientation_position,
-                    "orientation_delimiter":
-                    args[0].orientation_delimiter or orientation_delimiter
-                }
-            })
+                os.path.join(script_path, "src/video_orientation.sql")), {
+                    "macro": {
+                        "bq_dataset":
+                        bq_config.params.get("macro").get("bq_dataset"),
+                        "element_delimiter":
+                        args[0].element_delimiter or element_delimiter,
+                        "orientation_position":
+                        args[0].orientation_position or orientation_position,
+                        "orientation_delimiter":
+                        args[0].orientation_delimiter or orientation_delimiter
+                    }
+                })
     else:
         logger.info("Generating placeholders for video orientation")
         mode = "placeholders"
         video_orientation_regexp = None
-    if args[0].save_config:
-        update_config(path=args[0].gaarf_config,
-                      mode=mode,
-                      video_orientation_regexp=video_orientation_regexp)
+        if save_config:
+            update_config(path=args[0].gaarf_config,
+                          mode=mode)
+        if dry_run:
+            exit()
 
 
 if __name__ == "__main__":

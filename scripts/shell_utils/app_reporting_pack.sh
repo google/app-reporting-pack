@@ -50,7 +50,8 @@ ask_for_video_orientation() {
     fi
   elif [[ $video_parsing_mode = "y" ]]; then
     video_parsing_mode_output="youtube"
-    echo "Need something"
+    echo -n "Please enter path to youtube_config.yaml file: "
+    read -r youtube_config_path
 
   else
     video_parsing_mode_output="placeholders"
@@ -59,10 +60,10 @@ ask_for_video_orientation() {
 
 ask_for_cohorts() {
   default_cohorts=(0 1 3 5 7 14 30)
-  echo -n -e "${COLOR}Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to adjust it? [Y/n]: ${NC}"
+  echo -n -e "${COLOR}Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to use it? Continue[Y] or Change[n]: ${NC}"
   read -r cohorts_answer
   ads_config_answer=$(convert_answer $cohorts_answer)
-  if [[ $cohorts_answer = "y" ]]; then
+  if [[ $cohorts_answer != "y" ]]; then
     echo -n -e "${COLOR}Please enter cohort number in the following format 1,2,3,4,5: ${NC}"
     read -r cohorts_string
   fi

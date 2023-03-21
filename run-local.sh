@@ -30,6 +30,7 @@ Helper script for running App Reporting Pack queries.\n\n
 --legacy - generates legacy views that can be plugin into existing legacy dashboard.\n
 --backfill - whether to perform backfill of the bid and budgets snapshots.\n
 --backfill-only - perform only backfill of the bid and budgets snapshots.\n
+--generate-config-only - perform only config generation instead of fetching data from Ads API.\n
 "
 
 solution_name="App Reporting Pack"
@@ -37,6 +38,7 @@ solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
   tr ' ' '_')
 
 quiet="n"
+generate_config_only="n"
 
 while :; do
 case $1 in
@@ -63,6 +65,9 @@ case $1 in
     ;;
   --backfill-only)
     backfill_only="y"
+    ;;
+  --generate-config-only)
+    generate_config_only="y"
     ;;
   -h|--help)
     echo -e $usage;
@@ -102,10 +107,21 @@ setup() {
   read -r save_config_answer
   save_config_answer=$(convert_answer $save_config_answer)
   if [[ $save_config_answer = "y" ]]; then
+    echo -n "Config will be saved to $solution_name_lowercase.yaml, do you want to save it here? Continue[Y] or Change[n]: "
+    read -r config_change_answer
+    config_change_answer=$(convert_answer $config_change_answer)
+    if [[ $config_change_answer = "n" ]]; then
+      echo -n "Enter name of the config (without .yaml file extension): "
+      read -r solution_name_lowercase
+    fi
     save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
     echo -e "${COLOR}Saving configuration to $solution_name_lowercase.yaml${NC}"
     fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
     generate_output_tables $save_config --log=$loglevel --dry-run
+    fetch_video_orientation $save_config --log=$loglevel --dry-run
+    if [[ $generate_config_only = "y" ]]; then
+      exit 1
+    fi
   elif [[ $save_config_answer = "q" ]]; then
     exit 1
   fi
