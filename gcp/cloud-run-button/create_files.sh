@@ -30,5 +30,8 @@ use_proto_plus: True
 " >> google-ads.yaml
 
 echo "Editing config.yaml file..."
-sed -i 's/YOUR-BQ-PROJECT/'${GOOGLE_CLOUD_PROJECT}'/g' config.yaml
+sed -i 's/YOUR-BQ-PROJECT/'${GOOGLE_CLOUD_PROJECT}'/g' ./config.yaml
 sed -i 's/MCC-ID/'${MCC_ID}'/g' config.yaml
+
+echo "Updating index.html file..."
+sed -i 's/PROJECT_ID/'${GOOGLE_CLOUD_PROJECT}'/g' ./gcp/cloud-run-button/index.html
