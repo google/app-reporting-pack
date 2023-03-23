@@ -17,7 +17,7 @@
 . ./scripts/shell_utils/gaarf.sh
 . ./scripts/shell_utils/functions.sh
 
-
+set -e
 COLOR='\033[0;36m' # Cyan
 NC='\033[0m' # No color
 usage="bash run-local.sh -c|--config <config> -q|--quiet\n\n

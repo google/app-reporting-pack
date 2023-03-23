@@ -104,6 +104,7 @@ It will guide you through a series of questions to get all necessary parameters 
 * `start date` - first date from which you want to get performance data (i.e., `2022-01-01`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
 * `end date` - last date from which you want to get performance data (i.e., `2022-12-31`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
 * `Ads config` - path to `google-ads.yaml` file.
+* `Video orientation mode` - how to get video orientation for video assets - from YouTube (`youtube` mode, [learn more on authentication](docs/setup-youtube-api-to-fetch-video-orientation.md)), from asset name (`regex` mode) or use placeholders (`placeholders` mode).
 
 After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
 When you run `bash run-local.sh` next time it will automatically pick up created configuration.
@@ -134,7 +135,7 @@ You can run App Reporting Pack queries inside a Docker container.
 ```
 sudo docker run \
     -v /path/to/google-ads.yaml:/google-ads.yaml \
-    -v /path/to/service_account.json:/service_account.json \
+    -v /path/to/service_account.json:/app/service_account.json \
     -v /path/to/app_reporting_pack.yaml:/app_reporting_pack.yaml \
     ghcr.io/google/app-reporting-pack \
     -g google-ads.yaml -c app_reporting_pack.yaml --legacy --backfill
@@ -147,7 +148,7 @@ In that case you don't need to mount `google-ads.yaml` and `app_reporting_pack.y
 configs into the container:
 ```
 sudo docker run \
-    -v /path/to/service_account.json:/service_account.json \
+    -v /path/to/service_account.json:/app/service_account.json \
     ghcr.io/google/app-reporting-pack \
     -g gs://project_name/google-ads.yaml \
     -c gs://project_name/app_reporting_pack.yaml \

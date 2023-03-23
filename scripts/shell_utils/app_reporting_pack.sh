@@ -14,7 +14,7 @@
 # limitations under the License.
 
 ask_for_video_orientation() {
-  echo -n "Video orientations can be fetched from YouTube [y] or inferred from asset names [r], which mode do you prefer: [y/r]: "
+  echo -n "Video orientations can be fetched from YouTube [y], inferred from asset names [r], or use placeholders[p], which mode do you prefer: [y/r/p]: "
   read -r video_parsing_mode
   video_parsing_mode=$(convert_answer $video_parsing_mode)
   if [[ $video_parsing_mode = "r" ]]; then
