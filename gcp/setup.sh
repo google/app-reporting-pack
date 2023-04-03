@@ -83,7 +83,7 @@ create_topic() {
 deploy_cf() {
   echo "Deploying Cloud Function"
   CF_REGION=$(git config -f $SETTING_FILE function.region)
-  CF_NAME=$(git config -f $SETTING_FILE function.name)
+  CF_NAME=$(git config -f $SETTING_FILE function.name)  
 
   create_topic
 
@@ -108,6 +108,11 @@ deploy_cf() {
   #   - GCE Zone
   gce_zone=$(git config -f $SETTING_FILE compute.zone)
   sed -i'.original' -e "s|#*[[:space:]]*ZONE[[:space:]]*:[[:space:]]*.*$|ZONE: $gce_zone|" ./cloud-functions/create-vm/env.yaml
+  #   - NO_PUBLIC_IP
+  no_public_ip=$(git config -f $SETTING_FILE compute.no-public-ip)
+  if [[ $no_public_ip -eq 'true' ]]; then
+    sed -i'.original' -e "s|#*[[:space:]]*NO_PUBLIC_IP[[:space:]]*:[[:space:]]*.*$|NO_PUBLIC_IP: 'TRUE'|" ./cloud-functions/create-vm/env.yaml
+  fi
 
   # deploy CF (pubsub triggered)
   gcloud functions deploy $CF_NAME \
@@ -148,19 +153,25 @@ deploy_public_index() {
 
 
 get_run_data() {
-  # arguments for the CF (to be passed via pubsub message and scheduler job's arguments):
+  # arguments for the CF (to be passed via pubsub message or scheduler job's arguments):
   #   * project_id
   #   * machine_type
   #   * service_account
   #   * ads_config_uri
   #   * config_uri
-  #   * docker_image
+  #   * docker_image - a docker image url, can be CR or AR
+  #       gcr.io/$PROJECT_ID/workload
+  #       europe-docker.pkg.dev/$PROJECT_ID/docker/workload
+  #   * delete_vm - by default it's TRUE (set inside create-vm CF)
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
   GCS_BASE_PATH_PUBLIC=gs://${PROJECT_ID}-public/$NAME
+
   # NOTE for the commented code:
   # currently deploy_cf target puts a docker image url into env.yaml for CF, so there's no need to pass an image url via arguments,
   # but if you want to support several images simultaneously (e.g. with different tags) then image url can be passed via message as:
-  #    "docker_image": "'$REPOSITORY_LOCATION'-docker.pkg.dev/'$PROJECT_ID'/docker/'$IMAGE_NAME'",
+  #  "docker_image": "'$REPOSITORY_LOCATION'-docker.pkg.dev/'$PROJECT_ID'/docker/'$IMAGE_NAME'",
+  # if you need to prevent VM deletion add this:
+  #  "delete_vm": "FALSE"
   data='{
     "config_uri": "'$GCS_BASE_PATH'/config.yaml",
     "ads_config_uri": "'$GCS_BASE_PATH'/google-ads.yaml",
@@ -177,12 +188,7 @@ get_run_data_escaped() {
 
 
 start() {
-  # args for the cloud function (create-vm) passed via pub/sub event:
-  #   * project_id -
-  #   * docker_image - a docker image url, can be CR or AR
-  #       gcr.io/$PROJECT_ID/workload
-  #       europe-docker.pkg.dev/$PROJECT_ID/docker/workload
-  #   * service_account
+  # example:
   # --message="{\"project_id\":\"$PROJECT_ID\", \"docker_image\":\"europe-docker.pkg.dev/$PROJECT_ID/docker/workload\", \"service_account\":\"$SERVICE_ACCOUNT\"}"
 
   local DATA=$(get_run_data)

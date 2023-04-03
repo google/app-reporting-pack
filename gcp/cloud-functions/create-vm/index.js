@@ -37,8 +37,8 @@ function getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType)  {
           value: 'TRUE'
         },
         {
-          key: "delete_vm",
-          value: "TRUE"
+          key: 'delete_vm',
+          value: 'TRUE'
         }
       ]
     },
@@ -51,7 +51,7 @@ function getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType)  {
             "kind": "compute#accessConfig",
             "name": "External NAT",
             "type": "ONE_TO_ONE_NAT",
-            "networkTier": "PREMIUM"
+            "networkTier": "STANDARD" //"PREMIUM"
           }
         ]
       }
@@ -66,6 +66,20 @@ function getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType)  {
     ]
   };
   return vmConfig;
+}
+
+function setMetadata(items, key, value) {
+  let idx = items.findIndex(el => el.key === key);
+  if (idx > -1) {
+    items.splice(idx, 1)
+  }
+
+  if (value && value.trim().length > 1) {
+    items.push({
+      "key": key,
+      "value": value
+    });
+  }
 }
 
 async function getProject() {
@@ -125,34 +139,19 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
 
   const vmConfig = getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType);
 
-  let idx = vmConfig.metadata.items.findIndex(el => el.key === 'config_uri');
-  if (idx > -1) {
-    vmConfig.metadata.items.splice(idx, 1)
-  }
-
   // Get a config uri (config.yaml) and ads config uri (google-ads.yaml) from the pub/sub message payload,
   // And if it exists pass it as a custom metadata key-value to VM
-  const config_uri = data.config_uri;
-  if (config_uri && config_uri.trim().length > 1) {
-    vmConfig.metadata.items.push({
-      "key": "config_uri",
-      "value": config_uri.trim()
-    });
-  }
-  const ads_config_uri = data.ads_config_uri;
-  if (ads_config_uri && ads_config_uri.trim().length > 1) {
-    vmConfig.metadata.items.push({
-      "key": "ads_config_uri",
-      "value": ads_config_uri.trim()
-    });
+
+  setMetadata(vmConfig.metadata.items, 'config_uri', data.config_uri);
+  setMetadata(vmConfig.metadata.items, 'ads_config_uri', data.ads_config_uri);
+  setMetadata(vmConfig.metadata.items, 'gcs_base_path_public', data.gcs_base_path_public);
+  if (data.delete_vm !== undefined) {
+    setMetadata(vmConfig.metadata.items, 'delete_vm', data.delete_vm);
   }
 
-  const gcs_base_path_public = data.gcs_base_path_public;
-  if (gcs_base_path_public && gcs_base_path_public.trim().length > 1) {
-    vmConfig.metadata.items.push({
-      "key": "gcs_base_path_public",
-      "value": gcs_base_path_public.trim()
-    });
+  // org policy can prevent using external IPs, if so we'll remove accessConfig and this will prevent assigning an external IP
+  if (data.no_public_ip || process.env.NO_PUBLIC_IP) {
+    vmConfig.networkInterfaces[0].accessConfigs = [];
   }
 
   const vmName = instanceName + '-' + Date.now();
