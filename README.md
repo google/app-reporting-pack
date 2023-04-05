@@ -1,6 +1,21 @@
 # App Reporting Pack
+__A centralized platform and dashboard for Google Ads App campaign data.__
 
-##### Centralized platform and dashboard for Google Ads App campaign data
+## Table of Contents
+1. [Introduction](#introduction)
+1. [Deliverables](#deliverables)
+1. [Prerequisites](#prerequisites)
+1. [Installation](#installation)
+    * [Primary Installation Method](#primary-installation-method)
+    * [Alternative Installation Methods](#alternative-installation-methods)
+        * [Prerequisites for alternative installation methods](#prerequisites-1)
+        * [Running Queries Locally](#running-queries-locally)
+        * [Running in a Docker Container](#running-in-a-docker-container)
+        * [Running in Compute Engine with Docker](#running-in-compute-engine-with-docker)
+1. [Dashboard Replication](#dashboard-replication)
+1. [Disclaimer](#disclaimer)
+
+## Introduction
 
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
 App Reporting Pack fetches all necessary data from Ads API and creates a centralized dashboard showing different aspects of App campaign's performance and settings. All data is stored in BigQuery tables that can be used for any other need the client might have.
@@ -33,26 +48,29 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
    Normally you need OAuth2 credentials (Client ID, Client Secret), a Google Ads developer token and a refresh token.
 
 
-## Setup
+## Installation
 
-1. Click the big blue button to deploy:
+### Primary Installation Method
+The primary installation method does most of the hard work for us by building the required GCP infrastructure, populating the BigQuery datasets with the processed data from you Google Ads account and creates the App Reporting Pack dashboard from an existing template.
+To install this solution, follow these steps:
 
+1. Click "Run on Google Cloud"
    [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run)
 
-1. Select your GCP project and choose your region
+1. Select your GCP project and choose your region.
 
-1. When prompted, paste in your client ID, client secret, refresh token, developer token and MCC ID
+1. When prompted, paste in your client ID, client secret, refresh token, developer token and MCC ID. After inputing all credentials, the deployment will start.
 
-1. Wait for the deployment to finish. Once finished you will be given your ***URL***
+1. Once the deployment completes you will be given a link to a webpage. This webpage will inform you once the Bigquery datasets have been populated and the dashboard has been created.
 
-1. Click on "Run Queries" to manually run the queries. The queries are scheduled to run daily automatically.
+1. When the button is enabled, click "Open Dashboard" to open the dashboard template. Click the "Save" button on the top right to save your new dashboard.
 
-1. Once the tables are created click "Create Dashboard". This will create your own private copy of the App Reporting Pack dashboard. Change your dashboard's name and save it's URL or bookmark it.
+1. Change your dashboard's name and save it's URL or bookmark it.
 
 
-## Installation alternatives
+### Alternative Installation Methods
 
-### Prerequisites for alternative installation methods
+#### Prerequisites
 
 * Google Ads API access and [google-ads.yaml](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md#setting-up-using-google-adsyaml) file - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
 * Python 3.8+
@@ -67,7 +85,7 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
          gcloud auth application-default login
          ```
 
-### Running queries locally
+#### Running queries locally
 
 In order to run App Reporting Pack locally please follow the steps outlined below:
 
@@ -109,7 +127,7 @@ It will guide you through a series of questions to get all necessary parameters 
 After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
 When you run `bash run-local.sh` next time it will automatically pick up created configuration.
 
-#### Schedule running `run-local.sh` as a cronjob
+##### Schedule running `run-local.sh` as a cronjob
 
 When running `run-local.sh` scripts you can specify two options which are useful when running queries periodically (i.e. as a cron job):
 
@@ -128,7 +146,7 @@ If you installed all requirements in a virtual environment you can use the trick
 This command will execute App Reporting Pack queries every day at 1 AM.
 
 
-### Running in a Docker container
+#### Running in a Docker container
 
 You can run App Reporting Pack queries inside a Docker container.
 
@@ -155,7 +173,7 @@ sudo docker run \
     --legacy --backfill
 ```
 
-### Running in Compute Engine with Docker
+#### Running in Compute Engine with Docker
 First follow the instructions for manual installation above. In the end you will need to have `config.yaml`
 `google-ads.yaml` files. After that you are ready to install.
 Go to gcp folder and run the following command:
