@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module for defining queries used in the project."""
-
 from gaarf.base_query import BaseQuery
 
 
 class ConversionLagQuery(BaseQuery):
     """Fetches all_conversions by network and conversion_id."""
-    def __init__(self, start_date, end_date):
+    def __init__(self, start_date: str, end_date: str):
         self.query_text = f"""
         SELECT
             campaign.id AS campaign_id,
@@ -30,14 +28,13 @@ class ConversionLagQuery(BaseQuery):
             metrics.all_conversions AS all_conversions
         FROM campaign
         WHERE
-            segments.date >= '{start_date}'
-            AND segments.date <= '{end_date}'
+            segments.date BETWEEN '{start_date}' AND '{end_date}'
         """
 
 
 class ChangeHistory(BaseQuery):
     """Fetches change history for bids and budgets."""
-    def __init__(self, start_date: str, end_date: str) -> None:
+    def __init__(self, start_date: str, end_date: str):
         self.query_text = f"""
         SELECT
             change_event.change_date_time AS change_date,
@@ -51,8 +48,7 @@ class ChangeHistory(BaseQuery):
         FROM change_event
         WHERE
             campaign.advertising_channel_type = 'MULTI_CHANNEL'
-            AND change_event.change_date_time >= '{start_date}'
-            AND change_event.change_date_time <= '{end_date}'
+            AND change_event.change_date_time BETWEEN '{start_date}' AND '{end_date}'
             AND change_event.change_resource_type IN ("CAMPAIGN_BUDGET", "CAMPAIGN")
         LIMIT 10000
         """
@@ -60,7 +56,7 @@ class ChangeHistory(BaseQuery):
 
 class BidsBudgetsActiveCampaigns(BaseQuery):
     """Fetches bids and budget values for active campaigns."""
-    def __init__(self) -> None:
+    def __init__(self):
         self.query_text = """
         SELECT
             campaign.id AS campaign_id,
@@ -73,9 +69,10 @@ class BidsBudgetsActiveCampaigns(BaseQuery):
             AND campaign.status = 'ENABLED'
         """
 
+
 class BidsBudgetsInactiveCampaigns(BaseQuery):
     """Fetches bids and budget values for inactive campaigns with non-zero impressions."""
-    def __init__(self, start_date: str, end_date: str) -> None:
+    def __init__(self, start_date: str, end_date: str):
         self.query_text = f"""
         SELECT
             campaign.id AS campaign_id,
@@ -86,34 +83,29 @@ class BidsBudgetsInactiveCampaigns(BaseQuery):
         WHERE
             campaign.advertising_channel_type = 'MULTI_CHANNEL'
             AND campaign.status != 'ENABLED'
-            AND segments.date >= '{start_date}'
-            AND segments.date <= '{end_date}'
+            AND segments.date BETWEEN '{start_date}' AND '{end_date}'
             AND metrics.impressions > 0
         """
 
 
 class CampaignsWithSpend(BaseQuery):
     """Fetches campaign_ids with non-zero impressions."""
-    def __init__(self, start_date: str, end_date: str) -> None:
+    def __init__(self, start_date: str, end_date: str):
         self.query_text = f"""
         SELECT
             campaign.id
         FROM campaign
         WHERE
             campaign.advertising_channel_type = 'MULTI_CHANNEL'
-            AND segments.date >= '{start_date}'
-            AND segments.date <= '{end_date}'
+            AND segments.date BETWEEN '{start_date}' AND '{end_date}'
             AND metrics.impressions > 0
-
-    """
-
+        """
 
 class Videos(BaseQuery):
-    """Fetches campaign_ids with non-zero impressions."""
-    def __init__(self) -> None:
-        self.query_text = f"""
-        SELECT
-            media_file.video.youtube_video_id AS video_id
+    """Fetches YouTube video IDs for all videos in the account."""
+    def __init__(self):
+        self.query_text = """
+        SELECT media_file.video.youtube_video_id AS video_id
         FROM media_file
         WHERE media_file.type = 'VIDEO'
-    """
+        """
