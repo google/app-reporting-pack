@@ -95,23 +95,30 @@ deploy_cf() {
   # initialize env.yaml - environment variables for CF:
   #   - docker image url
   url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
-  sed -i'.original' -e "s|#*[[:space:]]*DOCKER_IMAGE[[:space:]]*:[[:space:]]*.*$|DOCKER_IMAGE: $url|" ./cloud-functions/create-vm/env.yaml
+  sed -i'.bak' -e "s|#*[[:space:]]*DOCKER_IMAGE[[:space:]]*:[[:space:]]*.*$|DOCKER_IMAGE: $url|" ./cloud-functions/create-vm/env.yaml
   #   - GCE VM name (base)
   instance=$(git config -f $SETTING_FILE compute.name)
-  sed -i'.original' -e "s|#*[[:space:]]*INSTANCE_NAME[[:space:]]*:[[:space:]]*.*$|INSTANCE_NAME: $instance|" ./cloud-functions/create-vm/env.yaml
+  sed -i'.bak' -e "s|#*[[:space:]]*INSTANCE_NAME[[:space:]]*:[[:space:]]*.*$|INSTANCE_NAME: $instance|" ./cloud-functions/create-vm/env.yaml
   #   - GCE machine type
   machine_type=$(git config -f $SETTING_FILE compute.machine-type)
-  sed -i'.original' -e "s|#*[[:space:]]*MACHINE_TYPE[[:space:]]*:[[:space:]]*.*$|MACHINE_TYPE: $machine_type|" ./cloud-functions/create-vm/env.yaml
+  sed -i'.bak' -e "s|#*[[:space:]]*MACHINE_TYPE[[:space:]]*:[[:space:]]*.*$|MACHINE_TYPE: $machine_type|" ./cloud-functions/create-vm/env.yaml
   #   - GCE Region
   gce_region=$(git config -f $SETTING_FILE compute.region)
-  sed -i'.original' -e "s|#*[[:space:]]*REGION[[:space:]]*:[[:space:]]*.*$|REGION: $gce_region|" ./cloud-functions/create-vm/env.yaml
+  sed -i'.bak' -e "s|#*[[:space:]]*REGION[[:space:]]*:[[:space:]]*.*$|REGION: $gce_region|" ./cloud-functions/create-vm/env.yaml
   #   - GCE Zone
   gce_zone=$(git config -f $SETTING_FILE compute.zone)
-  sed -i'.original' -e "s|#*[[:space:]]*ZONE[[:space:]]*:[[:space:]]*.*$|ZONE: $gce_zone|" ./cloud-functions/create-vm/env.yaml
+  sed -i'.bak' -e "s|#*[[:space:]]*ZONE[[:space:]]*:[[:space:]]*.*$|ZONE: $gce_zone|" ./cloud-functions/create-vm/env.yaml
   #   - NO_PUBLIC_IP
   no_public_ip=$(git config -f $SETTING_FILE compute.no-public-ip)
-  if [[ $no_public_ip -eq 'true' ]]; then
-    sed -i'.original' -e "s|#*[[:space:]]*NO_PUBLIC_IP[[:space:]]*:[[:space:]]*.*$|NO_PUBLIC_IP: 'TRUE'|" ./cloud-functions/create-vm/env.yaml
+  if [[ $no_public_ip == 'true' ]]; then
+    echo 'adding'
+    if grep -q 'NO_PUBLIC_IP' ./cloud-functions/create-vm/env.yaml; then
+      sed -i'.bak' -e "s|^#*[[:space:]]*NO_PUBLIC_IP[[:space:]]*:[[:space:]]*.*$|NO_PUBLIC_IP: 'TRUE'|" ./cloud-functions/create-vm/env.yaml
+    else
+      echo "" >> ./cloud-functions/create-vm/env.yaml && echo "NO_PUBLIC_IP: 'TRUE'" >> ./cloud-functions/create-vm/env.yaml
+    fi
+  else
+    sed -i'.bak' -e "s|^NO_PUBLIC_IP[[:space:]]*:|#NO_PUBLIC_IP:|" ./cloud-functions/create-vm/env.yaml
   fi
 
   # deploy CF (pubsub triggered)
