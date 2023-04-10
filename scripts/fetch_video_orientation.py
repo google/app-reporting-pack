@@ -308,12 +308,12 @@ def main():
         logger.info("Generating placeholders for video orientation")
         mode = "placeholders"
         video_orientation_regexp = None
-        generate_placeholders(bq_executor, bq_config)
         if save_config:
             update_config(path=args[0].gaarf_config,
                           mode=mode)
         if dry_run:
             exit()
+        generate_placeholders(bq_executor, bq_config)
 
 
 if __name__ == "__main__":
