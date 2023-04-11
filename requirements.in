@@ -1,6 +1,5 @@
-google-ads-api-report-fetcher >= 1.0.0
+google-ads-api-report-fetcher>=1.2.0
 db-dtypes
-flask
-gunicorn
 pyyaml
-google-api-python-client
+google-api-python-client==2.80.0
+

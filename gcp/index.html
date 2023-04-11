@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" 
+    rel="stylesheet" 
+    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" 
+    crossorigin="anonymous">
+  <title>App Reporting Pack Installer</title>
+</head>
+<style>
+  #arp-dashboard {
+    margin: 2em 5em;
+  }
+  [v-cloak] { 
+    display: none; 
+  }
+</style>
+
+<body>
+<div id="arp-dashboard" class="container-md">
+  <div class="row">
+    <div class="col">
+      <h1>App Reporting Pack Installer</h1>
+      <div class="alert alert-primary">This page allows you to create a dashboard for your App Reporting Pack. It's needed to be done only once.
+Once you installed App Reporting Pack and started it for the first time, this page waits for its completion and provides you with a link for creating dashboard.
+      </div>
+    </div>
+  </div>
+  <div>
+    <div class="col">
+      <div class="card" v-cloak>
+        <div class="card-body">
+          <div v-if="dashboardUrl" :key="dashboardUrl">
+            <p class="alert alert-success">Dashboard creating link was created successfully</p>
+          </div>
+          <div v-if="waiting">
+            <p class="card-text">Please wait while App Reporting Pack is running.</p>
+            <p class="card-text">When the process completes, the "Create Dashboard" button will be enabled.</p>
+          </div>
+          <div v-if="!waiting && !dashboardUrl">
+            <p class="alert alert-warning">App Reporting Pack execution completed but dashboard creation link wasn't generated. Please check Cloud Logging</div>
+          </div>
+          <br>
+          <div class="text-center">
+            <button
+              class="btn btn-primary"
+              @click="openUrl(this.dashboardUrl)"
+              :disabled="!dashboardUrl"
+            >Create Dashboard</button>
+          </div>
+          <p>&nbsp;</p>
+          <div id="openButtonText" class="form-text text-center" v-if="timeLeft">
+            Checking again in {{this.timeLeft}} seconds. <a href="#" @click="retry()">Retry now</a>
+          </div>
+          <p>&nbsp;</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/vue@3"></script>
+<script>
+  Vue.createApp({
+    data() {
+      return {
+        dashboardUrl: "",
+        waiting: true,
+        timeToRefresh: 60,
+        timer: 0,
+        timeLeft: 0,
+      };
+    },
+    methods: {
+      async fetchDashboardUrl() {
+        fetch("dashboard.json", { headers: { "Content-Type": "application/json" } })
+            .then((response) => {
+              if (response.status === 404) {
+                this.setTimer();
+              } else if (response.ok) {
+                return response.json();
+              }
+            })
+            .then((respJson) => {
+              if (respJson) {
+                this.dashboardUrl = respJson.dashboardUrl;
+                console.log(this.dashboardUrl);
+                this.waiting = false;
+              }
+            });
+      },
+      setTimer() {
+        this.timeLeft = this.timeToRefresh;
+        this.runTimer();
+      },
+      runTimer() {
+        this.timer = setTimeout(() => {
+          if (this.timeLeft > 0) {
+            this.timeLeft -= 1;
+            this.runTimer();
+          } else {
+            this.fetchDashboardUrl();
+          }
+        }, 1000);
+      },
+      openUrl(url) {
+        window.open(url, "_blank");
+      },
+      retry() {
+        clearTimeout(this.timer);
+        this.timeLeft = 0;
+        this.timer = 0;
+        this.fetchDashboardUrl();  
+      }
+    },
+    mounted() {
+      this.fetchDashboardUrl();
+    },
+  }).mount("#arp-dashboard");
+</script>
+</body>
+</html>
+

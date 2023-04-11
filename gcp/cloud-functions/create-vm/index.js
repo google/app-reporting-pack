@@ -37,6 +37,10 @@ function getVMConfig(projectId, dockerImageUrl, serviceAccount, machineType)  {
           value: 'TRUE'
         },
         {
+          key: 'google-logging-use-fluentbit',
+          value: 'TRUE'
+        },
+        {
           key: 'delete_vm',
           value: 'TRUE'
         }

@@ -1,43 +1,18 @@
 {
   "name": "app-reporting-pack",
-  "env": {
-    "OAUTH_CLIENT_ID": {
-      "description": "OAuth 2.0 Client ID",
-      "required": true,
-      "order": 1
-    },
-    "OAUTH_CLIENT_SECRET": {
-      "description": "OAuth 2.0 Client Secret",
-      "required": true,
-      "order": 2
-    },
-    "REFRESH_TOKEN": {
-      "description": "Refresh token created for this project",
-      "required" : true,
-      "order": 3
-    },
-    "DEVELOPER_TOKEN": {
-      "description": "Google Ads Developer token",
-      "required" : true,
-      "order": 4
-    },
-    "MCC_ID": {
-      "description": "Your Google Ads MCC account ID",
-      "required" : true,
-      "order": 5
-    }
-  },
   "options": {
-    "allow-unauthenticated": false,
+    "port": 7681,
+    "allow-unauthenticated": true,
     "memory": "8192Mi",
     "cpu": "2"
   },
   "hooks": {
     "prebuild": {
-      "commands": [
-        "./gcp/cloud-run-button/create_files.sh",
-        "./gcp/setup.sh deploy_public_index deploy_all start"
-      ]
+      "commands": ["./gcp/cloud-run-button/prebuild.sh"]
+    },
+    "postcreate": {
+      "commands": ["./gcp/cloud-run-button/postcreate.sh"]
     }
   }
+
 }

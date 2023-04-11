@@ -6,7 +6,7 @@ SETTING_FILE="${SCRIPT_PATH}/settings.ini"
 
 # changing the cwd to the script's contining folder so all pathes inside can be local to it
 # (important as the script can be called via absolute path and as a nested path)
-pushd $SCRIPT_PATH
+pushd $SCRIPT_PATH >/dev/null
 
 while :; do
     case $1 in
@@ -140,7 +140,7 @@ deploy_config() {
   gsutil mb -b on gs://$PROJECT_ID
 
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
-  gsutil -h "Content-Type:text/plain" cp ./../config.yaml $GCS_BASE_PATH/config.yaml
+  gsutil -h "Content-Type:text/plain" cp ./../app_reporting_pack.yaml $GCS_BASE_PATH/app_reporting_pack.yaml
   gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
 }
 
@@ -154,7 +154,8 @@ deploy_public_index() {
     echo "Could not add public access to public cloud bucket"
   else
     GCS_BASE_PATH_PUBLIC=gs://${PROJECT_ID}-public/$NAME
-    gsutil -h "Content-Type:text/plain" cp "${SCRIPT_PATH}/../gcp/cloud-run-button/index.html" $GCS_BASE_PATH_PUBLIC/index.html
+    gsutil -h "Content-Type:text/html" -h "Cache-Control: no-store" cp "${SCRIPT_PATH}/index.html" $GCS_BASE_PATH_PUBLIC/index.html
+    gsutil rm $GCS_BASE_PATH_PUBLIC/dashboard.json
   fi
 }
 
@@ -180,7 +181,7 @@ get_run_data() {
   # if you need to prevent VM deletion add this:
   #  "delete_vm": "FALSE"
   data='{
-    "config_uri": "'$GCS_BASE_PATH'/config.yaml",
+    "config_uri": "'$GCS_BASE_PATH'/app_reporting_pack.yaml",
     "ads_config_uri": "'$GCS_BASE_PATH'/google-ads.yaml",
     "gcs_base_path_public": "'$GCS_BASE_PATH_PUBLIC'"
   }'
@@ -219,6 +220,11 @@ start() {
   fi
 }
 
+print_public_gcs_url() {
+  INDEX_PATH="${PROJECT_ID}-public/$NAME"
+  PUBLIC_URL="https://storage.googleapis.com/${INDEX_PATH}"
+  echo $PUBLIC_URL
+}
 
 schedule_run() {
   JOB_NAME=$(git config -f $SETTING_FILE scheduler.name)
@@ -228,7 +234,10 @@ schedule_run() {
   local DATA=$(get_run_data)
   echo 'Scheduling a job with args: '$DATA
 
-  gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
+  JOB_EXISTS=$(gcloud scheduler jobs list --location=$REGION --format="value(ID)" --filter="ID:'$JOB_NAME'")
+  if [[ -n $JOB_EXISTS ]]; then
+    gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
+  fi
 
   gcloud scheduler jobs create pubsub $JOB_NAME \
     --schedule="$SCHEDULE" \
@@ -259,4 +268,4 @@ for i in "$@"; do
   fi
 done
 
-popd
+popd >/dev/null

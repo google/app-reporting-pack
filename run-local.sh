@@ -88,28 +88,36 @@ welcome() {
 }
 
 setup() {
+  # TODO: get default value from google-ads.yaml
   echo -n "Enter account_id in XXXXXXXXXX format: "
   read -r customer_id
-  echo -n "Enter BigQuery project_id: "
+
+  default_project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
+  echo -n "Enter BigQuery project_id ($default_project): "
   read -r project
-  echo -n "Enter BigQuery dataset: "
+  project=${project:-$default_project}
+
+  echo -n "Enter BigQuery dataset (arp): "
   read -r bq_dataset
+  bq_dataset=${bq_dataset:-arp}
+
   echo -n "Enter start_date in YYYY-MM-DD format (or use :YYYYMMDD-90 for last 90 days): "
   read -r start_date
   echo -n "Enter end_date in YYYY-MM-DD format (or use :YYYYMMDD-1 for yesterday): "
   read -r end_date
   start_date=${start_date:-:YYYYMMDD-90}
   end_date=${end_date:-:YYYYMMDD-1}
+
   ask_for_cohorts
   ask_for_video_orientation
   generate_bq_macros
   echo -n "Do you want to save this config (Y/n): "
   read -r save_config_answer
-  save_config_answer=$(convert_answer $save_config_answer)
+  save_config_answer=$(convert_answer $save_config_answer 'Y')
   if [[ $save_config_answer = "y" ]]; then
     echo -n "Config will be saved to $solution_name_lowercase.yaml, do you want to save it here? Continue[Y] or Change[n]: "
     read -r config_change_answer
-    config_change_answer=$(convert_answer $config_change_answer)
+    config_change_answer=$(convert_answer $config_change_answer 'Y')
     if [[ $config_change_answer = "n" ]]; then
       echo -n "Enter name of the config (without .yaml file extension): "
       read -r solution_name_lowercase
@@ -215,19 +223,21 @@ fi
 
 if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
   config_file=${config_file:-$solution_name_lowercase.yaml}
-  if [[ $quiet = "n" ]]; then
+  if [[ $quiet = "y" ]]; then
+    run_with_config
+  else
     echo -e "${COLOR}Found saved configuration at $config_file${NC}"
     if [[ -f "$config_file" ]]; then
       cat $config_file
     fi
     echo -n -e "${COLOR}Do you want to use it (Y/n/q): ${NC}"
     read -r setup_config_answer
-    setup_config_answer=$(convert_answer $setup_config_answer)
+    setup_config_answer=$(convert_answer $setup_config_answer 'Y')
     if [[ $setup_config_answer = "y" ]]; then
       echo -e "${COLOR}Using saved configuration...${NC}"
       run_with_config
     elif [[ $setup_config_answer = "n" ]]; then
-      echo -n -e "${COLOR}Choose [C]hoose an existing configuration or [S]tart over: (C/S): ${NC}"
+      echo -n -e "${COLOR}[C]hoose an existing configuration or [S]tart setup: (C/S): ${NC}"
       read -r new_config_start_over
       new_config_start_over=$(convert_answer $new_config_start_over)
       if [[ $new_config_start_over = "c" ]]; then
@@ -240,19 +250,12 @@ if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
         run_with_parameters
       else
         echo "Unknown command, exiting"
-        exit
+        exit 1
       fi
-    elif [[ ! $setup_config_answer =~ "^[yn]" ]]; then
-      echo "Unknown command, exiting"
-      exit 1
     else
-      echo
-      welcome
-      setup
-      prompt_running
+      echo "Exiting"
+      exit
     fi
-  else
-    run_with_config
   fi
 else
   welcome

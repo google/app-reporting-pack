@@ -60,11 +60,11 @@ ask_for_video_orientation() {
 
 ask_for_cohorts() {
   default_cohorts=(0 1 3 5 7 14 30)
-  echo -n -e "${COLOR}Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to use it? Continue[Y] or Change[n]: ${NC}"
+  echo -n "Asset performance has cohorts for 0,1,3,5,7,14 and 30 days. Do you want to use it? Continue[Y] or Change[n]: "
   read -r cohorts_answer
   ads_config_answer=$(convert_answer $cohorts_answer)
   if [[ $cohorts_answer != "y" ]]; then
-    echo -n -e "${COLOR}Please enter cohort number in the following format 1,2,3,4,5: ${NC}"
+    echo -n "Please enter cohort number in the following format 1,2,3,4,5: "
     read -r cohorts_string
   fi
   IFS="," read -ra cohorts_array <<< $cohorts_string

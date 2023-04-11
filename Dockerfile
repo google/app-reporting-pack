@@ -1,20 +1,27 @@
-# This is Dockerfile for running "one-click-deployment" - runnign ARP app in Cloud Run 
-FROM python:3.10
-#TODO: WORKDIR /app
+FROM google/cloud-sdk
 
-ADD requirements.txt .
-# common packages for URP
-RUN pip install --require-hashes -r requirements.txt
-# TODO: packages for Cloud Run application
-#RUN pip install flask &&
-#    pip install gunicorn
+# Install ttyd
+RUN apt-get install -y build-essential cmake git libjson-c-dev libwebsockets-dev
+RUN git clone https://github.com/tsl0922/ttyd.git
+WORKDIR ./ttyd
+RUN cmake . && make && make install
 
-ADD google_ads_queries/ google_ads_queries/
-ADD bq_queries/ bq_queries/
-ADD scripts/ .
-ADD google-ads.yaml .
-ADD config.yaml .
-ADD main.py .
+# Install Python
+RUN apt-get install python3-pip
 
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 main:app
-#CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 gcp.one_click_deployment.main:app
+# Install ARP with dependencies
+EXPOSE 7681/tcp
+WORKDIR /app
+COPY requirements.txt requirements.txt
+RUN python3 -m pip install -r requirements.txt --require-hashes
+COPY google_ads_queries/ google_ads_queries/
+COPY bq_queries/ bq_queries/
+COPY scripts/ scripts/
+COPY run-local.sh .
+COPY gcp/cloud-run-button/main.sh main.sh
+COPY gcp/ gcp/
+
+#NOTE: DO NOT remove the following line
+#COPY google-ads.yaml .
+
+CMD ["ttyd", "--url-arg", "bash", "-c", "./main.sh"]
