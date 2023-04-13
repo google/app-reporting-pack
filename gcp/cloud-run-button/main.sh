@@ -13,6 +13,8 @@ White='\033[0;37m'        # White
 install() {
   echo -e "${Cyan}Generating App Reporting pack configuration...${NC}"
   # generate ARP config and optionally google-ads.yaml (if it wasn't uploaded in cloud shell vm)
+  RUNNING_IN_GCE=true
+  export RUNNING_IN_GCE   # signaling to run-local.sh that we're runnign inside GCE (there'll be less questions)
   ./run-local.sh --generate-config-only
   echo -e "${Cyan}Starting Deploying Cloud components...${NC}"
   # deploy solution
@@ -25,7 +27,7 @@ if [[ -f ./app_reporting_pack.yaml ]]; then
   echo -e "${White}It seems you have deployed the solution already.${NC}"
   # when installation AND first run complete then there will be a dashboard.json file on public GCS
   public_gcs_url=$(./gcp/setup.sh print_public_gcs_url)
-  if curl $public_gcs_url/dashboard.json --fail 2>&1; then
+  if curl $public_gcs_url/dashboard.json --fail 2>/dev/null; then
     echo -e "If you haven't already, use that url for dashboard cloning"
     echo -n -e "${Red}Would you like to delete the current Cloud Run service (it's needed only for installation) (Y/n): ${NC}"
     read -r SHUTDOWN

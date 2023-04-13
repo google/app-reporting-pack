@@ -111,6 +111,18 @@ setup() {
   ask_for_cohorts
   ask_for_video_orientation
   generate_bq_macros
+
+  if [[ -n $RUNNING_IN_GCE && $generate_config_only ]]; then
+    # if you're running inside Google Cloud Compute Engine as generating config 
+    # (see gcp/cloud-run-button/main.sh) then there's no need for additional questions
+    save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
+    echo -e "${COLOR}Saving configuration to $solution_name_lowercase.yaml${NC}"
+    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+    generate_output_tables $save_config --log=$loglevel --dry-run
+    fetch_video_orientation $save_config --log=$loglevel --dry-run
+    exit
+  fi
+
   echo -n "Do you want to save this config (Y/n): "
   read -r save_config_answer
   save_config_answer=$(convert_answer $save_config_answer 'Y')
@@ -128,10 +140,10 @@ setup() {
     generate_output_tables $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
     if [[ $generate_config_only = "y" ]]; then
-      exit 1
+      exit
     fi
   elif [[ $save_config_answer = "q" ]]; then
-    exit 1
+    exit
   fi
   print_configuration
 }
