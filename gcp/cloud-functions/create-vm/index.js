@@ -146,8 +146,7 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
   // Get a config uri (config.yaml) and ads config uri (google-ads.yaml) from the pub/sub message payload,
   // And if it exists pass it as a custom metadata key-value to VM
 
-  setMetadata(vmConfig.metadata.items, 'config_uri', data.config_uri);
-  setMetadata(vmConfig.metadata.items, 'ads_config_uri', data.ads_config_uri);
+  setMetadata(vmConfig.metadata.items, 'gcs_source_uri', data.gcs_source_uri);
   setMetadata(vmConfig.metadata.items, 'gcs_base_path_public', data.gcs_base_path_public);
   if (data.delete_vm !== undefined) {
     setMetadata(vmConfig.metadata.items, 'delete_vm', data.delete_vm);

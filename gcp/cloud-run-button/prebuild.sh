@@ -52,3 +52,4 @@ gcloud services enable cloudbuild.googleapis.com
 gcloud services enable cloudfunctions.googleapis.com
 gcloud services enable eventarc.googleapis.com
 gcloud services enable googleads.googleapis.com
+gcloud services enable cloudscheduler.googleapis.com

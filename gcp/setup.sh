@@ -40,6 +40,7 @@ enable_apis() {
   gcloud services enable cloudbuild.googleapis.com
   gcloud services enable cloudfunctions.googleapis.com
   gcloud services enable eventarc.googleapis.com
+  gcloud services enable cloudscheduler.googleapis.com
 }
 
 
@@ -135,13 +136,24 @@ deploy_cf() {
 }
 
 
-deploy_config() {
+deploy_files() {
   echo 'Deploying config to GCS'
-  gsutil mb -b on gs://$PROJECT_ID
+  if ! gsutil ls gs://$PROJECT_ID; then
+    gsutil mb -b on gs://$PROJECT_ID
+  fi
 
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
   gsutil -h "Content-Type:text/plain" cp ./../app_reporting_pack.yaml $GCS_BASE_PATH/app_reporting_pack.yaml
   gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
+
+  gsutil -m rm -r $GCS_BASE_PATH/bq_queries
+  gsutil -m cp -R ./../bq_queries $GCS_BASE_PATH/bq_queries
+
+  gsutil -m rm -r $GCS_BASE_PATH/google_ads_queries
+  gsutil -m cp -R ./../google_ads_queries $GCS_BASE_PATH/google_ads_queries
+
+  gsutil -m rm -r $GCS_BASE_PATH/scripts
+  gsutil -m cp -R ./../scripts $GCS_BASE_PATH/scripts
 }
 
 deploy_public_index() {
@@ -155,7 +167,9 @@ deploy_public_index() {
   else
     GCS_BASE_PATH_PUBLIC=gs://${PROJECT_ID}-public/$NAME
     gsutil -h "Content-Type:text/html" -h "Cache-Control: no-store" cp "${SCRIPT_PATH}/index.html" $GCS_BASE_PATH_PUBLIC/index.html
-    gsutil rm $GCS_BASE_PATH_PUBLIC/dashboard.json
+    if gsutil ls $GCS_BASE_PATH_PUBLIC/dashboard.json >/dev/null 2> /dev/null; then
+      gsutil rm $GCS_BASE_PATH_PUBLIC/dashboard.json
+    fi
   fi
 }
 
@@ -165,8 +179,8 @@ get_run_data() {
   #   * project_id
   #   * machine_type
   #   * service_account
-  #   * ads_config_uri
-  #   * config_uri
+  #   * gcs_source_uri
+  #   * gcs_base_path_public
   #   * docker_image - a docker image url, can be CR or AR
   #       gcr.io/$PROJECT_ID/workload
   #       europe-docker.pkg.dev/$PROJECT_ID/docker/workload
@@ -181,8 +195,7 @@ get_run_data() {
   # if you need to prevent VM deletion add this:
   #  "delete_vm": "FALSE"
   data='{
-    "config_uri": "'$GCS_BASE_PATH'/app_reporting_pack.yaml",
-    "ads_config_uri": "'$GCS_BASE_PATH'/google-ads.yaml",
+    "gcs_source_uri": "'$GCS_BASE_PATH'",
     "gcs_base_path_public": "'$GCS_BASE_PATH_PUBLIC'"
   }'
   echo $data
@@ -254,7 +267,7 @@ deploy_all() {
   create_registry
   build_docker_image
   deploy_cf
-  deploy_config
+  deploy_files
   schedule_run
 }
 

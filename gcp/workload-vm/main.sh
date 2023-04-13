@@ -9,24 +9,23 @@ project_id=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/comp
 echo "Detected project id from metadata server: $project_id"
 gcloud config set project $project_id
 
-# Fetch config uris fro the current instance metadata
-config_uri=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/config_uri -s --fail)
-if [ -z "$config_uri" ]; then
-  config_uri="app_reporting_pack.yaml" # by default we assume a local config (inside the current container)
-  echo $config_uri
-fi
+# Fetch gcs uris fro the current instance metadata
+gcs_source_uri=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/gcs_source_uri -s --fail)
 
-ads_config_uri=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/ads_config_uri -s --fail)
-if [ -z "$ads_config_uri" ]; then
-  ads_config_uri="google-ads.yaml"
-  echo $ads_config_uri
-fi
+gcloud logging write $LOG_NAME "[$(hostname)] Starting ARP application (gcs_source_uri: $gcs_source_uri)"
 
-gcloud logging write $LOG_NAME "[$(hostname)] Starting ARP application (config: $config_uri, google-ads-config: $ads_config_uri)"
+# fetch ARP files from GCS
+if [[ -n $gcs_source_uri ]]; then
+  gsutil cp $gcs_source_uri/app_reporting_pack.yaml app_reporting_pack.yaml
+  gsutil cp $gcs_source_uri/google-ads.yaml google-ads.yaml
+  gsutil -m cp -R $gcs_source_uri/google_ads_queries .
+  gsutil -m cp -R $gcs_source_uri/bq_queries .
+  gsutil -m cp -R $gcs_source_uri/scripts .
+fi
 
 # run ARP
 # TODO: --backfill?
-./run-local.sh --quiet --config $config_uri --google-ads-config $ads_config_uri --legacy
+./run-local.sh --quiet --config app_reporting_pack.yaml --google-ads-config google-ads.yaml --legacy
 exitcode=$?
 
 if [ $exitcode -ne 0 ]; then
@@ -41,10 +40,11 @@ gcs_base_path_public=$(curl -H Metadata-Flavor:Google http://metadata.google.int
 if [[ -n gcs_base_path_public ]]; then
   # TODO: if run-local.sh failed we shouldn't create dashboard_url
   if gsutil ls $gcs_base_path_public/index.html >/dev/null 2>&1; then
-    dashboard_url=$(./scripts/create_dashboard.sh -L)
+    chmod +x ./scripts/create_dashboard.sh
+    dashboard_url=$(./scripts/create_dashboard.sh -L --config app_reporting_pack.yaml)
     echo "Created dashboard cloning url: $dashboard_url"
     echo "{\"dashboardUrl\":\"$dashboard_url\"}" > dashboard.json
-    gsutil -h "Content-Type:application/json" cp dashboard.json $gcs_base_path_public/dashboard.json
+    gsutil -h "Content-Type:application/json" -h "Cache-Control: no-store" cp dashboard.json $gcs_base_path_public/dashboard.json
   fi
 fi 
 

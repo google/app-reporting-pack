@@ -24,8 +24,8 @@ if [[ -f ./app_reporting_pack.yaml ]]; then
   # found app_reporting_pack.yaml from previous run
   echo -e "${White}It seems you have deployed the solution already.${NC}"
   # when installation AND first run complete then there will be a dashboard.json file on public GCS
-  public_gcs_url=$(./gcs/setup.sh print_public_gcs_url)
-  if curl $public_gcs_url/dashboard.json --fail >/dev/null 2>&1; then
+  public_gcs_url=$(./gcp/setup.sh print_public_gcs_url)
+  if curl $public_gcs_url/dashboard.json --fail 2>&1; then
     echo -e "If you haven't already, use that url for dashboard cloning"
     echo -n -e "${Red}Would you like to delete the current Cloud Run service (it's needed only for installation) (Y/n): ${NC}"
     read -r SHUTDOWN

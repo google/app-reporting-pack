@@ -18,12 +18,12 @@ check_ads_config() {
     use_google_ads_config='y'
     ads_config=$google_ads_config
   elif [[ -f "./google-ads.yaml" ]]; then
-    echo -n -e "${COLOR}Would you like to use google-ads.yaml (Y/n)?${NC}: "
+    echo -n "Would you like to use google-ads.yaml (Y/n)?: "
     read -r use_google_ads_config
     use_google_ads_config=$(convert_answer $use_google_ads_config 'Y')
     ads_config=google-ads.yaml
   elif [[ -f "$HOME/google-ads.yaml" ]]; then
-    echo -n -e "${COLOR}Would you like to use ~/google-ads.yaml (Y/n)?${NC}: "
+    echo -n "Would you like to use ~/google-ads.yaml (Y/n)?: "
     read -r use_google_ads_config
     use_google_ads_config=$(convert_answer $use_google_ads_config 'Y')
     ads_config=$HOME/google-ads.yaml
