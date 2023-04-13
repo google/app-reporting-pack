@@ -19,32 +19,46 @@ CREATE OR REPLACE TABLE {target_dataset}.creative_excellence
 AS (
 WITH
     -- Calculate ad_group level cost for the last 7 days
+    MappingTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_group_name) AS ad_group_name,
+            ANY_VALUE(ad_group_status) AS ad_group_status,
+            ANY_VALUE(campaign_id) AS campaign_id,
+            ANY_VALUE(campaign_name) AS campaign_name,
+            ANY_VALUE(campaign_status) AS campaign_status,
+            ANY_VALUE(account_id) AS account_id,
+            ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(currency) AS currency
+        FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        GROUP BY 1
+    ),
     CostDynamicsTable AS (
         SELECT
             PARSE_DATE("%Y-%m-%d", date) AS day,
-            campaign_id,
             C.ad_group_id,
+            ANY_VALUE(M.campaign_id) AS campaign_id,
             SUM(cost) AS cost
         FROM {bq_dataset}.ad_group_performance AS C
-        LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
+        LEFT JOIN MappingTable AS M
             ON C.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
-        GROUP BY 1, 2, 3
+        GROUP BY 1, 2
     ),
     AdGroupCostTable AS (
         SELECT
-            campaign_id,
             ad_group_id,
+            ANY_VALUE(campaign_id) AS campaign_id,
             COUNT(*) AS n_active_days,
             `{bq_dataset}.NormalizeMillis`(SUM(cost)) AS cost_last_7_days
         FROM CostDynamicsTable
-        GROUP BY 1, 2
+        GROUP BY 1
     ),
     ConversionSplitTable AS (
         SELECT
-            M.campaign_id,
             Conv.ad_group_id,
+            ANY_VALUE(campaign_id) AS campaign_id,
             SUM(IF(Conv.conversion_category = "DOWNLOAD", Conv.conversions, 0)) AS installs,
             SUM(IF(Conv.conversion_category != "DOWNLOAD", Conv.conversions, 0)) AS inapps
         FROM {bq_dataset}.ad_group_conversion_split AS Conv
@@ -52,7 +66,7 @@ WITH
             ON Conv.ad_group_id = M.ad_group_id
         WHERE PARSE_DATE("%Y-%m-%d", date)
             BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE()
-        GROUP BY 1, 2
+        GROUP BY 1
     ),
     -- Helper to identify campaign level bid and budget snapshot data
     -- for the last 7 days alongside corresponding lags
@@ -110,6 +124,42 @@ WITH
         LEFT JOIN CostDynamicsTable
             USING(day, campaign_id)
         GROUP BY 1
+    ),
+    BudgetTable AS (
+        SELECT
+            campaign_id,
+            ANY_VALUE(budget_amount) AS budget_amount,
+            ANY_VALUE(target_cpa) AS target_cpa,
+            ANY_VALUE(target_roas) AS target_roas
+        FROM `{bq_dataset}.bid_budget`
+        GROUP BY 1
+    ),
+    AssetStructureTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_id) AS ad_id,
+            ANY_VALUE(install_videos) AS install_videos,
+            ANY_VALUE(install_images) AS install_images,
+            ANY_VALUE(install_headlines) AS install_headlines,
+            ANY_VALUE(install_descriptions) AS install_descriptions,
+            ANY_VALUE(engagement_videos) AS engagement_videos,
+            ANY_VALUE(engagement_images) AS engagement_images,
+            ANY_VALUE(engagement_headlines) AS engagement_headlines,
+            ANY_VALUE(engagement_descriptions) AS engagement_descriptions,
+            ANY_VALUE(pre_registration_videos) AS pre_registration_videos,
+            ANY_VALUE(pre_registration_images) AS pre_registration_images,
+            ANY_VALUE(pre_registration_headlines) AS pre_registration_headlines,
+            ANY_VALUE(pre_registration_descriptions) AS pre_registration_descriptions,
+            ANY_VALUE(install_media_bundles) AS install_media_bundles,
+        FROM `{bq_dataset}.asset_structure`
+        GROUP BY 1
+    ),
+    AdStrengthTable AS (
+        SELECT
+            ad_id,
+            ANY_VALUE(ad_strength) AS ad_strength
+        FROM `{bq_dataset}.ad_strength`
+        GROUP BY 1
     )
 SELECT
     M.account_id,
@@ -146,14 +196,14 @@ SELECT
         END AS enough_budget,
     -- number of active assets of a certain type
     `{bq_dataset}.GetNumberOfElements`(
-        install_videos, engagement_videos, pre_registration_videos) AS n_videos,
+        S.install_videos, S.engagement_videos, S.pre_registration_videos) AS n_videos,
     `{bq_dataset}.GetNumberOfElements`(
-        install_images, engagement_images, pre_registration_images) AS n_images,
+        S.install_images, S.engagement_images, S.pre_registration_images) AS n_images,
     `{bq_dataset}.GetNumberOfElements`(
-        install_headlines, engagement_headlines, pre_registration_headlines) AS n_headlines,
+        S.install_headlines, S.engagement_headlines, S.pre_registration_headlines) AS n_headlines,
     `{bq_dataset}.GetNumberOfElements`(
-        install_descriptions, engagement_descriptions, pre_registration_descriptions) AS n_descriptions,
-    ARRAY_LENGTH(SPLIT(install_media_bundles, "|")) - 1 AS n_html5,
+        S.install_descriptions, S.engagement_descriptions, S.pre_registration_descriptions) AS n_descriptions,
+    ARRAY_LENGTH(SPLIT(S.install_media_bundles, "|")) - 1 AS n_html5,
     COALESCE(AdStrength.ad_strength, "UNSPECIFIED") AS ad_strength,
     IFNULL(C.cost_last_7_days, 0) AS cost_last_7_days,
     IFNULL(
@@ -181,21 +231,19 @@ SELECT
         Avg7Days.dramatic_target_cpa_changes,
         Avg7Days.dramatic_target_roas_changes
     ) AS dramatic_bid_changes
-FROM {bq_dataset}.account_campaign_ad_group_mapping AS M
+FROM MappingTable AS M
 LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
-LEFT JOIN {bq_dataset}.bid_budget AS B
+LEFT JOIN BudgetTable AS B
     ON M.campaign_id = B.campaign_id
-LEFT JOIN {bq_dataset}.asset_structure AS S
+LEFT JOIN AssetStructureTable AS S
   ON M.ad_group_id = S.ad_group_id
-LEFT JOIN {bq_dataset}.ad_strength AS AdStrength
+LEFT JOIN AdStrengthTable AS AdStrength
   ON S.ad_id = AdStrength.ad_id
 LEFT JOIN AdGroupCostTable AS C
-  ON M.campaign_id = C.campaign_id
-  AND M.ad_group_id = C.ad_group_id
+  ON M.ad_group_id = C.ad_group_id
 LEFT JOIN ConversionSplitTable AS Conv
-  ON M.campaign_id = Conv.campaign_id
-  AND M.ad_group_id = Conv.ad_group_id
+  ON M.ad_group_id = Conv.ad_group_id
 LEFT JOIN BidBudgetAvg7DaysTable AS Avg7Days
     ON M.campaign_id = Avg7Days.campaign_id
 WHERE cost_last_7_days > 0
