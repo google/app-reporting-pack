@@ -66,6 +66,20 @@ WITH
             policy_topic_type,
             evidences
         FROM AssetDisapprovals
+    ),
+    MappingTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_group_name) AS ad_group_name,
+            ANY_VALUE(ad_group_status) AS ad_group_status,
+            ANY_VALUE(campaign_id) AS campaign_id,
+            ANY_VALUE(campaign_name) AS campaign_name,
+            ANY_VALUE(campaign_status) AS campaign_status,
+            ANY_VALUE(account_id) AS account_id,
+            ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(currency) AS currency
+        FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        GROUP BY 1
     )
 SELECT
     day,
@@ -107,7 +121,7 @@ SELECT
     Disapprovals.policy_topic_type,
     Disapprovals.evidences
 FROM CombinedDisapprovals AS Disapprovals
-LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
+LEFT JOIN MappingTable AS M
   ON Disapprovals.ad_group_id = M.ad_group_id
 LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id

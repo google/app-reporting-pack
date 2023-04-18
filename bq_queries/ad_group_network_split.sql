@@ -39,6 +39,20 @@ AS (
                 AND ConvSplit.network = LagAdjustments.network
                 AND ConvSplit.conversion_id = LagAdjustments.conversion_id
         GROUP BY 1, 2, 3
+    ),
+    MappingTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_group_name) AS ad_group_name,
+            ANY_VALUE(ad_group_status) AS ad_group_status,
+            ANY_VALUE(campaign_id) AS campaign_id,
+            ANY_VALUE(campaign_name) AS campaign_name,
+            ANY_VALUE(campaign_status) AS campaign_status,
+            ANY_VALUE(account_id) AS account_id,
+            ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(currency) AS currency
+        FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        GROUP BY 1
     )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
@@ -74,7 +88,7 @@ SELECT
 FROM {bq_dataset}.ad_group_performance AS AP
 LEFT JOIN ConversionsTable AS ConvSplit
     USING(date, ad_group_id, network)
-LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
+LEFT JOIN MappingTable AS M
   ON AP.ad_group_id = M.ad_group_id
 LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id

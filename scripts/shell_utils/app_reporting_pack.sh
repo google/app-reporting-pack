@@ -37,8 +37,7 @@ ask_for_video_orientation() {
     orientation_position=$(convert_answer $orientation_position)
 
     if [[ $template_string != "q" ]]; then
-      let "orientation_position_view=orientation_position+1"
-      video_orientation=`echo ${splitted[$orientation_position_view]}`
+      video_orientation=`echo ${splitted[$orientation_position]}`
       echo "Video orientation: $video_orientation"
     fi
     echo -n "Select the orientation_delimiter: "

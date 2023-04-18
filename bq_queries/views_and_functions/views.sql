@@ -64,21 +64,22 @@ AS (
         WHERE conversion_type != "DOWNLOAD"
         GROUP BY 1
     )
-    SELECT DISTINCT
+    SELECT
         campaign_id,
-        campaign_sub_type,
-        app_id,
-        app_store,
-        bidding_strategy,
-        start_date,
-        install_conversion_id,
-        inapp_conversion_ids,
-        COALESCE(inapp_target_conversions, install_target_conversions) AS target_conversions,
-        COALESCE(inapp_conversion_sources, install_conversion_sources) AS conversion_sources,
-        COALESCE(n_of_inapp_target_conversions, n_of_install_target_conversions) AS n_of_target_conversions
+        ANY_VALUE(campaign_sub_type) AS campaign_sub_type,
+        ANY_VALUE(app_id) AS app_id,
+        ANY_VALUE(app_store) AS app_store,
+        ANY_VALUE(bidding_strategy) AS bidding_strategy,
+        ANY_VALUE(start_date) AS start_date,
+        ANY_VALUE(install_conversion_id) AS install_converion_id,
+        ANY_VALUE(inapp_conversion_ids) AS inapp_conversion_ids,
+        COALESCE(ANY_VALUE(inapp_target_conversions), ANY_VALUE(install_target_conversions)) AS target_conversions,
+        COALESCE(ANY_VALUE(inapp_conversion_sources), ANY_VALUE(install_conversion_sources)) AS conversion_sources,
+        COALESCE(ANY_VALUE(n_of_inapp_target_conversions), ANY_VALUE(n_of_install_target_conversions)) AS n_of_target_conversions
     FROM RawConversionIds
     LEFT JOIN InstallConversionId USING(campaign_id)
     LEFT JOIN InappConversionIds USING(campaign_id)
+    GROUP BY 1
 );
 
 -- Campaign level geo and language targeting

@@ -28,15 +28,16 @@ WITH CampaignCostTable AS (
         M.campaign_id,
         `{bq_dataset}.NormalizeMillis`(SUM(AP.cost)) AS campaign_cost,
     FROM {bq_dataset}.ad_group_performance AS AP
-    LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
+    LEFT JOIN (SELECT ad_group_id, ANY_VALUE(campaign_id) AS campaign_id FROM {bq_dataset}.account_campaign_ad_group_mapping GROUP BY 1) AS M
       ON AP.ad_group_id = M.ad_group_id
     GROUP BY 1, 2
     ),
     ConversionCategoryMapping AS (
-        SELECT DISTINCT
+        SELECT
             conversion_id,
-            conversion_type AS conversion_category
+            ANY_VALUE(conversion_type) AS conversion_category
         FROM {bq_dataset}.app_conversions_mapping
+        GROUP BY 1
     ),
     AssetsConversionsAdjustedTable AS (
         SELECT
@@ -71,6 +72,51 @@ WITH CampaignCostTable AS (
             ANY_VALUE(video_duration) AS video_duration
         FROM {bq_dataset}.mediafile
         WHERE video_id != ""
+        GROUP BY 1
+    ),
+    MappingTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_group_name) AS ad_group_name,
+            ANY_VALUE(ad_group_status) AS ad_group_status,
+            ANY_VALUE(campaign_id) AS campaign_id,
+            ANY_VALUE(campaign_name) AS campaign_name,
+            ANY_VALUE(campaign_status) AS campaign_status,
+            ANY_VALUE(account_id) AS account_id,
+            ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(currency) AS currency
+        FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        GROUP BY 1
+    ),
+    AssetReferenceTable AS (
+        SELECT
+            asset_id,
+            field_type,
+            ANY_VALUE(ad_group_id) AS ad_group_id,
+            ANY_VALUE(performance_label) AS performance_label,
+            ANY_VALUE(enabled) AS enabled
+        FROM `{bq_dataset}.asset_reference`
+        GROUP BY 1, 2
+    ),
+    AssetMapping AS (
+        SELECT
+            id,
+            ANY_VALUE(type) AS type,
+            ANY_VALUE(text) AS text,
+            ANY_VALUE(asset_name) AS asset_name,
+            ANY_VALUE(youtube_video_title) AS youtube_video_title,
+            ANY_VALUE(url) AS url,
+            ANY_VALUE(youtube_video_id) AS youtube_video_id,
+            ANY_VALUE(height) AS height,
+            ANY_VALUE(width) AS width
+        FROM `{bq_dataset}.asset_mapping`
+        GROUP BY 1
+    ),
+    VideoOrientation AS (
+        SELECT
+            video_id,
+            ANY_VALUE(video_orientation) AS video_orientation
+        FROM `{bq_dataset}.video_orientation`
         GROUP BY 1
     )
 SELECT
@@ -157,7 +203,7 @@ LEFT JOIN AssetsConversionsAdjustedTable AS ConvSplit
         AND AP.network = ConvSplit.network
         AND AP.asset_id = ConvSplit.asset_id
         AND AP.field_type = ConvSplit.field_type
-LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
+LEFT JOIN MappingTable AS M
   ON AP.ad_group_id = M.ad_group_id
 LEFT JOIN CampaignCostTable AS CampCost
     ON AP.date = CampCost.date
@@ -166,15 +212,15 @@ LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
 LEFT JOIN `{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
-LEFT JOIN {bq_dataset}.asset_reference AS R
+LEFT JOIN AssetReferenceTable AS R
   ON AP.asset_id = R.asset_id
     AND AP.ad_group_id = R.ad_group_id
     AND AP.field_type = R.field_type
-LEFT JOIN {bq_dataset}.asset_mapping AS Assets
+LEFT JOIN AssetMapping AS Assets
   ON AP.asset_id = Assets.id
 LEFT JOIN VideoDurations
   ON Assets.youtube_video_id = VideoDurations.video_id
-LEFT JOIN `{bq_dataset}.video_orientation` AS VideoOrientation
+LEFT JOIN VideoOrientation
     ON Assets.youtube_video_id = VideoOrientation.video_id
 LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
     ON PARSE_DATE("%Y-%m-%d", AP.date) = AssetCohorts.day_of_interaction
