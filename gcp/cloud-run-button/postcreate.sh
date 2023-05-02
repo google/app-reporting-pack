@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
-set -x
+#set -x
 
-echo "Updating Cloud Run service $K_SERVICE"
-# ttyd doesn't work on Gen2 environment, so we're updating it to Gen2, additionally increasing request timeout to the maximum allowed
-gcloud run services update $K_SERVICE --execution-environment=gen2 --timeout=3600 --max-instances=1 --region=$GOOGLE_CLOUD_REGION
+echo "Deleting Cloud Run service $K_SERVICE"
+
+gcloud run services delete $K_SERVICE --region $GOOGLE_CLOUD_REGION --quiet

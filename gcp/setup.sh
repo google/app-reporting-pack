@@ -229,7 +229,7 @@ start() {
     echo -e "${CYAN}[ * ] To access your new dashboard, click this link - ${GREEN}https://storage.googleapis.com/${INDEX_PATH}/index.html${NC}"
   else
     echo -e "${CYAN}[ * ] Your GCP project does not allow public access.${NC}"
-    echo -e "${CYAN}[ * ] To create your dashboard template, please run the ${GREEN}create_dashboard${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
+    echo -e "${CYAN}[ * ] To create your dashboard template, please run the ${GREEN}./scripts/create_dashboard.sh -c app_reporting_pack.yaml -L${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
   fi
 }
 
@@ -272,13 +272,27 @@ deploy_all() {
 }
 
 
-for i in "$@"; do
-  "$i"
-  exitcode=$?
-  if [ $exitcode -ne 0 ]; then
-    echo "Breaking script as command '$i' failed"
-    exit $exitcode
-  fi
-done
+_list_functions() {
+  # list all functions in this file not starting with "_"
+  declare -F | awk '{print $3}' | grep -v "^_"
+}
 
-popd >/dev/null
+
+if [[ $# -eq 0 ]]; then
+  _list_functions
+else
+  for i in "$@"; do
+    if declare -F "$i" > /dev/null; then
+      "$i"
+      exitcode=$?
+      if [ $exitcode -ne 0 ]; then
+        echo "Breaking script as command '$i' failed"
+        exit $exitcode
+      fi
+    else
+      echo -e "\033[0;31mFunction '$i' does not exist.\033[0m"
+    fi
+  done
+fi
+
+popd > /dev/null
