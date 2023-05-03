@@ -75,3 +75,14 @@ prompt_running() {
     exit
   fi
 }
+
+parse_yaml () {
+   local yaml_file="$1"
+   local prefix="$2"
+   while read line; do
+      local variable=`echo "$line" | sed -e 's/: /=/'`
+      if [ "${variable::1}" != "#" ] && [ `echo "$variable" | wc -c` -gt 2 ]; then
+         eval "export ${prefix}${variable}"
+      fi
+   done < <(cat $yaml_file)
+}

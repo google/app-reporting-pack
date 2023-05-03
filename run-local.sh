@@ -88,9 +88,14 @@ welcome() {
 }
 
 setup() {
-  # TODO: get default value from google-ads.yaml
-  echo -n "Enter account_id in XXXXXXXXXX format: "
+  # get default value from google-ads.yaml
+  if [[ -n $ads_config ]]; then
+    parse_yaml $ads_config "GOOGLE_ADS_"
+    local login_customer_id=$GOOGLE_ADS_login_customer_id
+  fi
+  echo -n "Enter account_id in XXXXXXXXXX format ($login_customer_id): "
   read -r customer_id
+  customer_id=${customer_id:-$login_customer_id}
 
   default_project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
   echo -n "Enter BigQuery project_id ($default_project): "
