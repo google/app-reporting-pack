@@ -1,4 +1,8 @@
 #!/bin/bash
+# ansi colors
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+NC='\033[0m'
 
 SETTING_FILE="./settings.ini"
 SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
@@ -217,19 +221,20 @@ start() {
   gcloud pubsub topics publish $TOPIC --message="$DATA"
 
   # Check if there is a public bucket and index.html and echo the url
-  INDEX_PATH="${PROJECT_ID}-public/$NAME"
-  PUBLIC_URL="https://storage.googleapis.com/${INDEX_PATH}/index.html"
+  local PUBLIC_URL=$(print_public_gcs_url)/index.html
   STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $PUBLIC_URL)
 
-  GREEN='\033[0;32m'
-  CYAN='\033[0;36m'
-  NC='\033[0m'
-
   if [[ $STATUS_CODE -eq 200 ]]; then
-    echo -e "${CYAN}[ * ] To access your new dashboard, click this link - ${GREEN}https://storage.googleapis.com/${INDEX_PATH}/index.html${NC}"
+    echo -e "${CYAN}[ * ] To access your new dashboard, click this link - ${GREEN}${PUBLIC_URL}${NC}"
   else
     echo -e "${CYAN}[ * ] Your GCP project does not allow public access.${NC}"
-    echo -e "${CYAN}[ * ] To create your dashboard template, please run the ${GREEN}./scripts/create_dashboard.sh -c app_reporting_pack.yaml -L${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
+    if [[ -f ./../app_reporting_pack.yaml ]]; then
+      dashboard_url=$(./../scripts/create_dashboard.sh -L --config app_reporting_pack.yaml)
+      echo -e "${CYAN}[ * ] To create your dashboard, click this link:"
+      echo -e "${GREEN}$dashboard_url${NC}"
+    else
+      echo -e "${CYAN}[ * ] To create your dashboard, please run the ${GREEN}./scripts/create_dashboard.sh -c app_reporting_pack.yaml -L${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
+    fi
   fi
 }
 
