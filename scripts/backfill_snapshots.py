@@ -100,6 +100,14 @@ def main():
     logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
     logger = logging.getLogger(__name__)
 
+    config = GaarfConfigBuilder(args).build()
+    bq_project = config.writer_params.get("project")
+    bq_dataset = config.writer_params.get("dataset")
+    bq_client = bigquery.Client(bq_project)
+    job = bq_client.query(f"SELECT DISTINCT CAST(day AS STRING) AS day FROM `{bq_dataset}.bid_budgets_*`")
+    snapshot_dates = set(job.result().to_dataframe()["day"])
+
+
     # Change history can be fetched only for the last 29 days
     days_ago_29 = (datetime.now() - timedelta(days=29)).strftime("%Y-%m-%d")
     days_ago_1 = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -107,9 +115,10 @@ def main():
         date.strftime("%Y-%m-%d") for date in pd.date_range(
             days_ago_29, days_ago_1).to_pydatetime().tolist()
     ]
-    config = GaarfConfigBuilder(args).build()
-    bq_project = config.writer_params.get("project")
-    bq_dataset = config.writer_params.get("dataset")
+    missing_dates = set(dates).difference(snapshot_dates)
+    if not missing_dates:
+        logger.info("No snapshots to backfill")
+        return
 
     with open(args[0].ads_config, "r", encoding="utf-8") as f:
         google_ads_config_dict = yaml.safe_load(f)
@@ -187,8 +196,7 @@ def main():
         [restored_budgets, restored_target_cpas, restored_target_roas])
 
     # Writer data for each date to BigQuery dated table (with _YYYYMMDD suffix)
-    bq_client = bigquery.Client(bq_project)
-    for date in dates:
+    for date in missing_dates:
         daily_history = restored_bid_budget_history.loc[
             restored_bid_budget_history["day"] == date]
         daily_history.loc[:, ("day")] = datetime.strptime(date,
