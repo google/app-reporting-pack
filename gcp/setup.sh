@@ -230,7 +230,7 @@ start() {
     echo -e "${CYAN}[ * ] Your GCP project does not allow public access.${NC}"
     if [[ -f ./../app_reporting_pack.yaml ]]; then
       dashboard_url=$(./../scripts/create_dashboard.sh -L --config app_reporting_pack.yaml)
-      echo -e "${CYAN}[ * ] To create your dashboard, click this link:"
+      echo -e "${CYAN}[ * ] To create your dashboard, click the following link once the installation process completes and all the relevant tables have been created in the DB:"
       echo -e "${GREEN}$dashboard_url${NC}"
     else
       echo -e "${CYAN}[ * ] To create your dashboard, please run the ${GREEN}./scripts/create_dashboard.sh -c app_reporting_pack.yaml -L${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
