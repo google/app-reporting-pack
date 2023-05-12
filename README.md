@@ -131,6 +131,17 @@ What happens when a pubsub message published (as a result of `setup.sh start`):
 * the VM on startup parses the arguments from the CF (via VM's attributes) and execute ARP in quite the same way as it executes locally (using `run-local.sh`).
 Additionally the VM's entrypoint script deletes the virtual machine upon completion of the run-local.sh.
 
+### Troubleshooting
+If you're getting an error at the creating Docker repository step:
+```
+ERROR: (gcloud.artifacts.repositories.create) INVALID_ARGUMENT: Maven config is not supported for format "DOCKER"
+- '@type': type.googleapis.com/google.rpc.DebugInfo
+  detail: '[ORIGINAL ERROR] generic::invalid_argument: Maven config is not supported
+    for format "DOCKER" [google.rpc.error_details_ext] { code: 3 message: "Maven config
+    is not supported for format \"DOCKER\"" }'
+```
+Please update your Cloud SDK CLI by running `gcloud components update`
+
 
 ### Alternative Installation Methods
 

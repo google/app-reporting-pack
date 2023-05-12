@@ -2,6 +2,7 @@
 # ansi colors
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
+RED='\033[0;31m'
 NC='\033[0m'
 
 SETTING_FILE="./settings.ini"
@@ -36,6 +37,7 @@ SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 
 
 enable_apis() {
+  echo "Enabling APIs"
   gcloud services enable compute.googleapis.com
   gcloud services enable artifactregistry.googleapis.com
   gcloud services enable run.googleapis.com
@@ -49,10 +51,18 @@ enable_apis() {
 
 
 create_registry() {
-  echo "Creating a repository in Artifact Repository"
-  gcloud artifacts repositories create $REPOSITORY \
-      --repository-format=Docker \
-      --location=$REPOSITORY_LOCATION
+  echo "Creating a repository in Artifact Registry"
+  REPO_EXISTS=$(gcloud artifacts repositories list --location=europe --filter="REPOSITORY:'"$REPOSITORY"'" --format="value(REPOSITORY)" 2>/dev/null)
+  if [[ ! -n $REPO_EXISTS ]]; then
+    # repo doesn't exist, creating    
+    gcloud artifacts repositories create ${REPOSITORY} \
+        --repository-format=docker \
+        --location=$REPOSITORY_LOCATION
+    exitcode=$?
+    if [ $exitcode -ne 0 ]; then
+      echo -e "${RED}[ ! ] Please upgrade Cloud SDK to the latest version: gcloud components update"
+    fi
+  fi
 }
 
 
