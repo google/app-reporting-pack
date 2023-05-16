@@ -55,7 +55,7 @@ case $1 in
     ;;
   -g|--google-ads-config)
     shift
-    google_ads_config=$1
+    ads_config=$1
     ;;
   --legacy)
     legacy="y"
@@ -118,7 +118,7 @@ setup() {
   generate_bq_macros
 
   if [[ -n $RUNNING_IN_GCE && $generate_config_only ]]; then
-    # if you're running inside Google Cloud Compute Engine as generating config 
+    # if you're running inside Google Cloud Compute Engine as generating config
     # (see gcp/cloud-run-button/main.sh) then there's no need for additional questions
     save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
     echo -e "${COLOR}Saving configuration to $solution_name_lowercase.yaml${NC}"
@@ -236,6 +236,11 @@ check_ads_config
 
 if [[ -z ${loglevel} ]]; then
   loglevel="INFO"
+fi
+
+if [[ $generate_config_only = "y" ]]; then
+  welcome
+  setup
 fi
 
 if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
