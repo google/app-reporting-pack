@@ -42,7 +42,7 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 1. A new GCP project with billing account attached
 
-1. Membership in `app-reporting-pack-readers-external` Google group (join [here](https://groups.google.com/a/google.com/g/app-reporting-pack-readers-external))
+1. Membership in `app-reporting-pack-readers-external` Google group (join [here](https://groups.google.com/g/app-reporting-pack-readers-external))
 
 1. Credentials for Google Ads API access - `google-ads.yaml`.
    See details here - https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md
@@ -50,7 +50,7 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 
 ## Installation
-There are several ways how to run the application. A recommeneded way is to run it
+There are several ways to run the application. A recommended way is to run it
 in the Google Cloud but it's not a requirement. You can run ARP locally or
 in your own infrastructure. In either way you need two things:
 * Google Ads API credentials (in `google-ads.yaml` or separately)
@@ -61,7 +61,7 @@ in your own infrastructure. In either way you need two things:
 The primary installation method deploys ARP into Google Cloud by using Cloud Run Button.
 The procedure automates generating ARP configuration and deploying all required components to the Cloud.
 
-This aproach is the simplest one because it clones the repo and starts install scripts for you. But sometimes you might need some customization.
+This approach is the simplest one because it clones the repo and starts install scripts for you. But sometimes you might need some customization.
 The majority infrastructure settings can be changed in `gcp/settings.ini` file (regions, service names, etc).
 If it's a case for you please use the [Manual installation in Google Cloud](#manual-installation-in-google-cloud) below.
 
