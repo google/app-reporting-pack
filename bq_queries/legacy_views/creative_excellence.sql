@@ -54,7 +54,7 @@ SELECT
     target_cpa AS TargetCPA,
     enough_budget AS EnoughBudget,
     conversions_last_7_days AS conversions,
-    enough_conversions AS EnoughConversions,
+    IF(enough_conversions IS TRUE, "OK", ">10/day needed") AS EnoughConversions,
     n_images,
     n_videos,
     n_headlines,

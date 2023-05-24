@@ -214,10 +214,10 @@ SELECT
     Conv.inapps AS inapps_last_7_days,
     CASE
         WHEN ACS.bidding_strategy = "Installs"
-            AND SUM(Conv.installs) OVER (PARTITION BY Conv.campaign_id) > 10
+            AND SUM(Conv.installs) OVER (PARTITION BY Conv.campaign_id) / 7 > 10
             THEN TRUE
-        WHEN ACS.bidding_strategy = "Actions"
-            AND SUM(Conv.inapps) OVER (PARTITION BY Conv.campaign_id) > 10
+        WHEN ACS.bidding_strategy IN ("Actions", "Target ROAS")
+            AND SUM(Conv.inapps) OVER (PARTITION BY Conv.campaign_id) / 7 > 10
             THEN TRUE
         ELSE FALSE
         END AS enough_conversions,
