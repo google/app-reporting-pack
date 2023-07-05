@@ -1,18 +1,20 @@
 # App Reporting Pack
-__A centralized platform and dashboard for Google Ads App campaign data.__
+
+**A centralized platform and dashboard for Google Ads App campaign data.**
 
 ## Table of Contents
+
 1. [Introduction](#introduction)
 1. [Deliverables](#deliverables)
 1. [Prerequisites](#prerequisites)
 1. [Installation](#installation)
-    * [Primary Installation Method](#primary-installation-method)
-    * [Manual installation in Google Cloud](#manual-installation-in-google-cloud)
-    * [Alternative Installation Methods](#alternative-installation-methods)
-        * [Prerequisites for alternative installation methods](#prerequisites-1)
-        * [Running Queries Locally](#running-queries-locally)
-        * [Running in a Docker Container](#running-in-a-docker-container)
-        * [Running in Compute Engine with Docker](#running-in-compute-engine-with-docker)
+   - [Primary Installation Method](#primary-installation-method)
+   - [Manual installation in Google Cloud](#manual-installation-in-google-cloud)
+   - [Alternative Installation Methods](#alternative-installation-methods)
+     - [Prerequisites for alternative installation methods](#prerequisites-1)
+     - [Running Queries Locally](#running-queries-locally)
+     - [Running in a Docker Container](#running-in-a-docker-container)
+     - [Running in Compute Engine with Docker](#running-in-compute-engine-with-docker)
 1. [Dashboard Replication](#dashboard-replication)
 1. [Disclaimer](#disclaimer)
 
@@ -21,20 +23,19 @@ __A centralized platform and dashboard for Google Ads App campaign data.__
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
 App Reporting Pack fetches all necessary data from Ads API and creates a centralized dashboard showing different aspects of App campaign's performance and settings. All data is stored in BigQuery tables that can be used for any other need the client might have.
 
-
 ## Deliverables
 
 1. A centralized dashboard with deep app campaign and assets performance views
 2. The following data tables in BigQuery that can be used independently:
 
-* `asset_performance`
-* `creative_excellence`
-* `approval_statuses`
-* `change_history`
-* `performance_grouping_history`
-* `ad_group_network_split`
-* `geo_performance`
-* `cannibalization`
+- `asset_performance`
+- `creative_excellence`
+- `approval_statuses`
+- `change_history`
+- `performance_grouping_history`
+- `ad_group_network_split`
+- `geo_performance`
+- `cannibalization`
 
 ## Prerequisites
 
@@ -48,22 +49,27 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
    See details here - https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md
    Normally you need OAuth2 credentials (Client ID, Client Secret), a Google Ads developer token and a refresh token.
 
-
 ## Installation
+
 There are several ways to run the application. A recommended way is to run it
 in the Google Cloud but it's not a requirement. You can run ARP locally or
 in your own infrastructure. In either way you need two things:
-* Google Ads API credentials (in `google-ads.yaml` or separately)
-* ARP configuration (in `app_reporting_pack.yaml`) - it can be generated via running `run-local.sh`.
 
+- Google Ads API credentials (in `google-ads.yaml` or separately)
+- ARP configuration (in `app_reporting_pack.yaml`) - it can be generated via running `run-local.sh`.
 
 ### Primary Installation Method
+
 The primary installation method deploys ARP into Google Cloud by using Cloud Run Button.
 The procedure automates generating ARP configuration and deploying all required components to the Cloud.
 
 This approach is the simplest one because it clones the repo and starts install scripts for you. But sometimes you might need some customization.
 The majority infrastructure settings can be changed in `gcp/settings.ini` file (regions, service names, etc).
 If it's a case for you please use the [Manual installation in Google Cloud](#manual-installation-in-google-cloud) below.
+
+> NOTE: There's an important pre-requisite for using this method - in your GCP projects it should be allowed to assign
+> public IPs to virtual machines in GCE. If it's not then you should use [the manual precedure](#manual-installation-in-google-cloud)
+> with the steps described in [No public IP](#no-public-ip) section.
 
 To install the solution, follow these steps:
 
@@ -79,17 +85,18 @@ To install the solution, follow these steps:
 1. At the end you will be given a link to a webpage on Cloud Storage where you can track the progress.
 
 1. This webpage will inform you once the BigQuery datasets have been populated and you can create a dashboard.
-When the button is enabled, click "Open Dashboard" to clone the dashboard template.
-Click the "Save" button on the top right to save your new dashboard.
+   When the button is enabled, click "Open Dashboard" to clone the dashboard template.
+   Click the "Save" button on the top right to save your new dashboard.
 
 1. Change your dashboard's name and save it's URL or bookmark it.
 
 It's important to note that a Cloud Run service that is being built and deployed during installation isn't actually needed (it'll be removed at the end).
 All ARP installation happens in a pre-build script.
 
-
 ### Manual installation in Google Cloud
+
 1. First you need to clone the repo in Cloud Shell or on your local machine (we assume Linux with gcloud CLI installed):
+
 ```
 git clone https://github.com/google/app-reporting-pack
 ```
@@ -98,41 +105,73 @@ git clone https://github.com/google/app-reporting-pack
 
 1. Optionally put your `google-ads.yaml` there or be ready to provide all Ads API credentials
 
-1. Optionally adjust settings in `settings.ini`
+1. Optionally adjust settings in `gcp/settings.ini`
 
 1. Run installation:
+
 ```
 ./gcp/install.sh
 ```
 
 If you already have ARP configuration (`app_reporting_pack.yaml`) then you can directly deploy all components via running:
+
 ```
 ./gcp/setup.sh deploy_public_index deploy_all start
 ```
 
->TIP: when you install via clicking Cloud Run Button basically you run the same install.sh but in an automatically created Shell.
-
+> TIP: when you install via clicking Cloud Run Button basically you run the same `install.sh` but in an automatically created Shell.
 
 The setup script with 'deploy_all' target does the followings:
-* enable APIs
-* grant required IAM permissions
-* create a repository in Artifact Repository
-* build a Docker image (using `gcp/workload-vm/Dockerfile` file)
-* publish the image into the repository
-* deploy Cloud Function `create-vm` (from gcp/cloud-functions/create-vm/) (using environment variables in env.yaml file)
-* deploy configs to GCS (config.yaml and google-ads.yaml) (to a bucket with a name of current GCP project id and 'arp' subfolder)
-* create a Scheduler job for publishing a pubsub message with arguments for the CF
+
+- enable APIs
+- grant required IAM permissions
+- create a Docker repository in Artifact Repository
+- build a Docker image (using `gcp/workload-vm/Dockerfile` file)
+- publish the image into the repository
+- deploy Cloud Function `create-vm` (from gcp/cloud-functions/create-vm/) (using environment variables in env.yaml file)
+- deploy configs to GCS (`app_reporting_pack.yaml` and `google-ads.yaml`) (to a bucket with a name of current GCP project id and 'arp' subfolder)
+- create a Scheduler job for calling the create-vm Cloud Function
 
 The setup script with 'deploy_public_index' uploads the index.html webpage on a GCS public bucket,
 the page that you can use to track installation progress, and create a dashboard at the end.
 
 What happens when a pubsub message published (as a result of `setup.sh start`):
-* the Cloud Function 'create-vm' get a message with arguments and create a virtual machine based a Docker container from the Docker image built during the installation
-* the VM on startup parses the arguments from the CF (via VM's attributes) and execute ARP in quite the same way as it executes locally (using `run-local.sh`).
-Additionally the VM's entrypoint script deletes the virtual machine upon completion of the run-local.sh.
+
+- the Cloud Function 'create-vm' get a message with arguments and create a virtual machine based a Docker container from the Docker image built during the installation
+- the VM on startup parses the arguments from the CF (via VM's attributes) and execute ARP in quite the same way as it executes locally (using `run-local.sh`).
+  Additionally the VM's entrypoint script deletes the virtual machine upon completion of the run-local.sh.
+
+#### No public IP
+
+If in your GCP project it's forbidden to assign public IPs to GCE virtual machines then by default the installed solution (either manually or through Cloud Run Button) will fail to run. It's because VMs created by the `create-vm` cloud function will fail to start.
+
+To work around this you should use the manual installation (not via Cloud Run Button) with one addition -
+before executing `setup.sh` or `install.sh` make this change in in `gcp/settings.ini` file:
+
+- uncomment the option `no-public-ip = true` in `[compute]` section
+
+With that option enabled the CF will be creating VMs without public IPs. But by default they won't get access to Google network,
+and as so they won't be able to access Docker image. So VMs will start but do nothing. And also they won't be deleted.
+
+To overcome this you need to enable 'Private Google Access' option for the default subnetwork. All created machines by default
+will be assigned to that subnetwork and will get access to Google Cloud services by default even without a public IP.
+
+To enable the option follow these steps:
+
+- open GCE virtual machines
+- choose a ARP VM, it will have name like arp-vm-xxxxxxxxxxxxx
+- click on its network interface (next to its internal IP - usually "nic0")
+- in the first list "Network interface details" click on "default" subnetwork for the interface
+- click Edit and enable 'Private Google Access' option, save
 
 ### Troubleshooting
+
+The most important thing to understand - you should use Cloud Logging to diagnose and track execution progress of ARP VMs. In the end of execution VMs are deleted. If you see an existing VM from execution it's signal of something wrong happened.
+
+#### Docker image failed to build
+
 If you're getting an error at the creating Docker repository step:
+
 ```
 ERROR: (gcloud.artifacts.repositories.create) INVALID_ARGUMENT: Maven config is not supported for format "DOCKER"
 - '@type': type.googleapis.com/google.rpc.DebugInfo
@@ -140,50 +179,62 @@ ERROR: (gcloud.artifacts.repositories.create) INVALID_ARGUMENT: Maven config is 
     for format "DOCKER" [google.rpc.error_details_ext] { code: 3 message: "Maven config
     is not supported for format \"DOCKER\"" }'
 ```
+
 Please update your Cloud SDK CLI by running `gcloud components update`
 
+#### No Google Cloud Storage public access
+
+If your GCP project has a policy to prevent public access to GCS then during
+installation setup won't be able to deploy a webpage (index.html) for waiting for the completion from which you could clone the dashboard. In that case you will have to replicate the dashboard manually - see [Dashboard Replication](#dashboard-replication).
+
+#### VM ran but did nothing and was not deleted
+
+Normally the Cloud Function `create-vm` creates a VM which runs ARP as Docker container. Though for this to work the VM should download ARP image from Artifact Repository. If your GCP project forbids for GCE VMs to have public IPs then by default they don't have access to any Google Cloud services. To work around this issue you need to enable 'Private Google Access' option for the default subnetwork. Even if you enabled 'no-public-ip' option in `settings.ini` there's another manual setting that should be done -
+please see [No public IP](#no-public-ip) for details.
+
+You can safely delete all ARP virtual machines and rerun Scheduler job manually. On a next run a VM should properly start with Google network access and downlaod ARP image. In the end the VM will be removed.
 
 ### Alternative Installation Methods
 
 #### Prerequisites
 
-* Google Ads API access and [google-ads.yaml](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md#setting-up-using-google-adsyaml) file - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
-* Python 3.8+
-* [Service account](https://cloud.google.com/iam/docs/creating-managing-service-accounts#creating) created and [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating) downloaded in order to write data to BigQuery.
-    * Once you downloaded service account key export it as an environmental variable
-        ```
-        export GOOGLE_APPLICATION_CREDENTIALS=path/to/service_account.json
-        ```
+- Google Ads API access and [google-ads.yaml](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md#setting-up-using-google-adsyaml) file - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
+- Python 3.8+
+- [Service account](https://cloud.google.com/iam/docs/creating-managing-service-accounts#creating) created and [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating) downloaded in order to write data to BigQuery.
 
-    * If authenticating via service account is not possible you can authenticate with the following command:
-         ```
-         gcloud auth application-default login
-         ```
+  - Once you downloaded service account key export it as an environmental variable
+
+    ```
+    export GOOGLE_APPLICATION_CREDENTIALS=path/to/service_account.json
+    ```
+
+  - If authenticating via service account is not possible you can authenticate with the following command:
+    ```
+    gcloud auth application-default login
+    ```
 
 #### Running queries locally
 
 In order to run App Reporting Pack locally please follow the steps outlined below:
 
-* clone this repository
-    ```
-    git clone https://github.com/google/app-reporting-pack
-    cd app-reporting-pack
-    ```
-* (Recommended) configure virtual environment if you starting testing the solution:
-    ```
-    sudo apt-get install python3-venv
-    python3 -m venv app-reporting-pack
-    source app-reporting-pack/bin/activate
-    ```
-* Make sure that that pip is updated to the latest version:
-    ```
-    python3 -m pip install --upgrade pip
-    ```
-* install dependencies:
-    ```
-    pip install -r requirements.in
-    ```
-Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
+- clone this repository
+  ```
+  git clone https://github.com/google/app-reporting-pack
+  cd app-reporting-pack
+  ```
+- (Recommended) configure virtual environment if you starting testing the solution:
+  ```
+  sudo apt-get install python3-venv
+  python3 -m venv app-reporting-pack
+  source app-reporting-pack/bin/activate
+  ```
+- Make sure that that pip is updated to the latest version:
+  ```
+  python3 -m pip install --upgrade pip
+  ```
+- install dependencies:
+  `  pip install -r requirements.in`
+  Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
 ```shell
 bash ./run-local.sh
@@ -191,13 +242,13 @@ bash ./run-local.sh
 
 It will guide you through a series of questions to get all necessary parameters to run the scripts:
 
-* `account_id` - id of Google Ads MCC account (no dashes, 111111111 format)
-* `BigQuery project_id` - id of BigQuery project where script will store the data (i.e. `my_project`)
-* `BigQuery dataset` - id of BigQuery dataset where script will store the data (i.e. `my_dataset`)
-* `start date` - first date from which you want to get performance data (i.e., `2022-01-01`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
-* `end date` - last date from which you want to get performance data (i.e., `2022-12-31`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
-* `Ads config` - path to `google-ads.yaml` file.
-* `Video orientation mode` - how to get video orientation for video assets - from YouTube (`youtube` mode, [learn more on authentication](docs/setup-youtube-api-to-fetch-video-orientation.md)), from asset name (`regex` mode) or use placeholders (`placeholders` mode).
+- `account_id` - id of Google Ads MCC account (no dashes, 111111111 format)
+- `BigQuery project_id` - id of BigQuery project where script will store the data (i.e. `my_project`)
+- `BigQuery dataset` - id of BigQuery dataset where script will store the data (i.e. `my_dataset`)
+- `start date` - first date from which you want to get performance data (i.e., `2022-01-01`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
+- `end date` - last date from which you want to get performance data (i.e., `2022-12-31`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
+- `Ads config` - path to `google-ads.yaml` file.
+- `Video orientation mode` - how to get video orientation for video assets - from YouTube (`youtube` mode, [learn more on authentication](docs/setup-youtube-api-to-fetch-video-orientation.md)), from asset name (`regex` mode) or use placeholders (`placeholders` mode).
 
 After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
 When you run `bash run-local.sh` next time it will automatically pick up created configuration.
@@ -206,8 +257,8 @@ When you run `bash run-local.sh` next time it will automatically pick up created
 
 When running `run-local.sh` scripts you can specify two options which are useful when running queries periodically (i.e. as a cron job):
 
-* `-c <config>`- path to `app_reporting_pack.yaml` config file. Comes handy when you have multiple config files or the configuration is located outside of current folder.
-* `-q` - skips all confirmation prompts and starts running scripts based on config file.
+- `-c <config>`- path to `app_reporting_pack.yaml` config file. Comes handy when you have multiple config files or the configuration is located outside of current folder.
+- `-q` - skips all confirmation prompts and starts running scripts based on config file.
 
 > `run-local.sh` support `--legacy` command line flag which is used to generate dashboard in the format compatible with existing dashboard.
 > If you're migrating existing datasources `--legacy` option might be extremely handy.
@@ -219,7 +270,6 @@ If you installed all requirements in a virtual environment you can use the trick
 ```
 
 This command will execute App Reporting Pack queries every day at 1 AM.
-
 
 #### Running in a Docker container
 
@@ -239,6 +289,7 @@ sudo docker run \
 You can provide configs as remote (for example Google Cloud Storage).
 In that case you don't need to mount `google-ads.yaml` and `app_reporting_pack.yaml`
 configs into the container:
+
 ```
 sudo docker run \
     -v /path/to/service_account.json:/app/service_account.json \
@@ -248,8 +299,9 @@ sudo docker run \
     --legacy --backfill
 ```
 
-
 ### Dashboard Replication
+
+If you install ARP via Cloud Run Button (see [Primary Installation Method](#primary-installation-method)) then in most cases you don't need the following procedure. Otherwise use the following command to clone the ARP dashboard.
 
 Once queries ran successfully you can proceed with dashboard replication.\
 Run the following command in the terminal to get a link for cloning the dashboard:
@@ -263,4 +315,5 @@ If you're running on a local machine you can omit `-L` flag and then the link wi
 For more details on dashboard please refer to [how-to-replicate-app-reporting-pack](docs/how-to-replicate-app-reporting-pack.md) document.
 
 ## Disclaimer
+
 This is not an officially supported Google product.
