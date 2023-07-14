@@ -15,6 +15,7 @@
 import argparse
 from google.cloud import bigquery
 from datetime import datetime, timedelta
+import pandas as pd
 from smart_open import open
 import yaml
 
@@ -26,6 +27,13 @@ from gaarf.cli.utils import GaarfConfigBuilder
 from src.queries import ConversionLagQuery
 from src.conv_lag_builder import ConversionLagBuilder
 from src.utils import write_data_to_bq
+
+
+def generate_placeholders():
+    df = pd.DataFrame(
+        data=[["", "", 0, 0.0]],
+        columns=["network", "conversion_id", "lag_day", "lag_adjustment"])
+    return df
 
 
 def main():
@@ -63,14 +71,16 @@ def main():
     days_ago_30 = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     lag_data = report_fetcher.fetch(
-        ConversionLagQuery(days_ago_180, days_ago_30)).to_pandas()
+        ConversionLagQuery(days_ago_180, days_ago_30))
+    if lag_data:
+        conv_lag_builder = ConversionLagBuilder(lag_data.to_pandas(),
+                                                ["network", "conversion_id"])
 
-    conv_lag_builder = ConversionLagBuilder(lag_data,
-                                            ["network", "conversion_id"])
-
-    conv_lag_table = conv_lag_builder.calculate_reference_values()
+        conv_lag_table = conv_lag_builder.calculate_reference_values()
+    else:
+        conv_lag_table = generate_placeholders()
     write_data_to_bq(bq_client, conv_lag_table,
-                   f"{project}.{dataset}.conversion_lag_adjustments")
+                     f"{project}.{dataset}.conversion_lag_adjustments")
 
 
 if __name__ == "__main__":
