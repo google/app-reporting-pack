@@ -30,6 +30,7 @@ Helper script for running App Reporting Pack queries.\n\n
 --legacy - generates legacy views that can be plugin into existing legacy dashboard.\n
 --backfill - whether to perform backfill of the bid and budgets snapshots.\n
 --backfill-only - perform only backfill of the bid and budgets snapshots.\n
+--initial-load - perform initial load outside for start and end date window.\n
 --generate-config-only - perform only config generation instead of fetching data from Ads API.\n
 "
 
@@ -63,6 +64,12 @@ case $1 in
   --backfill)
     backfill="y"
     ;;
+  --initial-load)
+    initial_mode="y"
+    ;;
+  --initial-load-start-date)
+    initial_mode_start_date=$1
+    ;;
   --backfill-only)
     backfill_only="y"
     ;;
@@ -81,10 +88,13 @@ done
 
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
-API_VERSION="12"
+API_VERSION="13"
 
 welcome() {
   echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
+  echo
+  echo "Please answer a couple of questions. The default answers are specified in parentheses, press Enter to select them"
+  echo
 }
 
 setup() {
@@ -106,15 +116,11 @@ setup() {
   read -r bq_dataset
   bq_dataset=${bq_dataset:-arp}
 
-  echo -n "Enter start_date in YYYY-MM-DD format (or use :YYYYMMDD-90 for last 90 days): "
-  read -r start_date
-  echo -n "Enter end_date in YYYY-MM-DD format (or use :YYYYMMDD-1 for yesterday): "
-  read -r end_date
-  start_date=${start_date:-:YYYYMMDD-90}
-  end_date=${end_date:-:YYYYMMDD-1}
+  ask_for_incremental_saving
 
   ask_for_cohorts
   ask_for_video_orientation
+  ask_for_skan_queries
   generate_bq_macros
 
   if [[ -n $RUNNING_IN_GCE && $generate_config_only ]]; then
@@ -125,6 +131,12 @@ setup() {
     fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
     generate_output_tables $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
+    if [[ $skan_answer = "y" ]]; then
+      create_skan_schema $save_config --log=$loglevel --dry-run
+    fi
+    for arp_answer in backfill incremental legacy; do
+      save_to_config $solution_name_lowercase.yaml $arp_answer
+    done
     exit
   fi
 
@@ -132,18 +144,21 @@ setup() {
   read -r save_config_answer
   save_config_answer=$(convert_answer $save_config_answer 'Y')
   if [[ $save_config_answer = "y" ]]; then
-    echo -n "Config will be saved to $solution_name_lowercase.yaml, do you want to save it here? Continue[Y] or Change[n]: "
-    read -r config_change_answer
-    config_change_answer=$(convert_answer $config_change_answer 'Y')
-    if [[ $config_change_answer = "n" ]]; then
-      echo -n "Enter name of the config (without .yaml file extension): "
-      read -r solution_name_lowercase
-    fi
-    save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
-    echo -e "${COLOR}Saving configuration to $solution_name_lowercase.yaml${NC}"
+    echo -n "Save config as ($solution_name_lowercase.yaml): "
+    read -r config_file_name
+    config_file=$(echo "`echo $config_file_name | sed 's/\.yaml//'`.yaml")
+    save_config="--save-config --config-destination=$config_file"
+    echo -e "${COLOR}Saving configuration to $config_file${NC}"
     fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
-    generate_output_tables $save_config --log=$loglevel --dry-run
+    generate_bq_views $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
+    if [[ $skan_answer = "y" ]]; then
+      create_skan_schema $save_config --log=$loglevel --dry-run
+    fi
+
+    for arp_answer in backfill incremental legacy; do
+      save_to_config $config_file $arp_answer
+    done
     if [[ $generate_config_only = "y" ]]; then
       exit
     fi
@@ -163,6 +178,9 @@ print_configuration() {
   echo "  Ads config: $ads_config"
   echo "  Cohorts: $cohorts_final"
   echo "  Video parsing mode: $video_parsing_mode_output"
+  if [[ $skan_answer = "y" ]]; then
+    echo "  SKAN schema mode: $skan_schema_mode"
+  fi
 }
 
 run_with_config() {
@@ -180,12 +198,22 @@ run_with_config() {
   echo -e "${COLOR}===fetching reports===${NC}"
   gaarf $(dirname $0)/google_ads_queries/**/*.sql -c=$config_file \
     --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+
+  if cat "$config_file" | grep -q skan_mode:; then
+    echo -e "${COLOR}===fetching iOS SKAN reports===${NC}"
+    gaarf $(dirname $0)/ios_skan/google_ads_queries/*.sql \
+      -c=$config_file \
+      --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    echo -e "${COLOR}===getting SKAN schema===${NC}"
+    $(which python3) $(dirname $0)/scripts/create_skan_schema.py -c=$config_file
+  fi
   echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
   $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
     -c=$config_file \
     --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
   echo -e "${COLOR}===generating snapshots===${NC}"
   gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql -c=$config_file --log=$loglevel
+  infer_answer_from_config $config_file backfill
   if [[ $backfill = "y" ]]; then
     echo -e "${COLOR}===backfilling snapshots===${NC}"
       $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
@@ -200,16 +228,43 @@ run_with_config() {
     --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
   echo -e "${COLOR}===generating final tables===${NC}"
   gaarf-bq $(dirname $0)/bq_queries/*.sql -c=$config_file --log=$loglevel
+  infer_answer_from_config $config_file legacy
   if [[ $legacy = "y" ]]; then
     echo -e "${COLOR}===generating legacy views===${NC}"
     gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
   fi
-
+  if cat "$config_file" | grep -q "skan_mode:"; then
+    echo -e "${COLOR}===generating SKAN output table===${NC}"
+    gaarf-bq $(dirname $0)/ios_skan/bq_queries/*.sql -c=$config_file --log=$loglevel
+  fi
+  infer_answer_from_config $config_file incremental
+  if [[ $incremental = "y" ]]; then
+    echo -e "${COLOR}===Saving increments and define views===${NC}"
+    gaarf-bq $(dirname $0)/bq_queries/incremental/incremental_saving.sql -c=$config_file --log=$loglevel
+  fi
 }
 
 run_with_parameters() {
   echo -e "${COLOR}===fetching reports===${NC}"
-  fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
+  if [ $initial_mode -eq 1 ]; then
+    if [[ $end_date == *"YYYYMMDD"* ]]; then
+      end_date_days_ago=$(echo $end_date | cut -d '-' -f2)
+      end_date_formatted=`date --date="$end_date_days_ago day ago" +%Y-%m-%d`
+    else
+      end_date_formatted=$end_date
+    fi
+    echo -e "${COLOR}===Extending fetching period: $initial_mode_start_date - $end_date_formatted===${NC}"
+    start_date=$initial_mode_start_date
+    fetch_reports --log=$loglevel --api-version=$API_VERSION
+  else
+    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
+  fi
+  if [[ $skan_answer = "y" ]]; then
+    echo -e "${COLOR}===fetching iOS SKAN reports===${NC}"
+    fetch_skan_reports --log=$loglevel --api-version=$API_VERSION
+    echo -e "${COLOR}===getting SKAN schema===${NC}"
+    create_skan_schema $save_config --log=$loglevel
+  fi
   echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
   conversion_lag_adjustment --customer--ids-query="$customer_ids_query" \
     --api-version=$API_VERSION
@@ -226,12 +281,26 @@ run_with_parameters() {
   fetch_video_orientation $save_config --log=$loglevel --api-version=$API_VERSION
   echo -e "${COLOR}===generating final tables===${NC}"
   generate_output_tables $save_config --log=$loglevel
+  if [[ $skan_answer = "y" ]]; then
+    echo -e "${COLOR}===generating iOS SKAN final tables===${NC}"
+    generate_skan_output_tables $save_config --log=$loglevel
+  fi
   if [[ $legacy = "y" ]]; then
     echo -e "${COLOR}===generating legacy views===${NC}"
     generate_legacy_views $save_config --log=$loglevel
   fi
+  if [[ $incremental = "y" ]]; then
+    # TODO: generate warning / error when start_date is not dynamic
+    if [[ $initial_mode -eq 1 ]]; then
+      echo -e "${COLOR}===Saving initial batch===${NC}"
+      save_initial --log=$loglevel
+    fi
+    echo -e "${COLOR}===Saving increments and define views===${NC}"
+    save_incremental --log=$loglevel
+  fi
 }
 
+check_gaarf_version
 check_ads_config
 
 if [[ -z ${loglevel} ]]; then
@@ -243,37 +312,28 @@ if [[ $generate_config_only = "y" ]]; then
   setup
 fi
 
+
 if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
   config_file=${config_file:-$solution_name_lowercase.yaml}
   if [[ $quiet = "y" ]]; then
     run_with_config
   else
     echo -e "${COLOR}Found saved configuration at $config_file${NC}"
+    echo -e "${COLOR}If you want to provide alternative configuration use '-c path/to/config.yaml' and restart.${NC}"
     if [[ -f "$config_file" ]]; then
       cat $config_file
     fi
-    echo -n -e "${COLOR}Do you want to use it (Y/n/q): ${NC}"
+    echo -n -e "${COLOR}Do you want to use this configuration? (Y/n) or press Q to quit: ${NC}"
     read -r setup_config_answer
     setup_config_answer=$(convert_answer $setup_config_answer 'Y')
     if [[ $setup_config_answer = "y" ]]; then
       echo -e "${COLOR}Using saved configuration...${NC}"
       run_with_config
     elif [[ $setup_config_answer = "n" ]]; then
-      echo -n -e "${COLOR}[C]hoose an existing configuration or [S]tart setup: (C/S): ${NC}"
-      read -r new_config_start_over
-      new_config_start_over=$(convert_answer $new_config_start_over)
-      if [[ $new_config_start_over = "c" ]]; then
-        echo -n -e "${COLOR}Provide full path to saved configuration: ${NC}"
-        read -r config_file
-        run_with_config
-      elif [[ $new_config_start_over = "s" ]]; then
-        setup
-        prompt_running
-        run_with_parameters
-      else
-        echo "Unknown command, exiting"
-        exit 1
-      fi
+      echo -e "${COLOR}Setting up new configuration... (Press Ctrl + C to exit)${NC}"
+      setup
+      prompt_running
+      run_with_parameters
     else
       echo "Exiting"
       exit

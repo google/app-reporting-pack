@@ -56,7 +56,8 @@ use_proto_plus: True
 }
 
 convert_answer() {
-  echo "$1" | tr '[:upper:]' '[:lower:]' | cut -c1
+  answer="$1"
+  echo ${answer:-y} | tr '[:upper:]' '[:lower:]' | cut -c1
 }
 
 prompt_running() {
@@ -84,4 +85,59 @@ parse_yaml () {
          eval "export ${prefix}${variable}"
       fi
    done < <(cat $yaml_file)
+}
+
+check_gaarf_version() {
+  if [[ $quiet = "n" ]]; then
+    echo "checking google-ads-api-report-fetcher version"
+    gaarf_version=`gaarf --version | cut -d ' ' -f3`
+    IFS='.' read -r -a version_array <<< "$gaarf_version"
+    major_version="${version_array[0]}"
+    minor_version="${version_array[1]}"
+
+    if [[ $major_version -ge 1 && $minor_version -ge 6 ]]; then
+      echo "google-ads-api-report-fetcher is up-to-date"
+    else
+      echo "updating google-ads-api-report-fetcher"
+      pip install -U google-ads-api-report-fetcher>=1.6.0
+    fi
+  fi
+}
+
+infer_answer_from_config() {
+  config=$1
+  section=$2
+  value="${!section}"
+  echo "initial: " "$section" "$value"
+  if [[ $value != "y" ]]; then
+    if cat $config | grep -q "$section: true"; then
+      value="y"
+    fi
+  fi
+  declare -g "$section"="$value"
+  echo "final: " "$section" "$value"
+}
+
+save_to_config() {
+  config=$1
+  section=$2
+  value="${!section}"
+  echo "$section: $value"
+  if [[ $value = "y" ]]; then
+    # if cat $config | grep -q "$section: true"; then
+    #   echo "Do nothing"
+    if cat $config | grep -q "$section: false"; then
+      sed -i "/$section/s/false/true"/g $config
+    else
+      echo "$section: true" >> $config
+    fi
+  else
+    # if cat $config | grep -q "$section: false"; then
+    #   echo "Do nothing"
+    if cat $config | grep -q "$section: true"; then
+      sed -i "/$section/s/true/false"/g $config
+    else
+      echo "$section: false" >> $config
+    fi
+  fi
 }

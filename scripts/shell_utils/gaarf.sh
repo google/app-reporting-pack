@@ -23,6 +23,17 @@ fetch_reports() {
   --ads-config=$ads_config "$@"
 }
 
+fetch_skan_reports() {
+  skan_customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL" AND campaign.app_campaign_setting.app_store = "APPLE_APP_STORE"'
+  gaarf $(dirname $0)/ios_skan/google_ads_queries/*.sql \
+  --account=$customer_id \
+  --output=bq \
+  --customer-ids-query="$skan_customer_ids_query" \
+  --bq.project=$project --bq.dataset=$bq_dataset \
+  --macro.start_date=$start_date --macro.end_date=$end_date \
+  --ads-config=$ads_config "$@"
+}
+
 conversion_lag_adjustment() {
   $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
     --account=$customer_id --ads-config=$ads_config \
@@ -37,7 +48,7 @@ backfill_snapshots() {
 fetch_video_orientation() {
   $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
     --mode=$video_parsing_mode_output --account=$customer_id \
-    -c=$solution_name_lowercase.yaml --ads-config=$ads_config \
+    -c=$config_file --ads-config=$ads_config \
     --youtube-config-path=$youtube_config_path \
     --project=$project --macro.bq_dataset=$bq_dataset \
     --element-delimiter=$element_delimiter \
@@ -45,15 +56,23 @@ fetch_video_orientation() {
     --orientation-delimiter=$orientation_delimiter "$@"
 }
 
+create_skan_schema() {
+  $(which python3) $(dirname $0)/scripts/create_skan_schema.py \
+    -m=$skan_schema_mode \
+    -c=$config_file \
+    --project=$project --macro.skan_schema_input_table=$skan_schema_input_table \
+    $macros "$@"
+}
+
 generate_bq_views() {
   gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql \
-    --project=$project --target=$bq_dataset $macros "$@"
+    --project=$project $macros "$@"
 }
 
 
 generate_snapshots() {
   gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql \
-    --project=$project --target=$bq_dataset $macros "$@"
+    --project=$project $macros "$@"
 }
 
 generate_output_tables() {
@@ -63,6 +82,20 @@ generate_output_tables() {
 
 generate_legacy_views() {
   gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql \
-    --project=$project --target=$bq_dataset_legacy $macros "$@"
+    --project=$project $macros "$@"
 }
 
+generate_skan_output_tables() {
+  gaarf-bq $(dirname $0)/ios_skan/bq_queries/*.sql \
+    --project=$project $macros "$@"
+}
+
+save_initial() {
+  gaarf-bq $(dirname $0)/bq_queries/incremental/initial_run/*.sql \
+    --project=$project $initial_run_macros "$@"
+}
+
+save_incremental() {
+  gaarf-bq $(dirname $0)/bq_queries/incremental/*.sql \
+    --project=$project $macros "$@"
+}
