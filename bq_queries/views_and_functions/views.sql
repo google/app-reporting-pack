@@ -117,7 +117,11 @@ WITH
     ),
     DistinctAdGroupAssetDimensions AS (
       SELECT DISTINCT
-        day_of_interaction, ad_group_id, asset_id, network, field_type
+        day_of_interaction,
+        ad_group_id,
+        asset_id,
+        network,
+        field_type
       FROM RawAssetConversionLags
     ),
     Final AS (
@@ -133,26 +137,30 @@ WITH
         LAST_VALUE(view_through_conversions IGNORE NULLS) OVER (PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type ORDER BY lag ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS view_through_conversions,
         LAST_VALUE(conversions_value IGNORE NULLS) OVER (PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type ORDER BY lag ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS conversions_value,
       FROM DistinctAdGroupAssetDimensions,
-      UNNEST(GENERATE_ARRAY(1, 90)) AS lag
+          UNNEST(GENERATE_ARRAY(1, 90)) AS lag
       LEFT JOIN RawAssetConversionLags
-      USING(day_of_interaction, ad_group_id, asset_id, network, lag, field_type)
+          USING(day_of_interaction, ad_group_id, asset_id, network, lag, field_type)
     )
 SELECT
-day_of_interaction,
-ad_group_id,
-asset_id,
-field_type,
-network,
-STRUCT(
+  day_of_interaction,
+  ad_group_id,
+  asset_id,
+  field_type,
+  network,
+  STRUCT(
     ARRAY_AGG(lag ORDER BY lag) AS lags,
     ARRAY_AGG(installs ORDER BY lag) AS installs,
     ARRAY_AGG(inapps ORDER BY lag) AS inapps,
     ARRAY_AGG(conversions_value ORDER BY lag) AS conversions_value,
     ARRAY_AGG(view_through_conversions ORDER BY lag) AS view_through_conversions
-) AS lag_data
+  ) AS lag_data
 FROM Final
 WHERE
-day_of_interaction IS NOT NULL
-AND lag <= 90
+  day_of_interaction IS NOT NULL
+  AND installs IS NOT NULL
+  AND inapps IS NOT NULL
+  AND conversions_value IS NOT NULL
+  AND view_through_conversions IS NOT NULL
+  AND lag <= 90
 GROUP BY 1, 2, 3, 4, 5
 );

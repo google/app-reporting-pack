@@ -12,24 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CREATE TEMPORARY FUNCTION equalsArr(x ARRAY<STRING>, y ARRAY<STRING>)
-RETURNS INT64
-LANGUAGE js AS r"""
-var count = 0;
-if(x.length >= y.length) {{
-for(var i=0; i<x.length; i++)
-   if(!x.includes(y[i])) {{
-   count++;
-   }}
-}} else {{
-for(var i=0; i<y.length; i++)
-   if(!y.includes(x[i])) {{
-   count++;
-   }}
-}}
-return count
-""";
-
 -- Contains daily changes (bids, budgets, assets, etc) on campaign level.
 CREATE OR REPLACE TABLE {target_dataset}.change_history
 AS (
@@ -117,58 +99,58 @@ AS (
         -- installs
         CASE
             WHEN LAG(install_headlines) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(install_headlines, LAG(install_headlines) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(install_headlines, LAG(install_headlines) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS install_headlines_changes,
         CASE
             WHEN LAG(install_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(install_descriptions, LAG(install_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(install_descriptions, LAG(install_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS install_descriptions_changes,
 
         CASE
             WHEN LAG(install_videos) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(install_videos, LAG(install_videos) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(install_videos, LAG(install_videos) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS install_videos_changes,
         CASE
             WHEN LAG(install_images) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(install_images, LAG(install_images) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(install_images, LAG(install_images) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS install_images_changes,
         CASE
             WHEN LAG(install_media_bundles) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(install_media_bundles, LAG(install_media_bundles) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(install_media_bundles, LAG(install_media_bundles) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS install_media_bundles_changes,
         -- engagements
         CASE
             WHEN LAG(engagement_headlines) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(engagement_headlines, LAG(engagement_headlines) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(engagement_headlines, LAG(engagement_headlines) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS engagement_headlines_changes,
         CASE
             WHEN LAG(engagement_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(engagement_descriptions, LAG(engagement_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(engagement_descriptions, LAG(engagement_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS engagement_descriptions_changes,
         CASE
             WHEN LAG(engagement_videos) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(engagement_videos, LAG(engagement_videos) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(engagement_videos, LAG(engagement_videos) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS engagement_videos_changes,
         CASE
             WHEN LAG(engagement_images) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(engagement_images, LAG(engagement_images) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(engagement_images, LAG(engagement_images) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS engagement_images_changes,
         CASE
             WHEN LAG(pre_registration_headlines) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(pre_registration_headlines, LAG(pre_registration_headlines) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(pre_registration_headlines, LAG(pre_registration_headlines) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS pre_registration_headlines_changes,
         CASE
             WHEN LAG(pre_registration_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(pre_registration_descriptions, LAG(pre_registration_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(pre_registration_descriptions, LAG(pre_registration_descriptions) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS pre_registration_descriptions_changes,
         -- pre_registrations
         CASE
             WHEN LAG(pre_registration_videos) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(pre_registration_videos, LAG(pre_registration_videos) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(pre_registration_videos, LAG(pre_registration_videos) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS pre_registration_videos_changes,
         CASE
             WHEN LAG(pre_registration_images) OVER (PARTITION BY ad_group_id ORDER BY day) IS NULL THEN 0
-            ELSE equalsArr(pre_registration_images, LAG(pre_registration_images) OVER (PARTITION BY ad_group_id ORDER BY day))
+            ELSE `{bq_dataset}.equalsArr`(pre_registration_images, LAG(pre_registration_images) OVER (PARTITION BY ad_group_id ORDER BY day))
             END AS pre_registration_images_changes
         FROM AssetStructureDailyArrays
     ),
@@ -259,10 +241,25 @@ SELECT
     CP.inapps,
     CP.inapps_adjusted,
     CP.view_through_conversions,
-    CP.conversions_value
+    CP.conversions_value,
+    {% if has_skan == "true" %}
+        S.skan_postbacks
+    {% else %}
+        0 AS skan_postbacks
+    {% endif %}
 FROM CampaignPerformance AS CP
 LEFT JOIN CampaignMapping AS M
     ON CP.campaign_id = M.campaign_id
+{% if has_skan == "true" %}
+    LEFT JOIN (
+        SELECT
+            PARSE_DATE("%Y-%m-%d", CAST(date AS STRING)) AS day,
+            campaign_id,
+            SUM(skan_postbacks) AS skan_postbacks
+        FROM `{bq_dataset}.ios_campaign_skan_performance`
+        GROUP BY 1, 2) AS S
+    ON CP.day = S.day AND CP.campaign_id = S.campaign_id
+{% endif %}
 LEFT JOIN `{bq_dataset}.bid_budget` AS B
     ON CP.campaign_id = B.campaign_id
 LEFT JOIN `{bq_dataset}.bid_budgets_*` AS BidBudgetHistory

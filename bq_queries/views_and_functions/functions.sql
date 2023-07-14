@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 -- Get number of elements in first non-emtpy array.
 CREATE OR REPLACE FUNCTION `{bq_dataset}.GetNumberOfElements` (first_element STRING, second_element STRING, third_element STRING)
 RETURNS INT64
@@ -78,3 +79,11 @@ AS (
         WHEN ROUND(SAFE_DIVIDE(width, height), 2) = 0.8 THEN "4:5 (Portrait)"
         ELSE "Unknown (Image)" END
 );
+
+
+CREATE OR REPLACE FUNCTION `{bq_dataset}.equalsArr` (x ARRAY<STRING>, y ARRAY<STRING>)
+RETURNS INT64
+LANGUAGE js AS r"""
+var count = (x.length >= y.length ? x : y).reduce((count, element) => count + (!x.includes(element) ? 1 : 0), 0);
+return count;
+""";

@@ -88,5 +88,21 @@ SELECT
     0 AS ad_groups_resumed,
     0 AS ad_groups_paused,
     0 AS ad_groups_deleted,
-    SAFE_DIVIDE(cost, conversions) AS CPA
-FROM {target_dataset}.change_history;
+    SAFE_DIVIDE(cost, conversions) AS CPA,
+    {% if has_skan == "true" %}
+        S.skan_postbacks
+    {% else %}
+        0 AS skan_postbacks
+    {% endif %}
+FROM {target_dataset}.change_history
+{% if has_skan == "true" %}
+    LEFT JOIN (
+        SELECT
+            PARSE_DATE("%Y-%m-%d", date) AS day,
+            campaign_id,
+            SUM(skan_postbacks) AS skan_postbacks
+        FROM `{bq_dataset}.ios_campaign_skan_performance`
+        GROUP BY 1, 2) AS S
+    USING(day, campaign_id)
+{% endif %}
+;
