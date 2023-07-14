@@ -29,17 +29,17 @@ AS (
   SkanInputSchema AS (
     SELECT
       app_id,
-      skan_conversion_value,
+      CAST(skan_conversion_value AS INT64) AS skan_conversion_value,
       skan_event_count,
       skan_event_value_low,
       skan_event_value_high,
       skan_event_value_mean,
       skan_mapped_event
-    FROM `{skan_input_schema_table}`
+    FROM `{bq_dataset}.skan_schema`
   ),
   PreparedData AS (
     SELECT
-      PARSE_DATE("%Y-%m-%d", date) AS day,
+      PARSE_DATE("%Y-%m-%d", CAST(date AS STRING)) AS day,
       M.account_id,
       M.account_name,
       M.currency,
@@ -51,14 +51,15 @@ AS (
       ACS.app_store,
       ACS.bidding_strategy,
       ACS.target_conversions,
+      S.skan_mapped_event,
       SP.skan_conversion_value,
       SP.skan_source_app_id,
       SP.skan_user_type,
       SP.skan_ad_event_type,
       SP.skan_ad_network_attribution_credit,
       SUM(IF(SP.skan_conversion_value IS NULL, SP.skan_postbacks, 0)) AS sum_null_values,
-      SUM(IF(SP.skan_conversion_value = 0, SP.skan_postbacks, 0)) AS sum_zero_values,
-      SUM(IF(SP.skan_conversion_value IS NOT NULL OR SP.skan_conversion_value != 0, SP.skan_postbacks, 0)) AS sum_wo_null_zero_values,
+      SUM(IF(CAST(SP.skan_conversion_value AS INT64) = 0, SP.skan_postbacks, 0)) AS sum_zero_values,
+      SUM(IF(SP.skan_conversion_value IS NOT NULL OR CAST(SP.skan_conversion_value AS INT64) != 0, SP.skan_postbacks, 0)) AS sum_wo_null_zero_values,
       SUM(SP.skan_postbacks) AS skan_postbacks,
       SUM(IF(ACS.bidding_strategy = "OPTIMIZE_INSTALLS_TARGET_INSTALL_COST", SP.skan_postbacks, 0)) AS tcpi_skan_postbacks,
       SUM(IF(ACS.bidding_strategy = "OPTIMIZE_IN_APP_CONVERSIONS_TARGET_INSTALL_COST", SP.skan_postbacks, 0)) AS tcpi_advanced_skan_postbacks,
@@ -69,15 +70,14 @@ AS (
       SUM(S.skan_event_value_high) AS skan_event_value_high,
       SUM(S.skan_event_value_mean) AS skan_event_value_mean
     FROM `{bq_dataset}.ios_campaign_skan_performance` AS SP
-    LEFT JOIN `{bq_dataset}.AppCampaignSettingsView`
-      USING(campaign_id)
-    INNER JOIN SkanInputSchema AS S
-      USING(skan_conversion_value, app_id)
-    LEFT JOIN MappingTable AS M
-      USING(campaign_id)
     LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
       USING(campaign_id)
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
+    LEFT JOIN SkanInputSchema AS S
+      ON CAST(SP.skan_conversion_value AS INT64) = S.skan_conversion_value
+        AND ACS.app_id = S.app_id
+    LEFT JOIN MappingTable AS M
+      USING(campaign_id)
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
   )
   SELECT
     day,
@@ -97,6 +97,10 @@ AS (
     skan_user_type,
     skan_ad_event_type,
     skan_ad_network_attribution_credit,
+    skan_mapped_event,
+    skan_event_value_low,
+    skan_event_value_high,
+    skan_event_value_mean,
     SUM(skan_postbacks) AS skan_postbacks,
     SUM(tcpi_skan_postbacks) AS tcpi_skan_postbacks,
     SUM(tcpi_advanced_skan_postbacks) AS tcpi_advanced_skan_postbacks,
@@ -118,5 +122,5 @@ AS (
     SUM(IF(bidding_strategy IN ("OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST","OPTIMIZE_INSTALLS_WITHOUT_TARGET_INSTALL_COST"), sum_wo_null_zero_values, 0)) AS tcpa_skan_values_wo_null_zero,
     SUM(IF(bidding_strategy = "OPTIMIZE_RETURN_ON_ADVERTISING_SPEND", sum_wo_null_zero_values, 0)) AS troas_skan_values_wo_null_zero
   FROM PreparedData
-  GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17
+  GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
   );
