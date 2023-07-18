@@ -146,6 +146,7 @@ setup() {
   if [[ $save_config_answer = "y" ]]; then
     echo -n "Save config as ($solution_name_lowercase.yaml): "
     read -r config_file_name
+    config_file_name=${config_file_name:-$solution_name_lowercase.yaml}
     config_file=$(echo "`echo $config_file_name | sed 's/\.yaml//'`.yaml")
     save_config="--save-config --config-destination=$config_file"
     echo -e "${COLOR}Saving configuration to $config_file${NC}"
