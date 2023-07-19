@@ -127,12 +127,12 @@ deploy_cf() {
   #   - NO_PUBLIC_IP
   no_public_ip=$(git config -f $SETTING_FILE compute.no-public-ip)
   if [[ $no_public_ip == 'true' ]]; then
-    echo 'adding'
     if grep -q 'NO_PUBLIC_IP' ./cloud-functions/create-vm/env.yaml; then
       sed -i'.bak' -e "s|^#*[[:space:]]*NO_PUBLIC_IP[[:space:]]*:[[:space:]]*.*$|NO_PUBLIC_IP: 'TRUE'|" ./cloud-functions/create-vm/env.yaml
     else
       echo "" >> ./cloud-functions/create-vm/env.yaml && echo "NO_PUBLIC_IP: 'TRUE'" >> ./cloud-functions/create-vm/env.yaml
     fi
+    enable_private_google_access
   else
     sed -i'.bak' -e "s|^NO_PUBLIC_IP[[:space:]]*:|#NO_PUBLIC_IP:|" ./cloud-functions/create-vm/env.yaml
   fi
@@ -152,7 +152,7 @@ deploy_cf() {
 
 
 deploy_files() {
-  echo 'Deploying config to GCS'
+  echo 'Deploying files to GCS'
   if ! gsutil ls gs://$PROJECT_ID; then
     gsutil mb -b on gs://$PROJECT_ID
   fi
@@ -211,7 +211,8 @@ get_run_data() {
   #  "delete_vm": "FALSE"
   data='{
     "gcs_source_uri": "'$GCS_BASE_PATH'",
-    "gcs_base_path_public": "'$GCS_BASE_PATH_PUBLIC'"
+    "gcs_base_path_public": "'$GCS_BASE_PATH_PUBLIC'",
+    "delete_vm": "TRUE"
   }'
   echo $data
 }
@@ -276,6 +277,10 @@ schedule_run() {
     --time-zone="Etc/UTC"
 }
 
+enable_private_google_access() {
+  REGION=$(git config -f $SETTING_FILE compute.region)
+  gcloud compute networks subnets update default --region=$REGION --enable-private-ip-google-access
+}
 
 deploy_all() {
   enable_apis
