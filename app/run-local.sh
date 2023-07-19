@@ -65,7 +65,7 @@ case $1 in
     backfill="y"
     ;;
   --initial-load)
-    initial_mode="y"
+    initial_mode=0
     ;;
   --initial-load-start-date)
     initial_mode_start_date=$1
