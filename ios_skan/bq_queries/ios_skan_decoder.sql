@@ -101,6 +101,7 @@ AS (
     skan_event_value_low,
     skan_event_value_high,
     skan_event_value_mean,
+    SUM(skan_event_count) AS skan_event_count,
     SUM(skan_postbacks) AS skan_postbacks,
     SUM(tcpi_skan_postbacks) AS tcpi_skan_postbacks,
     SUM(tcpi_advanced_skan_postbacks) AS tcpi_advanced_skan_postbacks,
