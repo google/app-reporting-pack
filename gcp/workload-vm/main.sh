@@ -16,11 +16,9 @@ gcloud logging write $LOG_NAME "[$(hostname)] Starting ARP application (gcs_sour
 
 # fetch ARP files from GCS
 if [[ -n $gcs_source_uri ]]; then
-  gsutil cp $gcs_source_uri/app_reporting_pack.yaml app_reporting_pack.yaml
-  gsutil cp $gcs_source_uri/google-ads.yaml google-ads.yaml
-  gsutil -m cp -R $gcs_source_uri/google_ads_queries .
-  gsutil -m cp -R $gcs_source_uri/bq_queries .
-  gsutil -m cp -R $gcs_source_uri/scripts .
+  folder_name=$(basename "$gcs_source_uri")
+  gsutil -m cp -R $gcs_source_uri .
+  mv "$folder_name/*" .
 fi
 
 # run ARP

@@ -13,7 +13,7 @@ WHITE='\033[0;37m'  # White
 echo -e "${CYAN}Creating Python virtual environment...${WHITE}"
 python3 -m venv .venv
 . .venv/bin/activate
-python3 -m pip install --require-hashes -r requirements.txt --no-deps
+pip install --require-hashes -r requirements.txt --no-deps
 
 # generate ARP configuration
 echo -e "${CYAN}Generating App Reporting pack configuration...${WHITE}"
