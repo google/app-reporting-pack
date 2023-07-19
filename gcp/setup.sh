@@ -25,14 +25,15 @@ while :; do
   shift
 done
 
-REPOSITORY=$(git config -f $SETTING_FILE repository.name)
-IMAGE_NAME=$(git config -f $SETTING_FILE repository.image)
-REPOSITORY_LOCATION=$(git config -f $SETTING_FILE repository.location)
-TOPIC=$(git config -f $SETTING_FILE pubsub.topic)
 NAME=$(git config -f $SETTING_FILE config.name)
-
 PROJECT_ID=$(gcloud config get-value project 2> /dev/null)
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="csv(projectNumber)" | tail -n 1)
+
+REPOSITORY=$(eval echo $(git config -f $SETTING_FILE repository.name))
+IMAGE_NAME=$(eval echo $(git config -f $SETTING_FILE repository.image))
+REPOSITORY_LOCATION=$(git config -f $SETTING_FILE repository.location)
+TOPIC=$(eval echo $(git config -f $SETTING_FILE pubsub.topic))
+
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 
 
@@ -99,7 +100,7 @@ create_topic() {
 deploy_cf() {
   echo "Deploying Cloud Function"
   CF_REGION=$(git config -f $SETTING_FILE function.region)
-  CF_NAME=$(git config -f $SETTING_FILE function.name)  
+  CF_NAME=$(eval echo $(git config -f $SETTING_FILE function.name))
 
   create_topic
 
@@ -113,7 +114,7 @@ deploy_cf() {
   url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
   sed -i'.bak' -e "s|#*[[:space:]]*DOCKER_IMAGE[[:space:]]*:[[:space:]]*.*$|DOCKER_IMAGE: $url|" ./cloud-functions/create-vm/env.yaml
   #   - GCE VM name (base)
-  instance=$(git config -f $SETTING_FILE compute.name)
+  instance=$(eval echo $(git config -f $SETTING_FILE compute.name))
   sed -i'.bak' -e "s|#*[[:space:]]*INSTANCE_NAME[[:space:]]*:[[:space:]]*.*$|INSTANCE_NAME: $instance|" ./cloud-functions/create-vm/env.yaml
   #   - GCE machine type
   machine_type=$(git config -f $SETTING_FILE compute.machine-type)
@@ -257,24 +258,34 @@ print_public_gcs_url() {
 }
 
 schedule_run() {
-  JOB_NAME=$(git config -f $SETTING_FILE scheduler.name)
+  JOB_NAME=$(eval echo $(git config -f $SETTING_FILE scheduler.name))
   REGION=$(git config -f $SETTING_FILE scheduler.region)
   SCHEDULE=$(git config -f $SETTING_FILE scheduler.schedule)
   SCHEDULE=${SCHEDULE:-"0 0 * * *"} # by default at midnight
+  SCHEDULE_TZ=$(git config -f $SETTING_FILE scheduler.schedule-timezone)
+  SCHEDULE_TZ=${SCHEDULE_TZ:-"Etc/UTC"}
   local DATA=$(get_run_data)
+
+  delete_schedule
+
   echo 'Scheduling a job with args: '$DATA
-
-  JOB_EXISTS=$(gcloud scheduler jobs list --location=$REGION --format="value(ID)" --filter="ID:'$JOB_NAME'")
-  if [[ -n $JOB_EXISTS ]]; then
-    gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
-  fi
-
   gcloud scheduler jobs create pubsub $JOB_NAME \
     --schedule="$SCHEDULE" \
     --location=$REGION \
     --topic=$TOPIC \
     --message-body="$DATA" \
-    --time-zone="Etc/UTC"
+    --time-zone=$SCHEDULE_TZ
+}
+
+delete_schedule() {
+  JOB_NAME=$(eval echo $(git config -f $SETTING_FILE scheduler.name))
+  REGION=$(git config -f $SETTING_FILE scheduler.region)
+
+  JOB_EXISTS=$(gcloud scheduler jobs list --location=$REGION --format="value(ID)" --filter="ID:'$JOB_NAME'" 2>/dev/null)
+  if [[ -n $JOB_EXISTS ]]; then
+    echo 'Deleting Cloud Scheduler job '$JOB_NAME
+    gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
+  fi
 }
 
 enable_private_google_access() {
