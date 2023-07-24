@@ -41,7 +41,7 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 1. [A Google Ads Developer token](https://developers.google.com/google-ads/api/docs/first-call/dev-token#:~:text=A%20developer%20token%20from%20Google,SETTINGS%20%3E%20SETUP%20%3E%20API%20Center.)
 
-1. A new GCP project with billing account attached
+1. A GCP project with billing account attached
 
 1. Membership in `app-reporting-pack-readers-external` Google group (join [here](https://groups.google.com/g/app-reporting-pack-readers-external))
 
@@ -67,13 +67,9 @@ This approach is the simplest one because it clones the repo and starts install 
 The majority infrastructure settings can be changed in `gcp/settings.ini` file (regions, service names, etc).
 If it's a case for you please use the [Manual installation in Google Cloud](#manual-installation-in-google-cloud) below.
 
-> NOTE: There's an important pre-requisite for using this method - in your GCP projects it should be allowed to assign
-> public IPs to virtual machines in GCE. If it's not then you should use [the manual precedure](#manual-installation-in-google-cloud)
-> with the steps described in [No public IP](#no-public-ip) section.
-
 To install the solution, follow these steps:
 
-1. Click "Run on Google Cloud"
+1. Click "Run on Google Cloud":  
    [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?dir=gcp/cloud-run-button)
 
 1. Select your GCP project and choose any region.
@@ -113,15 +109,17 @@ git clone https://github.com/google/app-reporting-pack
 ./gcp/install.sh
 ```
 
-If you already have ARP configuration (`app_reporting_pack.yaml`) then you can directly deploy all components via running:
+Or if you already have ARP configuration (`app_reporting_pack.yaml`) then you can directly deploy all components via running:
 
 ```
 ./gcp/setup.sh deploy_public_index deploy_all start
 ```
 
+It runs threee tasks ('deploy_public_index', 'deploy_all' and 'start') described below.
+
 > TIP: when you install via clicking Cloud Run Button basically you run the same `install.sh` but in an automatically created Shell.
 
-The setup script with 'deploy_all' target does the followings:
+The setup script with 'deploy_all' task does the followings:
 
 - enable APIs
 - grant required IAM permissions
@@ -129,32 +127,23 @@ The setup script with 'deploy_all' target does the followings:
 - build a Docker image (using `gcp/workload-vm/Dockerfile` file)
 - publish the image into the repository
 - deploy Cloud Function `create-vm` (from gcp/cloud-functions/create-vm/) (using environment variables in env.yaml file)
-- deploy configs to GCS (`app_reporting_pack.yaml` and `google-ads.yaml`) (to a bucket with a name of current GCP project id and 'arp' subfolder)
-- create a Scheduler job for calling the create-vm Cloud Function
+- deploy files to GCS (queries, scripts and config `app_reporting_pack.yaml` and `google-ads.yaml`) (to a bucket with a name of current GCP project id and 'arp' subfolder)
+- create a Scheduler job for calling the `create-vm` Cloud Function
 
-The setup script with 'deploy_public_index' uploads the index.html webpage on a GCS public bucket,
+The setup script with 'deploy_public_index' task uploads the `index.html` webpage on a GCS public bucket,
 the page that you can use to track installation progress, and create a dashboard at the end.
 
-What happens when a pubsub message published (as a result of `setup.sh start`):
+The task 'start' for `setup.sh` does the last part - publishes a PubSub message which essentially includes the following:
 
-- the Cloud Function 'create-vm' get a message with arguments and create a virtual machine based a Docker container from the Docker image built during the installation
-- the VM on startup parses the arguments from the CF (via VM's attributes) and execute ARP in quite the same way as it executes locally (using `run-local.sh`).
-  Additionally the VM's entrypoint script deletes the virtual machine upon completion of the run-local.sh.
+- the Cloud Function 'create-vm' gets a message with arguments and create a virtual machine based on a Docker container from the Docker image built during the installation
+- the VM on startup parses the arguments from the CF (via VM's attributes) and executes ARP code in quite the same way as it executes locally (using `run-local.sh`).
+  Additionally the VM's entrypoint script deletes the virtual machine upon completion of the `run-local.sh`.
 
 #### No public IP
 
-If in your GCP project it's forbidden to assign public IPs to GCE virtual machines then by default the installed solution (either manually or through Cloud Run Button) will fail to run. It's because VMs created by the `create-vm` cloud function will fail to start.
+By default virtual machines created by the Cloud Function have no public IP address associated. It's done to work around possible issues with policies in GCP projects forbid assigning public IPs for VMs.
 
-To work around this you should use the manual installation (not via Cloud Run Button) with one addition -
-before executing `setup.sh` or `install.sh` make this change in in `gcp/settings.ini` file:
-
-- uncomment the option `no-public-ip = true` in `[compute]` section
-
-With that option enabled the CF will be creating VMs without public IPs. But by default they won't get access to Google network,
-and as so they won't be able to access Docker image. So VMs will start but do nothing. And also they won't be deleted.
-
-To overcome this you need to enable 'Private Google Access' option for the default subnetwork. All created machines by default
-will be assigned to that subnetwork and will get access to Google Cloud services by default even without a public IP.
+It's managed by the `no-public-ip` option in the `settings.ini` in `[compute]` section. By default it's `true` so VMs created without public IPs. As they still need to get access to the Artifact Repository for downloading the Docker image, the option 'Private Google Access' is enabled for the default subnetwork. It's done by `setup.sh`. But VMs created by the CF get into another subnetwork in your environment them you have to enable the option manually.
 
 To enable the option follow these steps:
 
@@ -166,7 +155,7 @@ To enable the option follow these steps:
 
 ### Troubleshooting
 
-The most important thing to understand - you should use Cloud Logging to diagnose and track execution progress of ARP VMs. In the end of execution VMs are deleted. If you see an existing VM from execution it's signal of something wrong happened.
+The most important thing to understand - you should use Cloud Logging to diagnose and track execution progress of ARP VMs. In the end of execution VMs are deleted. If you see an existing VM left from execution it's a signal of something wrong happened.
 
 #### Docker image failed to build
 
@@ -184,13 +173,13 @@ Please update your Cloud SDK CLI by running `gcloud components update`
 
 #### No Google Cloud Storage public access
 
-If your GCP project has a policy to prevent public access to GCS then during
-installation setup won't be able to deploy a webpage (index.html) for waiting for the completion from which you could clone the dashboard. In that case you will have to replicate the dashboard manually - see [Dashboard Replication](#dashboard-replication).
+If your GCP project has a policy to prevent public access to GCS then during installation `setup.sh` won't be able to deploy a webpage (index.html) for waiting for the completion from which you could clone the dashboard. In that case you will have to replicate the dashboard manually - see [Dashboard Replication](#dashboard-replication).
 
 #### VM ran but did nothing and was not deleted
 
-Normally the Cloud Function `create-vm` creates a VM which runs ARP as Docker container. Though for this to work the VM should download ARP image from Artifact Repository. If your GCP project forbids for GCE VMs to have public IPs then by default they don't have access to any Google Cloud services. To work around this issue you need to enable 'Private Google Access' option for the default subnetwork. Even if you enabled 'no-public-ip' option in `settings.ini` there's another manual setting that should be done -
-please see [No public IP](#no-public-ip) for details.
+Normally the Cloud Function `create-vm` creates a VM which runs ARP as Docker container. Though for this to work the VM should download an ARP image from Artifact Repository. If your GCP project forbids for GCE VMs to have public IPs then by default they don't have access to any Google Cloud services. To work around this issue you need to enable 'Private Google Access' option for the default subnetwork. It should be enabled automatically by default but worth checking - go to your VM's settings and check whcih subnetwork it got into and then check the setting 'Private Google Access' is enabled for that subnetwork.
+
+Please see [No public IP](#no-public-ip) for details.
 
 You can safely delete all ARP virtual machines and rerun Scheduler job manually. On a next run a VM should properly start with Google network access and downlaod ARP image. In the end the VM will be removed.
 
@@ -230,10 +219,10 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
   ```
 - Make sure that that pip is updated to the latest version:
   ```
-  python3 -m pip install --upgrade pip
+  pip install --upgrade pip
   ```
 - install dependencies:
-  `  pip install -r requirements.in`
+  `pip install -r requirements.in`  
   Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
 ```shell
@@ -250,8 +239,8 @@ It will guide you through a series of questions to get all necessary parameters 
 - `Ads config` - path to `google-ads.yaml` file.
 - `Video orientation mode` - how to get video orientation for video assets - from YouTube (`youtube` mode, [learn more on authentication](docs/setup-youtube-api-to-fetch-video-orientation.md)), from asset name (`regex` mode) or use placeholders (`placeholders` mode).
 
-After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information used for future runs.
-When you run `bash run-local.sh` next time it will automatically pick up created configuration.
+After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information to be used for future runs.
+When you run `bash run-local.sh` next time it will automatically pick up the created configuration.
 
 ##### Schedule running `run-local.sh` as a cronjob
 
