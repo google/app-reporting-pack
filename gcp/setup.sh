@@ -9,7 +9,7 @@ SETTING_FILE="./settings.ini"
 SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
 SETTING_FILE="${SCRIPT_PATH}/settings.ini"
 
-# changing the cwd to the script's contining folder so all pathes inside can be local to it
+# changing the cwd to the script's containing folder so all pathes inside can be local to it
 # (important as the script can be called via absolute path and as a nested path)
 pushd $SCRIPT_PATH >/dev/null
 
@@ -29,12 +29,28 @@ NAME=$(git config -f $SETTING_FILE config.name)
 PROJECT_ID=$(gcloud config get-value project 2> /dev/null)
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="csv(projectNumber)" | tail -n 1)
 
+APP_CONFIG_FILE=$(eval echo $(git config -f $SETTING_FILE config.config-file))
 REPOSITORY=$(eval echo $(git config -f $SETTING_FILE repository.name))
 IMAGE_NAME=$(eval echo $(git config -f $SETTING_FILE repository.image))
 REPOSITORY_LOCATION=$(git config -f $SETTING_FILE repository.location)
 TOPIC=$(eval echo $(git config -f $SETTING_FILE pubsub.topic))
 
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
+
+deploy_files() {
+  echo 'Deploying files to GCS'
+  if ! gsutil ls gs://$PROJECT_ID > /dev/null 2> /dev/null; then
+    gsutil mb -b on gs://$PROJECT_ID
+  fi
+
+  GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
+
+  gsutil -m rm -r $GCS_BASE_PATH/
+  # NOTE: if an error "module 'sys' has no attribute 'maxint'" occures, run this: `pip3 install -U crcmod`
+  gsutil -m rsync -r -x ".*/__pycache__/.*|\..*" ./../app $GCS_BASE_PATH
+  gsutil -h "Content-Type:text/plain" cp ./../app/*.yaml $GCS_BASE_PATH/
+  gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
+}
 
 
 enable_apis() {
@@ -97,6 +113,7 @@ create_topic() {
   fi
 }
 
+
 deploy_cf() {
   echo "Deploying Cloud Function"
   CF_REGION=$(git config -f $SETTING_FILE function.region)
@@ -152,34 +169,17 @@ deploy_cf() {
 }
 
 
-deploy_files() {
-  echo 'Deploying files to GCS'
-  if ! gsutil ls gs://$PROJECT_ID; then
-    gsutil mb -b on gs://$PROJECT_ID
-  fi
-
-  GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
-  gsutil -h "Content-Type:text/plain" cp ./../app_reporting_pack.yaml $GCS_BASE_PATH/app_reporting_pack.yaml
-  gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
-
-  gsutil -m rm -r $GCS_BASE_PATH/bq_queries
-  gsutil -m cp -R ./../bq_queries $GCS_BASE_PATH/bq_queries
-
-  gsutil -m rm -r $GCS_BASE_PATH/google_ads_queries
-  gsutil -m cp -R ./../google_ads_queries $GCS_BASE_PATH/google_ads_queries
-
-  gsutil -m rm -r $GCS_BASE_PATH/scripts
-  gsutil -m cp -R ./../scripts $GCS_BASE_PATH/scripts
-}
-
 deploy_public_index() {
   echo 'Deploying index.html to GCS'
 
-  gsutil mb -b on gs://${PROJECT_ID}-public
+  if ! gsutil ls gs://$PROJECT_ID-public > /dev/null 2> /dev/null; then
+    gsutil mb -b on gs://$PROJECT_ID-public
+  fi
+
   gsutil iam ch -f allUsers:objectViewer gs://${PROJECT_ID}-public 2> /dev/null
   exitcode=$?
   if [ $exitcode -ne 0 ]; then
-    echo "Could not add public access to public cloud bucket"
+    echo -e "${RED}[ ! ] Could not add public access to public cloud bucket${NC}"
   else
     GCS_BASE_PATH_PUBLIC=gs://${PROJECT_ID}-public/$NAME
     gsutil -h "Content-Type:text/html" -h "Cache-Control: no-store" cp "${SCRIPT_PATH}/index.html" $GCS_BASE_PATH_PUBLIC/index.html
@@ -191,16 +191,19 @@ deploy_public_index() {
 
 
 get_run_data() {
+  local dashboard_url="$1"
   # arguments for the CF (to be passed via pubsub message or scheduler job's arguments):
   #   * project_id
   #   * machine_type
   #   * service_account
-  #   * gcs_source_uri
-  #   * gcs_base_path_public
   #   * docker_image - a docker image url, can be CR or AR
   #       gcr.io/$PROJECT_ID/workload
   #       europe-docker.pkg.dev/$PROJECT_ID/docker/workload
-  #   * delete_vm - by default it's TRUE (set inside create-vm CF)
+  #   * vm - an object with attributes for VM (they will be passed to main.sh via VM's metadata):
+  #     * gcs_source_uri
+  #     * gcs_base_path_public
+  #     * create_dashboard_link
+  #     * delete_vm - by default it's TRUE (set inside create-vm CF)
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
   GCS_BASE_PATH_PUBLIC=gs://${PROJECT_ID}-public/$NAME
 
@@ -211,9 +214,12 @@ get_run_data() {
   # if you need to prevent VM deletion add this:
   #  "delete_vm": "FALSE"
   data='{
-    "gcs_source_uri": "'$GCS_BASE_PATH'",
-    "gcs_base_path_public": "'$GCS_BASE_PATH_PUBLIC'",
-    "delete_vm": "TRUE"
+    "vm": {
+      "gcs_source_uri": "'$GCS_BASE_PATH'",
+      "gcs_base_path_public": "'$GCS_BASE_PATH_PUBLIC'",
+      "create_dashboard_url": "'$dashboard_url'",
+      "delete_vm": "TRUE"
+    }
   }'
   echo $data
 }
@@ -229,7 +235,9 @@ start() {
   # example:
   # --message="{\"project_id\":\"$PROJECT_ID\", \"docker_image\":\"europe-docker.pkg.dev/$PROJECT_ID/docker/workload\", \"service_account\":\"$SERVICE_ACCOUNT\"}"
 
-  local DATA=$(get_run_data)
+  dashboard_url=$(./../app/scripts/create_dashboard.sh -L --config ./../app/$APP_CONFIG_FILE)
+
+  local DATA=$(get_run_data $dashboard_url)
   echo 'Publishing a pubsub with args: '$DATA
   gcloud pubsub topics publish $TOPIC --message="$DATA"
 
@@ -241,12 +249,11 @@ start() {
     echo -e "${CYAN}[ * ] To access your new dashboard, click this link - ${GREEN}${PUBLIC_URL}${NC}"
   else
     echo -e "${CYAN}[ * ] Your GCP project does not allow public access.${NC}"
-    if [[ -f ./../app_reporting_pack.yaml ]]; then
-      dashboard_url=$(./../scripts/create_dashboard.sh -L --config app_reporting_pack.yaml)
+    if [[ -f ./../app/$APP_CONFIG_FILE ]]; then
       echo -e "${CYAN}[ * ] To create your dashboard, click the following link once the installation process completes and all the relevant tables have been created in the DB:"
       echo -e "${GREEN}$dashboard_url${NC}"
     else
-      echo -e "${CYAN}[ * ] To create your dashboard, please run the ${GREEN}./scripts/create_dashboard.sh -c app_reporting_pack.yaml -L${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
+      echo -e "${CYAN}[ * ] To create your dashboard, please run the ${GREEN}./scripts/create_dashboard.sh -c $APP_CONFIG_FILE -L${CYAN} shell script once the installation process completes and all the relevant tables have been created in the DB.${NC}"
     fi
   fi
 }
@@ -277,6 +284,7 @@ schedule_run() {
     --time-zone=$SCHEDULE_TZ
 }
 
+
 delete_schedule() {
   JOB_NAME=$(eval echo $(git config -f $SETTING_FILE scheduler.name))
   REGION=$(git config -f $SETTING_FILE scheduler.region)
@@ -292,6 +300,7 @@ enable_private_google_access() {
   REGION=$(git config -f $SETTING_FILE compute.region)
   gcloud compute networks subnets update default --region=$REGION --enable-private-ip-google-access
 }
+
 
 deploy_all() {
   enable_apis

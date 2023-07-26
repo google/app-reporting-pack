@@ -146,10 +146,18 @@ functions.cloudEvent('createInstance', async (cloudEvent) => {
   // Get a config uri (config.yaml) and ads config uri (google-ads.yaml) from the pub/sub message payload,
   // And if it exists pass it as a custom metadata key-value to VM
 
-  setMetadata(vmConfig.metadata.items, 'gcs_source_uri', data.gcs_source_uri);
-  setMetadata(vmConfig.metadata.items, 'gcs_base_path_public', data.gcs_base_path_public);
-  if (data.delete_vm !== undefined) {
-    setMetadata(vmConfig.metadata.items, 'delete_vm', data.delete_vm);
+  // all keys from vm object in request data forward as VM's attributes
+  if (data.vm) {
+    for(let key of Object.keys(data.vm)) {
+      let val = data.vm[key];
+      if (val === true || val === "true" || val === "True") {
+        val = "TRUE";
+      }
+      else if (val === false || val === "false" || val === "False") {
+        val = "FALSE";
+      }
+      setMetadata(vmConfig.metadata.items, key, val);
+    }
   }
 
   // org policy can prevent using external IPs, if so we'll remove accessConfig and this will prevent assigning an external IP

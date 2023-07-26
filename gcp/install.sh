@@ -13,13 +13,13 @@ WHITE='\033[0;37m'  # White
 echo -e "${CYAN}Creating Python virtual environment...${WHITE}"
 python3 -m venv .venv
 . .venv/bin/activate
-pip install --require-hashes -r requirements.txt --no-deps
+pip install --require-hashes -r ./app/requirements.txt --no-deps
 
 # generate ARP configuration
-echo -e "${CYAN}Generating App Reporting pack configuration...${WHITE}"
+echo -e "${CYAN}Generating configuration...${WHITE}"
 RUNNING_IN_GCE=true
 export RUNNING_IN_GCE   # signaling to run-local.sh that we're runnign inside GCE (there'll be less questions)
-./run-local.sh --generate-config-only
+./app/run-local.sh --generate-config-only
 
 # deploy solution
 echo -e "${CYAN}Deploying Cloud components...${WHITE}"

@@ -209,7 +209,7 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
 - clone this repository
   ```
   git clone https://github.com/google/app-reporting-pack
-  cd app-reporting-pack
+  cd app-reporting-pack/app
   ```
 - (Recommended) configure virtual environment if you starting testing the solution:
   ```
@@ -225,9 +225,9 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
   `pip install -r requirements.in`  
   Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
-```shell
-bash ./run-local.sh
-```
+  ```shell
+  bash ./run-local.sh
+  ```
 
 It will guide you through a series of questions to get all necessary parameters to run the scripts:
 
@@ -255,7 +255,7 @@ When running `run-local.sh` scripts you can specify two options which are useful
 If you installed all requirements in a virtual environment you can use the trick below to run the proper cronjob:
 
 ```
-* 1 * * * /usr/bin/env bash -c "source /path/to/your/venv/bin/activate && bash /path/to/app-reporting-pack/run-local.sh -c /path/to/app_reporting_pack.yaml -g /path/to/google-ads.yaml -q"
+* 1 * * * /usr/bin/env bash -c "source /path/to/your/venv/bin/activate && bash /path/to/app-reporting-pack/app/run-local.sh -c /path/to/app_reporting_pack.yaml -g /path/to/google-ads.yaml -q"
 ```
 
 This command will execute App Reporting Pack queries every day at 1 AM.
@@ -296,7 +296,7 @@ Once queries ran successfully you can proceed with dashboard replication.\
 Run the following command in the terminal to get a link for cloning the dashboard:
 
 ```
-bash ./scripts/create_dashboard.sh -c app_reporting_pack.yaml -L
+bash ./app/scripts/create_dashboard.sh -c app_reporting_pack.yaml -L
 ```
 
 If you're running on a local machine you can omit `-L` flag and then the link will be opened in the browser.

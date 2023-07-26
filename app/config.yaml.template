@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Example of ARP config. 
+# Please note you can generate your config inteactively by running run-local.sh 
 gaarf:
   output: bq
   bq:

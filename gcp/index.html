@@ -7,10 +7,10 @@
     rel="stylesheet" 
     integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" 
     crossorigin="anonymous">
-  <title>App Reporting Pack Installer</title>
+  <title>Installer</title>
 </head>
 <style>
-  #arp-dashboard {
+  #app {
     margin: 2em 5em;
   }
   [v-cloak] { 
@@ -19,12 +19,12 @@
 </style>
 
 <body>
-<div id="arp-dashboard" class="container-md">
+<div id="app" class="container-md" v-cloak>
   <div class="row">
     <div class="col">
-      <h1>App Reporting Pack Installer</h1>
-      <div class="alert alert-primary">This page allows you to create a dashboard for your App Reporting Pack. It's needed to be done only once.
-Once you installed App Reporting Pack and started it for the first time, this page waits for its completion and provides you with a link for creating dashboard.
+      <h1>{{appName}} Installer</h1>
+      <div class="alert alert-primary">This page allows you to create a dashboard for your {{appName}}. It's needed to be done only once.
+Once you installed {{appName}} and started it for the first time, this page waits for its completion and provides you with a link for creating dashboard.
       </div>
     </div>
   </div>
@@ -36,11 +36,11 @@ Once you installed App Reporting Pack and started it for the first time, this pa
             <p class="alert alert-success">Dashboard creating link was created successfully</p>
           </div>
           <div v-if="waiting">
-            <p class="card-text">Please wait while App Reporting Pack is running.</p>
+            <p class="card-text">Please wait while {{appName}} is running.</p>
             <p class="card-text">When the process completes, the "Create Dashboard" button will be enabled.</p>
           </div>
           <div v-if="!waiting && !dashboardUrl">
-            <p class="alert alert-warning">App Reporting Pack execution completed but dashboard creation link wasn't generated. Please check Cloud Logging</div>
+            <p class="alert alert-warning">{{appName}} execution completed but dashboard creation link wasn't generated. Please check Cloud Logging</div>
           </div>
           <br>
           <div class="text-center">
@@ -66,6 +66,7 @@ Once you installed App Reporting Pack and started it for the first time, this pa
   Vue.createApp({
     data() {
       return {
+        appName: "App Reporting Pack",
         dashboardUrl: "",
         waiting: true,
         timeToRefresh: 60,
@@ -116,9 +117,10 @@ Once you installed App Reporting Pack and started it for the first time, this pa
       }
     },
     mounted() {
+      window.document.title = this.appName + ' Installer';
       this.fetchDashboardUrl();
     },
-  }).mount("#arp-dashboard");
+  }).mount("#app");
 </script>
 </body>
 </html>

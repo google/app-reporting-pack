@@ -14,16 +14,15 @@ gcs_source_uri=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/
 
 gcloud logging write $LOG_NAME "[$(hostname)] Starting ARP application (gcs_source_uri: $gcs_source_uri)"
 
-# fetch ARP files from GCS
+# fetch application files from GCS
 if [[ -n $gcs_source_uri ]]; then
   folder_name=$(basename "$gcs_source_uri")
   gsutil -m cp -R $gcs_source_uri .
-  mv "$folder_name/*" .
+  mv $folder_name/* .
 fi
 
-# run ARP
-# TODO: --backfill?
-./run-local.sh --quiet --config app_reporting_pack.yaml --google-ads-config google-ads.yaml --legacy
+# run the application
+./start.sh
 exitcode=$?
 
 if [ $exitcode -ne 0 ]; then
@@ -35,15 +34,11 @@ fi
 
 # Check if index.html exists in the bucket. If so - create and upload dashboard.json
 gcs_base_path_public=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/gcs_base_path_public -s --fail)
-if [[ -n gcs_base_path_public ]]; then
-  # TODO: if run-local.sh failed we shouldn't create dashboard_url
-  if gsutil ls $gcs_base_path_public/index.html >/dev/null 2>&1; then
-    chmod +x ./scripts/create_dashboard.sh
-    dashboard_url=$(./scripts/create_dashboard.sh -L --config app_reporting_pack.yaml)
-    echo "Created dashboard cloning url: $dashboard_url"
-    echo "{\"dashboardUrl\":\"$dashboard_url\"}" > dashboard.json
-    gsutil -h "Content-Type:application/json" -h "Cache-Control: no-store" cp dashboard.json $gcs_base_path_public/dashboard.json
-  fi
+create_dashboard_url=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/create_dashboard_url-s --fail)
+if [[ $exitcode -eq 0 && -n "$gcs_base_path_public" && -n "$create_dashboard_url" ]]; then
+  echo "{\"dashboardUrl\":\"$create_dashboard_url\"}" > dashboard.json
+  echo "Created dashboard.json with cloning url: $create_dashboard_link"
+  gsutil -h "Content-Type:application/json" -h "Cache-Control: no-store" cp dashboard.json $gcs_base_path_public/dashboard.json
 fi 
 
 # Delete the VM (fetch a custom metadata key, it can be absent, so returns 404 - handling it with --fail options)
