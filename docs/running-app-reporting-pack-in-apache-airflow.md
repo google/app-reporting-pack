@@ -46,7 +46,7 @@ with DAG('app_reporting_pack_local', default_args=default_args, schedule_interva
         mounts=[
             Mount(
                 source="/path/to/service_account.json",
-                target="/service_account.json",
+                target="/app/service_account.json",
                 type="bind"),
             Mount(
                 source="/path/to/google-ads.yaml",
@@ -88,8 +88,11 @@ with DAG('app_reporting_pack_remote', default_args=default_args, schedule_interv
         image='ghcr.io/google/app-reporting-pack:latest',
         api_version='auto',
         auto_remove=True,
+        environment={
+            "GOOGLE_CLOUD_PROJECT": <YOUR_CLOUD_PROJECT>
+        },
         command=[
-            "-g", "gs://path/to//google-ads.yaml",
+            "-g", "gs://path/to/google-ads.yaml",
             "-c", "gs://path/to/app_reporting_pack.yaml",
             "--legacy"
         ],
@@ -97,7 +100,7 @@ with DAG('app_reporting_pack_remote', default_args=default_args, schedule_interv
         mounts=[
             Mount(
                 source="/path/to/service_account.json",
-                target="/service_account.json",
+                target="/app/service_account.json",
                 type="bind")
     )
     app_reporting_pack
