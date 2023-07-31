@@ -23,7 +23,7 @@ import yaml
 from smart_open import open
 
 from gaarf.bq_executor import BigQueryExecutor
-from gaarf.cli.utils import GaarfBqConfigBuilder, GaarfBqConfig
+from gaarf.cli.utils import GaarfBqConfigBuilder, GaarfBqConfig, init_logging
 
 
 def update_config(path: str, mode: str) -> None:
@@ -92,6 +92,7 @@ def main():
     parser.add_argument("-c", "--config", dest="gaarf_config", default=None)
     parser.add_argument("-m", "--mode", dest="mode", default="placeholders")
     parser.add_argument("--log", "--loglevel", dest="loglevel", default="info")
+    parser.add_argument("--logger", dest="logger", default="local")
     parser.add_argument("--save-config",
                         dest="save_config",
                         action="store_true")
@@ -109,14 +110,8 @@ def main():
     save_config = args[0].save_config
     dry_run = args[0].dry_run
 
-    logging.basicConfig(format="%(message)s",
-                        level=args[0].loglevel.upper(),
-                        datefmt="%Y-%m-%d %H:%M:%S",
-                        handlers=[RichHandler(rich_tracebacks=True)])
-    logging.getLogger("google.ads.googleads.client").setLevel(logging.WARNING)
-    logging.getLogger("smart_open.smart_open_lib").setLevel(logging.WARNING)
-    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-    logger = logging.getLogger(__name__)
+    logger = init_logging(loglevel=args[0].loglevel.upper(),
+                          logger_type=args[0].logger)
 
     config = GaarfBqConfigBuilder(args).build()
     bq_executor = BigQueryExecutor(config.project)
@@ -131,7 +126,7 @@ def main():
     else:
         mode = args[0].mode
     if dry_run:
-        logger.info("Generating placeholders for SKAN schema")
+        logger.info("Saving SKAN mode to the config")
         exit()
     if (mode == "placeholders" or
             not config.params.get("macro", {}).get("skan_schema_input_table")):

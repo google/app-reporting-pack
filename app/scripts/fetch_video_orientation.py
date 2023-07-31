@@ -18,16 +18,14 @@ import argparse
 import os
 import logging
 import google
-from rich.logging import RichHandler
 import yaml
 from smart_open import open
 from googleapiclient.discovery import build
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.bq_executor import BigQueryExecutor
-from gaarf.utils import get_customer_ids
 from gaarf.query_executor import AdsReportFetcher
-from gaarf.cli.utils import GaarfConfigBuilder, GaarfBqConfigBuilder
+from gaarf.cli.utils import GaarfConfigBuilder, GaarfBqConfigBuilder, init_logging
 from gaarf.io.reader import FileReader
 from gaarf.io.writer import WriterFactory
 from gaarf.report import GaarfReport
@@ -49,10 +47,10 @@ class VideoOrientationRegexp:
 
 
 def update_config(
-    path: str,
-    mode: str,
-    youtube_config_path: str = None,
-    video_orientation_regexp: Optional[VideoOrientationRegexp] = None):
+        path: str,
+        mode: str,
+        youtube_config_path: str = None,
+        video_orientation_regexp: Optional[VideoOrientationRegexp] = None):
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -144,6 +142,7 @@ def main():
     parser.add_argument("--account", dest="customer_id")
     parser.add_argument("--api-version", dest="api_version", default="12")
     parser.add_argument("--log", "--loglevel", dest="loglevel", default="info")
+    parser.add_argument("--logger", dest="logger", default="local")
     parser.add_argument("--customer-ids-query",
                         dest="customer_ids_query",
                         default=None)
@@ -179,14 +178,8 @@ def main():
     parser.set_defaults(dry_run=False)
     args = parser.parse_known_args()
 
-    logging.basicConfig(format="%(message)s",
-                        level=args[0].loglevel.upper(),
-                        datefmt="%Y-%m-%d %H:%M:%S",
-                        handlers=[RichHandler(rich_tracebacks=True)])
-    logging.getLogger("google.ads.googleads.client").setLevel(logging.WARNING)
-    logging.getLogger("smart_open.smart_open_lib").setLevel(logging.WARNING)
-    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-    logger = logging.getLogger(__name__)
+    logger = init_logging(loglevel=args[0].loglevel.upper(),
+                          logger_type=args[0].logger)
 
     mode = args[0].mode
     if args[0].gaarf_config:
@@ -224,7 +217,9 @@ def main():
         if dry_run:
             exit()
         logger.info("Getting video orientation from YouTube")
-        with open(args[0].youtube_config_path or youtube_config_path, "r", encoding="utf-8") as f:
+        with open(args[0].youtube_config_path or youtube_config_path,
+                  "r",
+                  encoding="utf-8") as f:
             youtube_config = yaml.safe_load(f)
         try:
             parsed_videos = bq_executor.execute(script_name="existing_videos",
@@ -243,10 +238,10 @@ def main():
         google_ads_client = GoogleAdsApiClient(
             config_dict=google_ads_config_dict,
             version=f"v{config.api_version}")
-        customer_ids = get_customer_ids(google_ads_client, config.account,
-                                        config.customer_ids_query)
-        report_fetcher = AdsReportFetcher(google_ads_client, customer_ids)
-        videos = report_fetcher.fetch(queries.Videos()).to_list()
+        report_fetcher = AdsReportFetcher(google_ads_client)
+        customer_ids = report_fetcher.expand_mcc(config.account,
+                                                 config.customer_ids_query)
+        videos = report_fetcher.fetch(queries.Videos(), customer_ids).to_list()
         if parsed_videos:
             videos = list(
                 set(videos).difference(set(parsed_videos["video_id"])))
@@ -309,8 +304,7 @@ def main():
         mode = "placeholders"
         video_orientation_regexp = None
         if save_config:
-            update_config(path=args[0].gaarf_config,
-                          mode=mode)
+            update_config(path=args[0].gaarf_config, mode=mode)
         if dry_run:
             exit()
         generate_placeholders(bq_executor, bq_config)

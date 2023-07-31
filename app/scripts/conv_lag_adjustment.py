@@ -20,9 +20,8 @@ from smart_open import open
 import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
-from gaarf.utils import get_customer_ids
 from gaarf.query_executor import AdsReportFetcher
-from gaarf.cli.utils import GaarfConfigBuilder
+from gaarf.cli.utils import GaarfConfigBuilder, init_logging
 
 from src.queries import ConversionLagQuery
 from src.conv_lag_builder import ConversionLagBuilder
@@ -49,8 +48,13 @@ def main():
     parser.add_argument("--customer-ids-query-file",
                         dest="customer_ids_query_file",
                         default=None)
+    parser.add_argument("--log", "--loglevel", dest="loglevel", default="info")
+    parser.add_argument("--logger", dest="logger", default="local")
 
     args = parser.parse_known_args()
+
+    logger = init_logging(loglevel=args[0].loglevel.upper(),
+                          logger_type=args[0].logger)
 
     config = GaarfConfigBuilder(args).build()
 
@@ -61,9 +65,9 @@ def main():
         google_ads_config_dict = yaml.safe_load(f)
     google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
-    customer_ids = get_customer_ids(google_ads_client, config.account,
-                                    args[0].customer_ids_query)
-    report_fetcher = AdsReportFetcher(google_ads_client, customer_ids)
+    report_fetcher = AdsReportFetcher(google_ads_client)
+    customer_ids = report_fetcher.expand_mcc(config.account,
+                                             args[0].customer_ids_query)
 
     bq_client = bigquery.Client(project)
 
@@ -71,7 +75,7 @@ def main():
     days_ago_30 = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
     lag_data = report_fetcher.fetch(
-        ConversionLagQuery(days_ago_180, days_ago_30))
+        ConversionLagQuery(days_ago_180, days_ago_30), customer_ids)
     if lag_data:
         conv_lag_builder = ConversionLagBuilder(lag_data.to_pandas(),
                                                 ["network", "conversion_id"])

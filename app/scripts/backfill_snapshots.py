@@ -26,9 +26,8 @@ from smart_open import open
 import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
-from gaarf.utils import get_customer_ids
 from gaarf.query_executor import AdsReportFetcher
-from gaarf.cli.utils import GaarfConfigBuilder
+from gaarf.cli.utils import GaarfConfigBuilder, init_logging
 
 import src.queries as queries
 from src.utils import write_data_to_bq
@@ -82,6 +81,7 @@ def main():
     parser.add_argument("--account", dest="customer_id")
     parser.add_argument("--api-version", dest="api_version", default="12")
     parser.add_argument("--log", "--loglevel", dest="loglevel", default="info")
+    parser.add_argument("--logger", dest="logger", default="local")
     parser.add_argument("--customer-ids-query",
                         dest="customer_ids_query",
                         default=None)
@@ -91,22 +91,18 @@ def main():
 
     args = parser.parse_known_args()
 
-    logging.basicConfig(format="%(message)s",
-                        level=args[0].loglevel.upper(),
-                        datefmt="%Y-%m-%d %H:%M:%S",
-                        handlers=[RichHandler(rich_tracebacks=True)])
-    logging.getLogger("google.ads.googleads.client").setLevel(logging.WARNING)
-    logging.getLogger("smart_open.smart_open_lib").setLevel(logging.WARNING)
-    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
-    logger = logging.getLogger(__name__)
+    logger = init_logging(loglevel=args[0].loglevel.upper(),
+                          logger_type=args[0].logger)
+
 
     config = GaarfConfigBuilder(args).build()
     bq_project = config.writer_params.get("project")
     bq_dataset = config.writer_params.get("dataset")
     bq_client = bigquery.Client(bq_project)
-    job = bq_client.query(f"SELECT DISTINCT CAST(day AS STRING) AS day FROM `{bq_dataset}.bid_budgets_*`")
+    job = bq_client.query(
+        f"SELECT DISTINCT CAST(day AS STRING) AS day FROM `{bq_dataset}.bid_budgets_*`"
+    )
     snapshot_dates = set(job.result().to_dataframe()["day"])
-
 
     # Change history can be fetched only for the last 29 days
     days_ago_29 = (datetime.now() - timedelta(days=29)).strftime("%Y-%m-%d")
@@ -124,15 +120,16 @@ def main():
         google_ads_config_dict = yaml.safe_load(f)
     google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
-    customer_ids = get_customer_ids(google_ads_client, config.account,
-                                    config.customer_ids_query)
     logger.info("Restoring change history for %d accounts: %s",
                 len(customer_ids), customer_ids)
-    report_fetcher = AdsReportFetcher(google_ads_client, customer_ids)
+    report_fetcher = AdsReportFetcher(google_ads_client)
+    customer_ids = report_fetcher.expand_mcc(config.account,
+                                             config.customer_ids_query)
 
     # extract change history report
     change_history = report_fetcher.fetch(
-        queries.ChangeHistory(days_ago_29, days_ago_1)).to_pandas()
+        queries.ChangeHistory(days_ago_29, days_ago_1),
+        customer_ids).to_pandas()
 
     logger.info("Restoring change history for %d accounts: %s",
                 len(customer_ids), customer_ids)
@@ -161,16 +158,17 @@ def main():
         logger.info("no target_roas events were found")
     # get all campaigns with an non-zero impressions to build placeholders df
     campaign_ids = report_fetcher.fetch(
-        queries.CampaignsWithSpend(days_ago_29, days_ago_1)).to_pandas()
+        queries.CampaignsWithSpend(days_ago_29, days_ago_1),
+        customer_ids).to_pandas()
     logger.info("Change history will be restored for %d campaign_ids",
                 len(campaign_ids))
 
     # get latest bids and budgets to replace values in campaigns without any changes
     current_bids_budgets_active_campaigns = report_fetcher.fetch(
-        queries.BidsBudgetsActiveCampaigns()).to_pandas()
+        queries.BidsBudgetsActiveCampaigns(), customer_ids).to_pandas()
     current_bids_budgets_inactive_campaigns = report_fetcher.fetch(
-        queries.BidsBudgetsInactiveCampaigns(days_ago_29,
-                                             days_ago_1)).to_pandas()
+        queries.BidsBudgetsInactiveCampaigns(days_ago_29, days_ago_1),
+        customer_ids).to_pandas()
     current_bids_budgets = pd.concat([
         current_bids_budgets_inactive_campaigns,
         current_bids_budgets_active_campaigns
