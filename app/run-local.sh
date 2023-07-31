@@ -13,9 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-. ./scripts/shell_utils/app_reporting_pack.sh
-. ./scripts/shell_utils/gaarf.sh
-. ./scripts/shell_utils/functions.sh
+. ./app/scripts/shell_utils/app_reporting_pack.sh
+. ./app/scripts/shell_utils/gaarf.sh
+. ./app/scripts/shell_utils/functions.sh
 
 set -e
 COLOR='\033[0;36m' # Cyan
@@ -116,7 +116,14 @@ setup() {
   read -r bq_dataset
   bq_dataset=${bq_dataset:-arp}
 
-  ask_for_incremental_saving
+  echo -n -e "Enter start_date in YYYY-MM-DD format or use :YYYYMMDD-90 for last 90 days (:YYYYMMDD-90): "
+  read -r start_date
+  echo -n -e "Enter end_date in YYYY-MM-DD format or use :YYYYMMDD-1 for yesterday (:YYYYMMDD-1): "
+  read -r end_date
+  start_date=${start_date:-:YYYYMMDD-90}
+  end_date=${end_date:-:YYYYMMDD-1}
+  #
+  # ask_for_incremental_saving # TODO: Activate during next release
 
   ask_for_cohorts
   ask_for_video_orientation
@@ -247,7 +254,7 @@ run_with_config() {
 
 run_with_parameters() {
   echo -e "${COLOR}===fetching reports===${NC}"
-  if [ $initial_mode -eq 1 ]; then
+  if [[ $initial_mode -eq 1 ]]; then
     if [[ $end_date == *"YYYYMMDD"* ]]; then
       end_date_days_ago=$(echo $end_date | cut -d '-' -f2)
       end_date_formatted=`date --date="$end_date_days_ago day ago" +%Y-%m-%d`
@@ -332,6 +339,7 @@ if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
       run_with_config
     elif [[ $setup_config_answer = "n" ]]; then
       echo -e "${COLOR}Setting up new configuration... (Press Ctrl + C to exit)${NC}"
+      welcome
       setup
       prompt_running
       run_with_parameters

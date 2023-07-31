@@ -95,11 +95,11 @@ check_gaarf_version() {
     major_version="${version_array[0]}"
     minor_version="${version_array[1]}"
 
-    if [[ $major_version -ge 1 && $minor_version -ge 6 ]]; then
+    if [[ $major_version -ge 1 && $minor_version -ge 9 ]]; then
       echo "google-ads-api-report-fetcher is up-to-date"
     else
       echo "updating google-ads-api-report-fetcher"
-      pip install -U google-ads-api-report-fetcher>=1.6.0
+      pip install -U google-ads-api-report-fetcher>=1.9.0
     fi
   fi
 }
@@ -108,14 +108,12 @@ infer_answer_from_config() {
   config=$1
   section=$2
   value="${!section}"
-  echo "initial: " "$section" "$value"
   if [[ $value != "y" ]]; then
     if cat $config | grep -q "$section: true"; then
       value="y"
     fi
   fi
   declare -g "$section"="$value"
-  echo "final: " "$section" "$value"
 }
 
 save_to_config() {

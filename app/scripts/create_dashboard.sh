@@ -1,6 +1,7 @@
 base_template_report_id=187f1f41-16bc-434d-8437-7988bed6e8b9
 lite_template_report_id=6c386d70-7a1f-4b31-a29b-173f5b671310
-report_id=$base_template_report_id
+base_template_report_id_v1_2_0=3f042b13-f767-4195-b092-35b94e0b430c
+report_id=$base_template_report_id_v1_2_0
 report_name="app_reporting_pack_copy"
 return_link=0
 
