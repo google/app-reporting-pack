@@ -41,4 +41,11 @@ ds.approvals.datasourceName=approval_statuses_copy&
 ds.approvals.projectId=YOUR_PROJECT_ID&
 ds.approvals.type=TABLE&
 ds.approvals.datasetId=YOUR_DATASET_ID&
-ds.approvals.tableId=approval_statuses
+ds.approvals.tableId=approval_statuses&
+
+ds.skan_decoder.connector=bigQuery&
+ds.skan_decoder.datasourceName=skan_decoder_copy&
+ds.skan_decoder.projectId=YOUR_PROJECT_ID&
+ds.skan_decoder.type=TABLE&
+ds.skan_decoder.datasetId=YOUR_DATASET_ID&
+ds.skan_decoder.tableId=skan_decoder
