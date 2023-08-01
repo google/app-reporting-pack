@@ -132,14 +132,31 @@ WITH
         network,
         field_type,
         lag,
-        LAST_VALUE(installs IGNORE NULLS) OVER (PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type ORDER BY lag ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS installs,
-        LAST_VALUE(inapps IGNORE NULLS) OVER (PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type ORDER BY lag ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS inapps,
-        LAST_VALUE(view_through_conversions IGNORE NULLS) OVER (PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type ORDER BY lag ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS view_through_conversions,
-        LAST_VALUE(conversions_value IGNORE NULLS) OVER (PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type ORDER BY lag ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) AS conversions_value,
+        installs AS installs_,
+        inapps AS inapps_,
+        view_through_conversions AS view_through_conversions_,
+        conversions_value AS conversions_value_,
+        LAST_VALUE(installs IGNORE NULLS) OVER (
+            PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type
+            ORDER BY lag
+            RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS installs,
+        LAST_VALUE(inapps IGNORE NULLS) OVER (
+            PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type
+            ORDER BY lag
+            RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS inapps,
+        LAST_VALUE(view_through_conversions IGNORE NULLS) OVER (
+            PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type
+            ORDER BY lag
+            RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS view_through_conversions,
+        LAST_VALUE(conversions_value IGNORE NULLS) OVER (
+            PARTITION BY day_of_interaction, ad_group_id, asset_id, network, field_type
+            ORDER BY lag
+            RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS conversions_value
       FROM DistinctAdGroupAssetDimensions,
           UNNEST(GENERATE_ARRAY(1, 90)) AS lag
       LEFT JOIN RawAssetConversionLags
           USING(day_of_interaction, ad_group_id, asset_id, network, lag, field_type)
+      GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     )
 SELECT
   day_of_interaction,
