@@ -1,7 +1,7 @@
 # Creating App Reporting Pack in DataStudio
 
 Once data for App Reporting Pack data are generated and stored in BigQuery you can
-proceed with replication
+proceed with replication of the [App Reporting Pack dashboard](https://lookerstudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO).
 
 ## Automatic creation
 
@@ -67,12 +67,12 @@ Now that you’ve copied each of the datasources, make a copy of the dashboard a
 
 > Please ensure that ALL datasources are created before proceeding to replication of the dashboard.
 
-[Here](https://datastudio.google.com/c/u/0/reporting/187f1f41-16bc-434d-8437-7988bed6e8b9/page/0hcO) you can access the template version of the dashboard.
+[Here](https://datastudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO) you can access the template version of the dashboard.
 >  [Lite version](https://datastudio.google.com/c/u/0/reporting/6c386d70-7a1f-4b31-a29b-173f5b671310/page/0hcO) of the dashboard is also available.
 
 In order to replicate dashboard please do the following:
 
-* make a [copy of the dashboard](https://datastudio.google.com/c/u/0/reporting/187f1f41-16bc-434d-8437-7988bed6e8b9/page/0hcO) by clicking on *More options - Make a copy*.
+* make a [copy of the dashboard](https://datastudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO) by clicking on *More options - Make a copy*.
 
 	![copy dashboard](src/copy_dashboard.png)
 

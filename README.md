@@ -21,11 +21,11 @@
 ## Introduction
 
 Crucial information on App campaigns is scattered across various places in Google Ads UI which makes it harder to get insights into how campaign and assets perform.
-App Reporting Pack fetches all necessary data from Ads API and creates a centralized dashboard showing different aspects of App campaign's performance and settings. All data is stored in BigQuery tables that can be used for any other need the client might have.
+App Reporting Pack fetches all necessary data from Ads API and creates a centralized [dashboard](https://lookerstudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO) showing different aspects of App campaign's performance and settings. All data is stored in BigQuery tables that can be used for any other need the client might have.
 
 ## Deliverables
 
-1. A centralized dashboard with deep app campaign and assets performance views
+1. A centralized [dashboard](https://lookerstudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO) with deep app campaign and assets performance views
 2. The following data tables in BigQuery that can be used independently:
 
 - `asset_performance`
@@ -43,7 +43,7 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 
 1. A GCP project with billing account attached
 
-1. Membership in `app-reporting-pack-readers-external` Google group (join [here](https://groups.google.com/g/app-reporting-pack-readers-external))
+1. Membership in `app-reporting-pack-readers-external` Google group (join [here](https://groups.google.com/g/app-reporting-pack-readers-external)) to get access to the [dashboard template](https://lookerstudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO).
 
 1. Credentials for Google Ads API access - `google-ads.yaml`.
    See details here - https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md
@@ -69,7 +69,7 @@ If it's a case for you please use the [Manual installation in Google Cloud](#man
 
 To install the solution, follow these steps:
 
-1. Click "Run on Google Cloud":  
+1. Click "Run on Google Cloud":
    [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?dir=gcp/cloud-run-button)
 
 1. Select your GCP project and choose any region.
@@ -209,7 +209,7 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
 - clone this repository
   ```
   git clone https://github.com/google/app-reporting-pack
-  cd app-reporting-pack/app
+  cd app-reporting-pack
   ```
 - (Recommended) configure virtual environment if you starting testing the solution:
   ```
@@ -222,11 +222,11 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
   pip install --upgrade pip
   ```
 - install dependencies:
-  `pip install -r requirements.in`  
+  `pip install -r app/requirements.in`
   Please run `run-local.sh` script in a terminal to generate all necessary tables for App Reporting Pack:
 
   ```shell
-  bash ./run-local.sh
+  bash ./app/run-local.sh
   ```
 
 It will guide you through a series of questions to get all necessary parameters to run the scripts:
