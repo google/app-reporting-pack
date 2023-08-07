@@ -120,12 +120,12 @@ def main():
         google_ads_config_dict = yaml.safe_load(f)
     google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
-    logger.info("Restoring change history for %d accounts: %s",
-                len(customer_ids), customer_ids)
     report_fetcher = AdsReportFetcher(google_ads_client)
     customer_ids = report_fetcher.expand_mcc(config.account,
                                              config.customer_ids_query)
 
+    logger.info("Restoring change history for %d accounts: %s",
+                len(customer_ids), customer_ids)
     # extract change history report
     change_history = report_fetcher.fetch(
         queries.ChangeHistory(days_ago_29, days_ago_1),
