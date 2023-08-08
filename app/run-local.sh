@@ -237,13 +237,13 @@ run_with_config() {
   echo -e "${COLOR}===generating final tables===${NC}"
   gaarf-bq $(dirname $0)/bq_queries/*.sql -c=$config_file --log=$loglevel
   infer_answer_from_config $config_file legacy
-  if [[ $legacy = "y" ]]; then
-    echo -e "${COLOR}===generating legacy views===${NC}"
-    gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
-  fi
   if cat "$config_file" | grep -q "skan_mode:"; then
     echo -e "${COLOR}===generating SKAN output table===${NC}"
     gaarf-bq $(dirname $0)/ios_skan/bq_queries/*.sql -c=$config_file --log=$loglevel
+  fi
+  if [[ $legacy = "y" ]]; then
+    echo -e "${COLOR}===generating legacy views===${NC}"
+    gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
   fi
   infer_answer_from_config $config_file incremental
   if [[ $incremental = "y" ]]; then
