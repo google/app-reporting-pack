@@ -1,4 +1,4 @@
-# Copyright 2022 Google LLC
+# Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,16 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Example of ARP config. 
-# Please note you can generate your config inteactively by running run-local.sh 
+# Example of ARP config.
+# Please note you can generate your config interactively by running run-local.sh
 gaarf:
   output: bq
   bq:
     project: YOUR-BQ-PROJECT
     dataset: app_reporting_pack
   # Do not change API version manually
-  api_version: 12
-  account: 'MCC-ID'
+  api_version: '13'
+  account:
+  - 'YOUR_MCC_ID'
+  customer_ids_query: SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type
+    = "MULTI_CHANNEL"
   params:
     macro:
       start_date: ":YYYYMMDD-91"
@@ -30,9 +33,17 @@ gaarf-bq:
   project: YOUR-BQ-PROJECT
   params:
     macro:
-      bq_dataset: app_reporting_pack
-      output_dataset: app_reporting_pack_output
-      target_dataset: app_reporting_pack_target
+      bq_dataset: app_reporting_pack # Should be the same as in 'gaarf.bq.dataset' above
+      target_dataset: app_reporting_pack_output
       legacy_dataset: app_reporting_pack_legacy
+      skan_schema_input_table: YOUR_PROJECT.YOUR_DATASET.YOUR_SKAN_SCHEMA_TABLE
     template:
       cohort_days: 0,1,3,5,7,14,30
+      has_skan: 'false' # Change to 'true' is have SKAN schema
+scripts:
+  video_orientation:
+    mode: placeholders
+  skan_mode:
+    mode: placeholders
+legacy: true
+backfill: true
