@@ -56,7 +56,8 @@ deploy_files() {
 enable_apis() {
   echo "Enabling APIs"
   gcloud services enable compute.googleapis.com
-  gcloud services enable artifactregistry.googleapis.com
+  #gcloud services enable artifactregistry.googleapis.com
+  gcloud services enable containerregistry.googleapis.com
   gcloud services enable run.googleapis.com
   gcloud services enable cloudresourcemanager.googleapis.com
   gcloud services enable iamcredentials.googleapis.com
@@ -93,7 +94,7 @@ build_docker_image() {
 build_docker_image_gcr() {
   # NOTE: it's an alternative to build_docker_image if you want to use GCR instead of AR
   echo "Building and pushing Docker image to Container Registry"
-  gcloud builds submit --config=cloudbuild-gcr.yaml --substitutions=_IMAGE="workload" ./workload-vm
+  gcloud builds submit --config=cloudbuild-gcr.yaml --substitutions=_IMAGE="$IMAGE_NAME" ./..
 }
 
 
@@ -128,7 +129,8 @@ deploy_cf() {
   fi
   # initialize env.yaml - environment variables for CF:
   #   - docker image url
-  url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
+  #url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
+  url="gcr.io/$PROJECT_ID/$IMAGE_NAME"
   sed -i'.bak' -e "s|#*[[:space:]]*DOCKER_IMAGE[[:space:]]*:[[:space:]]*.*$|DOCKER_IMAGE: $url|" ./cloud-functions/create-vm/env.yaml
   #   - GCE VM name (base)
   instance=$(eval echo $(git config -f $SETTING_FILE compute.name))
@@ -305,8 +307,9 @@ enable_private_google_access() {
 deploy_all() {
   enable_apis
   set_iam_permissions
-  create_registry
-  build_docker_image
+  #create_registry
+  #build_docker_image
+  build_docker_image_gcr
   deploy_cf
   deploy_files
   schedule_run
