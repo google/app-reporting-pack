@@ -12,10 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
 
-. ./app/scripts/shell_utils/app_reporting_pack.sh
-. ./app/scripts/shell_utils/gaarf.sh
-. ./app/scripts/shell_utils/functions.sh
+source $SCRIPT_PATH/scripts/shell_utils/app_reporting_pack.sh
+source $SCRIPT_PATH/scripts/shell_utils/gaarf.sh
+source $SCRIPT_PATH/scripts/shell_utils/functions.sh
 
 set -e
 COLOR='\033[0;36m' # Cyan
