@@ -104,12 +104,12 @@ def main():
     )
     snapshot_dates = set(job.result().to_dataframe()["day"])
 
-    # Change history can be fetched only for the last 29 days
-    days_ago_29 = (datetime.now() - timedelta(days=29)).strftime("%Y-%m-%d")
+    # Change history can be fetched only for the last 28 days
+    days_ago_28 = (datetime.now() - timedelta(days=28)).strftime("%Y-%m-%d")
     days_ago_1 = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     dates = [
         date.strftime("%Y-%m-%d") for date in pd.date_range(
-            days_ago_29, days_ago_1).to_pydatetime().tolist()
+            days_ago_28, days_ago_1).to_pydatetime().tolist()
     ]
     missing_dates = set(dates).difference(snapshot_dates)
     if not missing_dates:
@@ -128,7 +128,7 @@ def main():
                 len(customer_ids), customer_ids)
     # extract change history report
     change_history = report_fetcher.fetch(
-        queries.ChangeHistory(days_ago_29, days_ago_1),
+        queries.ChangeHistory(days_ago_28, days_ago_1),
         customer_ids).to_pandas()
 
     logger.info("Restoring change history for %d accounts: %s",
@@ -158,7 +158,7 @@ def main():
         logger.info("no target_roas events were found")
     # get all campaigns with an non-zero impressions to build placeholders df
     campaign_ids = report_fetcher.fetch(
-        queries.CampaignsWithSpend(days_ago_29, days_ago_1),
+        queries.CampaignsWithSpend(days_ago_28, days_ago_1),
         customer_ids).to_pandas()
     logger.info("Change history will be restored for %d campaign_ids",
                 len(campaign_ids))
@@ -167,7 +167,7 @@ def main():
     current_bids_budgets_active_campaigns = report_fetcher.fetch(
         queries.BidsBudgetsActiveCampaigns(), customer_ids).to_pandas()
     current_bids_budgets_inactive_campaigns = report_fetcher.fetch(
-        queries.BidsBudgetsInactiveCampaigns(days_ago_29, days_ago_1),
+        queries.BidsBudgetsInactiveCampaigns(days_ago_28, days_ago_1),
         customer_ids).to_pandas()
     current_bids_budgets = pd.concat([
         current_bids_budgets_inactive_campaigns,
@@ -176,7 +176,7 @@ def main():
                                      sort=False).drop_duplicates()
 
     # generate a placeholder dataframe that contain possible variations of
-    # campaign_ids with non-zero impressions and last 29 days date range
+    # campaign_ids with non-zero impressions and last 28 days date range
     placeholders = pd.DataFrame(data=list(
         itertools.product(list(campaign_ids.campaign_id.values), dates)),
                                 columns=["campaign_id", "day"])
