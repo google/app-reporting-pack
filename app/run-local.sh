@@ -134,8 +134,9 @@ setup() {
   if [[ -n $RUNNING_IN_GCE && $generate_config_only ]]; then
     # if you're running inside Google Cloud Compute Engine as generating config
     # (see gcp/cloud-run-button/main.sh) then there's no need for additional questions
-    save_config="--save-config --config-destination=$solution_name_lowercase.yaml"
-    echo -e "${COLOR}Saving configuration to $solution_name_lowercase.yaml${NC}"
+    config_file="app/$solution_name_lowercase.yaml"
+    save_config="--save-config --config-destination=$config_file"
+    echo -e "${COLOR}Saving configuration to $config_file${NC}"
     fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
     generate_output_tables $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
@@ -143,7 +144,7 @@ setup() {
       create_skan_schema $save_config --log=$loglevel --dry-run
     fi
     for arp_answer in backfill incremental legacy; do
-      save_to_config $solution_name_lowercase.yaml $arp_answer
+      save_to_config $config_file $arp_answer
     done
     exit
   fi

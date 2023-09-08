@@ -22,8 +22,13 @@ if [[ -n $gcs_source_uri ]]; then
 fi
 
 # run the application
-./start.sh
+./start.sh 2>&1 | tee $LOG_NAME.log
 exitcode=$?
+
+while read -r line
+do
+  gcloud logging write $LOG_NAME "$line"
+done < $LOG_NAME.log
 
 if [ $exitcode -ne 0 ]; then
   gcloud logging write $LOG_NAME "[$(hostname)] ARP application has finished execution with an error ($exitcode)" --severity ERROR
@@ -39,7 +44,7 @@ if [[ $exitcode -eq 0 && -n "$gcs_base_path_public" && -n "$create_dashboard_url
   echo "{\"dashboardUrl\":\"$create_dashboard_url\"}" > dashboard.json
   echo "Created dashboard.json with cloning url: $create_dashboard_link"
   gsutil -h "Content-Type:application/json" -h "Cache-Control: no-store" cp dashboard.json $gcs_base_path_public/dashboard.json
-fi 
+fi
 
 # Delete the VM (fetch a custom metadata key, it can be absent, so returns 404 - handling it with --fail options)
 delete_vm=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/delete_vm -s --fail)

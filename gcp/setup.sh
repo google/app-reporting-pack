@@ -49,7 +49,13 @@ deploy_files() {
   # NOTE: if an error "module 'sys' has no attribute 'maxint'" occures, run this: `pip3 install -U crcmod`
   gsutil -m rsync -r -x ".*/__pycache__/.*|\..*" ./../app $GCS_BASE_PATH
   gsutil -h "Content-Type:text/plain" cp ./../app/*.yaml $GCS_BASE_PATH/
-  gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
+  if [[ -f ./../google-ads.yaml ]]; then
+    gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
+  elif [[ -f $HOME/google-ads.yaml ]]; then
+    gsutil -h "Content-Type:text/plain" cp $HOME/google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
+  else
+    echo "Please upload google-ads.yaml"
+  fi
 }
 
 
