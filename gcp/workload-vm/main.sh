@@ -1,6 +1,6 @@
 #!/bin/bash
 
-LOG_NAME=arp-vm
+LOG_NAME=$(git config -f "./settings.ini" config.name)
 
 echo "Starting entrypoint script"
 
@@ -12,7 +12,7 @@ gcloud config set project $project_id
 # Fetch gcs uris fro the current instance metadata
 gcs_source_uri=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/gcs_source_uri -s --fail)
 
-gcloud logging write $LOG_NAME "[$(hostname)] Starting ARP application (gcs_source_uri: $gcs_source_uri)"
+gcloud logging write $LOG_NAME "[$(hostname)] Starting application (gcs_source_uri: $gcs_source_uri)"
 
 # fetch application files from GCS
 if [[ -n $gcs_source_uri ]]; then
@@ -31,10 +31,10 @@ do
 done < $LOG_NAME.log
 
 if [ $exitcode -ne 0 ]; then
-  gcloud logging write $LOG_NAME "[$(hostname)] ARP application has finished execution with an error ($exitcode)" --severity ERROR
+  gcloud logging write $LOG_NAME "[$(hostname)] Application has finished execution with an error ($exitcode)" --severity ERROR
   # TODO: send the error somewhere
 else
-  gcloud logging write $LOG_NAME "[$(hostname)] ARP application has finished execution successfully"
+  gcloud logging write $LOG_NAME "[$(hostname)] Application has finished execution successfully"
 fi
 
 # Check if index.html exists in the bucket. If so - create and upload dashboard.json
