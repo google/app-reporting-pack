@@ -98,7 +98,7 @@ FROM {target_dataset}.change_history
 {% if has_skan == "true" %}
     LEFT JOIN (
         SELECT
-            PARSE_DATE("%Y-%m-%d", date) AS day,
+            PARSE_DATE("%Y-%m-%d", CAST(date AS STRING)) AS day,
             campaign_id,
             SUM(skan_postbacks) AS skan_postbacks
         FROM `{bq_dataset}.ios_campaign_skan_performance`
