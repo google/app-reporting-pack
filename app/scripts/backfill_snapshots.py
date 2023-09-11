@@ -14,6 +14,7 @@
 
 import argparse
 from datetime import datetime, timedelta
+from bisect import bisect_left
 import itertools
 import logging
 from rich.logging import RichHandler
@@ -31,6 +32,52 @@ from gaarf.cli.utils import GaarfConfigBuilder, init_logging
 
 import src.queries as queries
 from src.utils import write_data_to_bq
+
+
+def restore_missing_cohorts(bq_client: bigquery.Client, bq_dataset: str) -> None:
+    job = bq_client.query(
+        f"SELECT DISTINCT day_of_interaction AS day FROM `{bq_dataset}.conversion_lags_*` ORDER BY 1"
+    )
+    snapshot_dates = set(job.result().to_dataframe()["day"])
+    dates = [
+        date for date in pd.date_range(min(snapshot_dates), max(
+            snapshot_dates)).to_pydatetime().tolist()
+    ]
+    missing_dates = list(set(dates).difference(snapshot_dates))
+    snapshot_dates = sorted(list(snapshot_dates))
+    if not missing_dates:
+        logging.info("No asset cohort snapshots to backfill")
+        return
+    for date in sorted(missing_dates):
+        index = bisect_left(snapshot_dates, date.date())
+        if index == 0:
+            continue
+        last_available_date = snapshot_dates[index - 1]
+        date_diff = (date.date() - last_available_date).days
+        date = date.strftime("%Y%m%d")
+        table_id = f"{bq_dataset}.conversion_lags_{date}"
+        query = f"""
+            CREATE OR REPLACE TABLE `{table_id}`
+            AS
+            SELECT
+                day_of_interaction,
+                lag+{date_diff} AS lag,
+                ad_group_id,
+                asset_id,
+                field_type,
+                network AS network,
+                installs,
+                inapps,
+                view_through_conversions,
+                conversions_value
+            FROM `{bq_dataset}.conversion_lags_{last_available_date.strftime("%Y%m%d")}`
+            """
+        job = bq_client.query(query)
+        try:
+            result = job.result()
+            logging.info("table '%s' has been created", table_id)
+        except Conflict as e:
+            logging.warning("table '%s' already exists", table_id)
 
 
 def restore_history(placeholder_df: pd.DataFrame,
@@ -82,6 +129,9 @@ def main():
     parser.add_argument("--api-version", dest="api_version", default="12")
     parser.add_argument("--log", "--loglevel", dest="loglevel", default="info")
     parser.add_argument("--logger", dest="logger", default="local")
+    parser.add_argument("--restore-cohorts",
+                        dest="cohorts",
+                        action="store_true")
     parser.add_argument("--customer-ids-query",
                         dest="customer_ids_query",
                         default=None)
@@ -93,7 +143,6 @@ def main():
 
     logger = init_logging(loglevel=args[0].loglevel.upper(),
                           logger_type=args[0].logger)
-
 
     config = GaarfConfigBuilder(args).build()
     bq_project = config.writer_params.get("project")
@@ -113,8 +162,12 @@ def main():
     ]
     missing_dates = set(dates).difference(snapshot_dates)
     if not missing_dates:
-        logger.info("No snapshots to backfill")
-        return
+        logger.info("No bid budget snapshots to backfill")
+        if not args[0].cohorts:
+            return
+        else:
+            restore_missing_cohorts(bq_client, bq_dataset)
+            return
 
     with open(args[0].ads_config, "r", encoding="utf-8") as f:
         google_ads_config_dict = yaml.safe_load(f)
@@ -208,6 +261,8 @@ def main():
             logger.info("table '%s' has been created", table_id)
         except Conflict as e:
             logger.warning("table '%s' already exists", table_id)
+    if args[0].cohorts:
+        restore_missing_cohorts(bq_client, bq_dataset)
 
 
 if __name__ == "__main__":
