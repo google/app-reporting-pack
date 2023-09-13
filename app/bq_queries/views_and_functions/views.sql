@@ -39,7 +39,7 @@ AS (
     FROM {bq_dataset}.app_campaign_settings AS ACS,
     UNNEST(SPLIT(ACS.target_conversions, "|")) AS conversion_ids
     LEFT JOIN {bq_dataset}.app_conversions_mapping AS Mapping
-        ON conversion_ids = CAST(Mapping.conversion_id AS STRING)
+        ON SPLIT(conversion_ids, "/")[SAFE_OFFSET(3)] = CAST(Mapping.conversion_id AS STRING)
     GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     ),
     InstallConversionId AS (
