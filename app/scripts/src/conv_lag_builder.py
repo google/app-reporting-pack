@@ -20,7 +20,6 @@ to any performance dataset.
 from typing import List
 import os
 from functools import reduce
-import numpy as np
 import pandas as pd
 
 
@@ -77,7 +76,7 @@ class ConversionLagBuilder:
         return joined_data.groupby(self.group_by + ["lag_number"],
                                    as_index=False).agg({
                                        "all_conversions":
-                                       np.sum
+                                       "sum"
                                    }).sort_values(by=self.group_by +
                                                   ["lag_number"])
 

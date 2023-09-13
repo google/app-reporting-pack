@@ -124,18 +124,18 @@ save_to_config() {
   value="${!section}"
   echo "$section: $value"
   if [[ $value = "y" ]]; then
-    # if cat $config | grep -q "$section: true"; then
-    #   echo "Do nothing"
     if cat $config | grep -q "$section: false"; then
       sed -i "/$section/s/false/true"/g $config
+    elif cat $config | grep -q "$section: true"; then
+      :
     else
       echo "$section: true" >> $config
     fi
   else
-    # if cat $config | grep -q "$section: false"; then
-    #   echo "Do nothing"
     if cat $config | grep -q "$section: true"; then
       sed -i "/$section/s/true/false"/g $config
+    elif cat $config | grep -q "$section: false"; then
+      :
     else
       echo "$section: false" >> $config
     fi

@@ -14,35 +14,13 @@
 # limitations under the License.
 
 fetch_reports() {
-  gaarf $(dirname $0)/google_ads_queries/*/*.sql \
+  gaarf $(dirname $0)/core/google_ads_queries/*/*.sql \
   --account=$customer_id \
   --output=bq \
   --customer-ids-query="$customer_ids_query" \
   --bq.project=$project --bq.dataset=$bq_dataset \
   --macro.start_date=$start_date --macro.end_date=$end_date \
   --ads-config=$ads_config "$@"
-}
-
-fetch_skan_reports() {
-  skan_customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL" AND campaign.app_campaign_setting.app_store = "APPLE_APP_STORE"'
-  gaarf $(dirname $0)/ios_skan/google_ads_queries/*.sql \
-  --account=$customer_id \
-  --output=bq \
-  --customer-ids-query="$skan_customer_ids_query" \
-  --bq.project=$project --bq.dataset=$bq_dataset \
-  --macro.start_date=$start_date --macro.end_date=$end_date \
-  --ads-config=$ads_config "$@"
-}
-
-conversion_lag_adjustment() {
-  $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
-    --account=$customer_id --ads-config=$ads_config \
-    --bq.project=$project --bq.dataset=$bq_dataset
-}
-
-backfill_snapshots() {
-  $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
-    --account=$customer_id --ads-config=$ads_config "$@"
 }
 
 fetch_video_orientation() {
@@ -64,38 +42,17 @@ create_skan_schema() {
     $macros "$@"
 }
 
-generate_bq_views() {
-  gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql \
-    --project=$project $macros "$@"
-}
-
-
-generate_snapshots() {
-  gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql \
-    --project=$project $macros "$@"
-}
-
 generate_output_tables() {
-  gaarf-bq $(dirname $0)/bq_queries/*.sql \
+  gaarf-bq $(dirname $0)/core/bq_queries/*.sql \
     --project=$project --target=$bq_dataset_output $macros "$@"
 }
 
-generate_legacy_views() {
-  gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql \
-    --project=$project $macros "$@"
-}
-
-generate_skan_output_tables() {
-  gaarf-bq $(dirname $0)/ios_skan/bq_queries/*.sql \
-    --project=$project $macros "$@"
-}
-
 save_initial() {
-  gaarf-bq $(dirname $0)/bq_queries/incremental/initial_run/*.sql \
+  gaarf-bq $(dirname $0)/incremental/bq_queries/initial_run.sql \
     --project=$project $initial_run_macros "$@"
 }
 
 save_incremental() {
-  gaarf-bq $(dirname $0)/bq_queries/incremental/*.sql \
+  gaarf-bq $(dirname $0)/incremental/bq_queries/incremental_saving.sql \
     --project=$project $macros "$@"
 }

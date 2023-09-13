@@ -13,7 +13,7 @@
 # limitations under the License.
 
 -- Contains campaign level iOS SKAN performance with decoded events from SKAN input schema
-CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder`
+CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{date_iso}`
 AS (
   WITH MappingTable AS (
     SELECT

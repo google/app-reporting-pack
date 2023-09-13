@@ -33,6 +33,7 @@ Helper script for running App Reporting Pack queries.\n\n
 --backfill-only - perform only backfill of the bid and budgets snapshots.\n
 --initial-load - perform initial load outside for start and end date window.\n
 --generate-config-only - perform only config generation instead of fetching data from Ads API.\n
+--modules - comma separated list of modules to run
 "
 
 solution_name="App Reporting Pack"
@@ -41,6 +42,7 @@ solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 
 quiet="n"
 generate_config_only="n"
+modules="core,assets,disapprovals,ios_skan,geo"
 
 while :; do
 case $1 in
@@ -77,6 +79,10 @@ case $1 in
   --generate-config-only)
     generate_config_only="y"
     ;;
+  --modules)
+    shift
+    modules=$1
+    ;;
   -h|--help)
     echo -e $usage;
     exit
@@ -90,45 +96,62 @@ done
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
 API_VERSION="13"
-
+#
 welcome() {
   echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
   echo
-  echo "Please answer a couple of questions. The default answers are specified in parentheses, press Enter to select them"
+  echo "The solution will be deployed with the following default values"
+  print_configuration
+  echo -n "Press n to change the configuration or Enter to continue: "
+  read -r defaults
+  defaults=$(convert_answer $defaults 'y')
   echo
 }
 
 setup() {
   # get default value from google-ads.yaml
-  if [[ -n $ads_config ]]; then
-    parse_yaml $ads_config "GOOGLE_ADS_"
-    local login_customer_id=$GOOGLE_ADS_login_customer_id
+  if [[ $defaults != "y" ]]; then
+    echo "Please answer a couple of questions. The default answers are specified in parentheses, press Enter to select them"
+    if [[ -n $ads_config ]]; then
+      parse_yaml $ads_config "GOOGLE_ADS_"
+      local login_customer_id=$GOOGLE_ADS_login_customer_id
+    fi
+    echo -n "Enter account_id in XXXXXXXXXX format ($login_customer_id): "
+    read -r customer_id
+    customer_id=${customer_id:-$login_customer_id}
+
+    default_project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
+    echo -n "Enter BigQuery project_id ($default_project): "
+    read -r project
+    project=${project:-$default_project}
+
+    echo -n "Enter BigQuery dataset (arp): "
+    read -r bq_dataset
+    bq_dataset=${bq_dataset:-arp}
+
+    if [[ $modules =~ "incremental" ]]; then
+      ask_for_incremental_saving
+    else
+      echo -n -e "Enter start_date in YYYY-MM-DD format or use :YYYYMMDD-90 for last 90 days (:YYYYMMDD-90): "
+      read -r start_date
+      echo -n -e "Enter end_date in YYYY-MM-DD format or use :YYYYMMDD-1 for yesterday (:YYYYMMDD-1): "
+      read -r end_date
+    fi
+    start_date=${start_date:-:YYYYMMDD-90}
+    end_date=${end_date:-:YYYYMMDD-1}
+
+    if [[ $modules =~ "assets" ]]; then
+      ask_for_cohorts
+      ask_for_video_orientation
+    fi
+    if [[ $modules =~ "ios_skan" ]]; then
+      ask_for_skan_queries
+    fi
+  else
+    if [[ $modules =~ "ios_skan" ]]; then
+      ask_for_skan_queries
+    fi
   fi
-  echo -n "Enter account_id in XXXXXXXXXX format ($login_customer_id): "
-  read -r customer_id
-  customer_id=${customer_id:-$login_customer_id}
-
-  default_project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
-  echo -n "Enter BigQuery project_id ($default_project): "
-  read -r project
-  project=${project:-$default_project}
-
-  echo -n "Enter BigQuery dataset (arp): "
-  read -r bq_dataset
-  bq_dataset=${bq_dataset:-arp}
-
-  echo -n -e "Enter start_date in YYYY-MM-DD format or use :YYYYMMDD-90 for last 90 days (:YYYYMMDD-90): "
-  read -r start_date
-  echo -n -e "Enter end_date in YYYY-MM-DD format or use :YYYYMMDD-1 for yesterday (:YYYYMMDD-1): "
-  read -r end_date
-  start_date=${start_date:-:YYYYMMDD-90}
-  end_date=${end_date:-:YYYYMMDD-1}
-  #
-  # ask_for_incremental_saving # TODO: Activate during next release
-
-  ask_for_cohorts
-  ask_for_video_orientation
-  ask_for_skan_queries
   generate_bq_macros
 
   if [[ -n $RUNNING_IN_GCE && $generate_config_only ]]; then
@@ -149,40 +172,48 @@ setup() {
     exit
   fi
 
-  echo -n "Do you want to save this config (Y/n): "
-  read -r save_config_answer
-  save_config_answer=$(convert_answer $save_config_answer 'Y')
-  if [[ $save_config_answer = "y" ]]; then
-    echo -n "Save config as ($solution_name_lowercase.yaml): "
-    read -r config_file_name
-    config_file_name=${config_file_name:-$solution_name_lowercase.yaml}
-    config_file=$(echo "`echo $config_file_name | sed 's/\.yaml//'`.yaml")
-    save_config="--save-config --config-destination=$config_file"
-    echo -e "${COLOR}Saving configuration to $config_file${NC}"
-    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
-    generate_bq_views $save_config --log=$loglevel --dry-run
-    fetch_video_orientation $save_config --log=$loglevel --dry-run
-    if [[ $skan_answer = "y" ]]; then
-      create_skan_schema $save_config --log=$loglevel --dry-run
-    fi
-
-    for arp_answer in backfill incremental legacy; do
-      save_to_config $config_file $arp_answer
-    done
-    if [[ $generate_config_only = "y" ]]; then
+  if [[ $defaults != "y" ]]; then
+    echo -n "Do you want to save this config (Y/n): "
+    read -r save_config_answer
+    save_config_answer=$(convert_answer $save_config_answer 'Y')
+    if [[ $save_config_answer = "y" ]]; then
+      echo -n "Save config as ($solution_name_lowercase.yaml): "
+      read -r config_file_name
+      config_file_name=${config_file_name:-$solution_name_lowercase.yaml}
+      config_file=$(echo "`echo $config_file_name | sed 's/\.yaml//'`.yaml")
+    elif [[ $save_config_answer = "q" ]]; then
       exit
+    else
+      config_file="/tmp/app_reporting_pack.yaml"
     fi
-  elif [[ $save_config_answer = "q" ]]; then
+  else
+    config_file=$solution_name_lowercase.yaml
+  fi
+  save_config="--save-config --config-destination=$config_file"
+  echo -e "${COLOR}Saving configuration to $config_file${NC}"
+  fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+  generate_output_tables $save_config --log=$loglevel --dry-run
+  fetch_video_orientation $save_config --log=$loglevel --dry-run
+  if [[ $skan_answer = "y" ]]; then
+    create_skan_schema $save_config --log=$loglevel --dry-run
+  fi
+
+  for arp_answer in backfill incremental legacy; do
+    save_to_config $config_file $arp_answer
+  done
+  if [[ $generate_config_only = "y" ]]; then
     exit
   fi
-  print_configuration
+  if [[ $defaults != "y" ]]; then
+    print_configuration
+  fi
 }
 
 print_configuration() {
   echo "Your configuration:"
   echo "  account_id: $customer_id"
   echo "  BigQuery project_id: $project"
-  echo "  BigQuery dataset:: $bq_dataset"
+  echo "  BigQuery dataset: $bq_dataset"
   echo "  Start date: $start_date"
   echo "  End date: $end_date"
   echo "  Ads config: $ads_config"
@@ -190,6 +221,47 @@ print_configuration() {
   echo "  Video parsing mode: $video_parsing_mode_output"
   if [[ $skan_answer = "y" ]]; then
     echo "  SKAN schema mode: $skan_schema_mode"
+  fi
+}
+
+###
+# if [[ $initial_mode -eq 1 ]]; then
+#     if [[ $end_date == *"YYYYMMDD"* ]]; then
+#       end_date_days_ago=$(echo $end_date | cut -d '-' -f2)
+#       end_date_formatted=`date --date="$end_date_days_ago day ago" +%Y-%m-%d`
+#     else
+#       end_date_formatted=$end_date
+#     fi
+#     echo -e "${COLOR}===Extending fetching period: $initial_mode_start_date - $end_date_formatted===${NC}"
+#     start_date=$initial_mode_start_date
+#     fetch_reports --log=$loglevel --api-version=$API_VERSION
+#   else
+#     fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
+#   fi
+
+###
+
+run_google_ads_queries() {
+  echo -e "${COLOR}===$1===${NC}"
+    gaarf $(dirname $0)/$1/google_ads_queries/*.sql -c=$config_file \
+      --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+}
+run_bq_queries() {
+  if [ -d "$(dirname $0)/$1/bq_queries/snapshots/" ]; then
+    echo -e "${COLOR}===generating snapshots for $1===${NC}"
+    gaarf-bq $(dirname $0)/$1/bq_queries/snapshots/*.sql -c=$config_file --log=$loglevel
+  fi
+  if [ -d "$(dirname $0)/$1/bq_queries/views/" ]; then
+    echo -e "${COLOR}===generating views for $1===${NC}"
+    gaarf-bq $(dirname $0)/$1/bq_queries/views/*.sql -c=$config_file --log=$loglevel
+  fi
+  echo -e "${COLOR}===generating output tables for $1===${NC}"
+  gaarf-bq $(dirname $0)/$1/bq_queries/*.sql -c=$config_file --log=$loglevel
+  if [ -d "$(dirname $0)/$1/bq_queries/legacy_views/" ]; then
+    if [[ $legacy = "y" ]]; then
+      echo -e "${COLOR}===generating legacy views for $1===${NC}"
+      gaarf-bq $(dirname $0)/$1/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
+    fi
   fi
 }
 
@@ -206,23 +278,34 @@ run_with_config() {
       exit
   fi
   echo -e "${COLOR}===fetching reports===${NC}"
-  gaarf $(dirname $0)/google_ads_queries/**/*.sql -c=$config_file \
-    --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
-
-  if cat "$config_file" | grep -q skan_mode:; then
-    echo -e "${COLOR}===fetching iOS SKAN reports===${NC}"
-    gaarf $(dirname $0)/ios_skan/google_ads_queries/*.sql \
+  if [[ $modules =~ "core" ]]; then
+    run_google_ads_queries "core"
+    echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
+    $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
       -c=$config_file \
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    run_bq_queries "core"
+  fi
+  if [[ $modules =~ "assets" ]]; then
+    run_google_ads_queries "assets"
+      echo -e "${COLOR}===getting video orientation===${NC}"
+      $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
+        -c=$config_file \
+        --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    run_bq_queries "assets"
+  fi
+  if [[ $modules =~ "disapprovals" ]]; then
+    run_google_ads_queries "disapprovals"
+    run_bq_queries "disapprovals"
+  fi
+  if [[ $modules =~ "ios_skan" ]]; then
+    if cat "$config_file" | grep -q skan_mode:; then
+    run_google_ads_queries "ios_skan"
     echo -e "${COLOR}===getting SKAN schema===${NC}"
     $(which python3) $(dirname $0)/scripts/create_skan_schema.py -c=$config_file
+    run_bq_queries "ios_skan"
+    fi
   fi
-  echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
-  $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
-    -c=$config_file \
-    --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
-  echo -e "${COLOR}===generating snapshots===${NC}"
-  gaarf-bq $(dirname $0)/bq_queries/snapshots/*.sql -c=$config_file --log=$loglevel
   infer_answer_from_config $config_file backfill
   if [[ $backfill = "y" ]]; then
     echo -e "${COLOR}===backfilling snapshots===${NC}"
@@ -230,88 +313,28 @@ run_with_config() {
         -c=$config_file \
         --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
   fi
-  echo -e "${COLOR}===generating views and functions===${NC}"
-  gaarf-bq $(dirname $0)/bq_queries/views_and_functions/*.sql -c=$config_file --log=$loglevel
-  echo -e "${COLOR}===getting video orientation===${NC}"
-  $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
-    -c=$config_file \
-    --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
-  echo -e "${COLOR}===generating final tables===${NC}"
-  gaarf-bq $(dirname $0)/bq_queries/*.sql -c=$config_file --log=$loglevel
   infer_answer_from_config $config_file legacy
-  if cat "$config_file" | grep -q "skan_mode:"; then
-    echo -e "${COLOR}===generating SKAN output table===${NC}"
-    gaarf-bq $(dirname $0)/ios_skan/bq_queries/*.sql -c=$config_file --log=$loglevel
-  fi
-  if [[ $legacy = "y" ]]; then
-    echo -e "${COLOR}===generating legacy views===${NC}"
-    gaarf-bq $(dirname $0)/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
-  fi
   infer_answer_from_config $config_file incremental
   if [[ $incremental = "y" ]]; then
     echo -e "${COLOR}===Saving increments and define views===${NC}"
-    gaarf-bq $(dirname $0)/bq_queries/incremental/incremental_saving.sql -c=$config_file --log=$loglevel
-  fi
-}
-
-run_with_parameters() {
-  echo -e "${COLOR}===fetching reports===${NC}"
-  if [[ $initial_mode -eq 1 ]]; then
-    if [[ $end_date == *"YYYYMMDD"* ]]; then
-      end_date_days_ago=$(echo $end_date | cut -d '-' -f2)
-      end_date_formatted=`date --date="$end_date_days_ago day ago" +%Y-%m-%d`
-    else
-      end_date_formatted=$end_date
-    fi
-    echo -e "${COLOR}===Extending fetching period: $initial_mode_start_date - $end_date_formatted===${NC}"
-    start_date=$initial_mode_start_date
-    fetch_reports --log=$loglevel --api-version=$API_VERSION
-  else
-    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
-  fi
-  if [[ $skan_answer = "y" ]]; then
-    echo -e "${COLOR}===fetching iOS SKAN reports===${NC}"
-    fetch_skan_reports --log=$loglevel --api-version=$API_VERSION
-    echo -e "${COLOR}===getting SKAN schema===${NC}"
-    create_skan_schema $save_config --log=$loglevel
-  fi
-  echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
-  conversion_lag_adjustment --customer--ids-query="$customer_ids_query" \
-    --api-version=$API_VERSION
-  echo -e "${COLOR}===generating snapshots===${NC}"
-  generate_snapshots $save_config --log=$loglevel
-  if [[ $backfill = "y" ]]; then
-    echo -e "${COLOR}===backfilling snapshots===${NC}"
-    backfill_snapshots --customer--ids-query="$customer_ids_query" \
-      --api-version=$API_VERSION
-  fi
-  echo -e "${COLOR}===generating views and functions===${NC}"
-  generate_bq_views $save_config --log=$loglevel
-  echo -e "${COLOR}===getting video orientation===${NC}"
-  fetch_video_orientation $save_config --log=$loglevel --api-version=$API_VERSION
-  echo -e "${COLOR}===generating final tables===${NC}"
-  generate_output_tables $save_config --log=$loglevel
-  if [[ $skan_answer = "y" ]]; then
-    echo -e "${COLOR}===generating iOS SKAN final tables===${NC}"
-    generate_skan_output_tables $save_config --log=$loglevel
-  fi
-  if [[ $legacy = "y" ]]; then
-    echo -e "${COLOR}===generating legacy views===${NC}"
-    generate_legacy_views $save_config --log=$loglevel
-  fi
-  if [[ $incremental = "y" ]]; then
-    # TODO: generate warning / error when start_date is not dynamic
-    if [[ $initial_mode -eq 1 ]]; then
-      echo -e "${COLOR}===Saving initial batch===${NC}"
-      save_initial --log=$loglevel
-    fi
-    echo -e "${COLOR}===Saving increments and define views===${NC}"
-    save_incremental --log=$loglevel
+    gaarf-bq $(dirname $0)/incremental/incremental_saving.sql -c=$config_file --log=$loglevel
   fi
 }
 
 check_gaarf_version
 check_ads_config
+
+# defaults
+start_date=":YYYYMMDD-90"
+end_date=":YYYYMMDD-1"
+bq_dataset="arp"
+project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
+parse_yaml $ads_config "GOOGLE_ADS_"
+customer_id=$GOOGLE_ADS_login_customer_id
+video_parsing_mode_output="placeholders"
+cohorts_final="0,1,2,3,5,7,14,30"
+skan_schema_mode="placeholders"
+generate_bq_macros
 
 if [[ -z ${loglevel} ]]; then
   loglevel="INFO"
@@ -338,13 +361,13 @@ if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
     setup_config_answer=$(convert_answer $setup_config_answer 'Y')
     if [[ $setup_config_answer = "y" ]]; then
       echo -e "${COLOR}Using saved configuration...${NC}"
-      run_with_config
+      run_with_config $config_file
     elif [[ $setup_config_answer = "n" ]]; then
       echo -e "${COLOR}Setting up new configuration... (Press Ctrl + C to exit)${NC}"
       welcome
       setup
       prompt_running
-      run_with_parameters
+      run_with_config
     else
       echo "Exiting"
       exit
@@ -354,5 +377,5 @@ else
   welcome
   setup
   prompt_running
-  run_with_parameters
+  run_with_config
 fi
