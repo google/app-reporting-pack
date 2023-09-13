@@ -98,8 +98,10 @@ check_gaarf_version() {
     if [[ $major_version -ge 1 && $minor_version -ge 9 ]]; then
       echo "google-ads-api-report-fetcher is up-to-date"
     else
-      echo "updating google-ads-api-report-fetcher"
-      pip install -U google-ads-api-report-fetcher>=1.9.0
+      echo "You are using an old version of google-ads-api-report-fetcher library"
+      echo "Please update it by running the following command:"
+      echo -e "${COLOR}pip install -U google-ads-api-report-fetcher${NC}"
+      exit 1
     fi
   fi
 }
