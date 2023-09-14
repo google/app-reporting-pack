@@ -1,4 +1,19 @@
 #!/bin/bash
+#
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # ansi colors
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -76,9 +91,9 @@ enable_apis() {
 
 
 create_registry() {
-  echo "Creating a repository in Artifact Registry"
-  REPO_EXISTS=$(gcloud artifacts repositories list --location=europe --filter="REPOSITORY:'"$REPOSITORY"'" --format="value(REPOSITORY)" 2>/dev/null)
+  REPO_EXISTS=$(gcloud artifacts repositories list --location=$REPOSITORY_LOCATION --filter="REPOSITORY=projects/'$PROJECT_ID'/locations/'$REPOSITORY_LOCATION'/repositories/'"$REPOSITORY"'" --format="value(REPOSITORY)" 2>/dev/null)
   if [[ ! -n $REPO_EXISTS ]]; then
+    echo "Creating a repository in Artifact Registry"
     # repo doesn't exist, creating    
     gcloud artifacts repositories create ${REPOSITORY} \
         --repository-format=docker \
@@ -114,7 +129,7 @@ set_iam_permissions() {
 
 
 create_topic() {
-  TOPIC_EXISTS=$(gcloud pubsub topics list --filter="name.scope(topic):'$TOPIC'" --format="get(name)")
+  TOPIC_EXISTS=$(gcloud pubsub topics list --filter="name=projects/'$PROJECT_ID'/topics/'$TOPIC'" --format="get(name)")
   if [[ ! -n $TOPIC_EXISTS ]]; then
     gcloud pubsub topics create $TOPIC
   fi
@@ -297,7 +312,7 @@ delete_schedule() {
   JOB_NAME=$(eval echo $(git config -f $SETTING_FILE scheduler.name))
   REGION=$(git config -f $SETTING_FILE scheduler.region)
 
-  JOB_EXISTS=$(gcloud scheduler jobs list --location=$REGION --format="value(ID)" --filter="ID:'$JOB_NAME'" 2>/dev/null)
+  JOB_EXISTS=$(gcloud scheduler jobs list --location=$REGION --format="value(ID)" --filter="ID=projects/'$PROJECT_ID'/locations/'$REGION'/jobs/'$JOB_NAME'" 2>/dev/null)
   if [[ -n $JOB_EXISTS ]]; then
     echo 'Deleting Cloud Scheduler job '$JOB_NAME
     gcloud scheduler jobs delete $JOB_NAME --location $REGION --quiet
