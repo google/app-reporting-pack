@@ -145,8 +145,8 @@ google-ads==21.1.0 \
     --hash=sha256:5c6bf7541d286cc33c1f6f0d7262d20789360c224edc3b754453488fbc5e9495 \
     --hash=sha256:f48cfad609de2189403cf43c100bc2e0d8f5549f13b033982587830aee83eb84
     # via google-ads-api-report-fetcher
-google-ads-api-report-fetcher==1.9.0 \
-    --hash=sha256:8859c2f8d40cf795d096871bb5778950306dcd6c66943010593f1292ce2be223
+google-ads-api-report-fetcher==1.10.2 \
+    --hash=sha256:7fbd211839f815c0b7dfdbbcae51ff2fc8967011637fd5b7a33b68f864ab3f56
     # via -r requirements.in
 google-api-core[grpc]==2.10.1 \
     --hash=sha256:92d17123cfe399b5ef7e026c63babf978d8475e1ac877919eb7933e25dea2273 \
@@ -694,6 +694,5 @@ urllib3==1.26.12 \
     #   requests
 
 # WARNING: The following packages were not pinned, but pip requires them to be
-# pinned when the requirements file includes hashes and the requirement is not
-# satisfied by a package already installed. Consider using the --allow-unsafe flag.
+# pinned when the requirements file includes hashes. Consider using the --allow-unsafe flag.
 # setuptools
