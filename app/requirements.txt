@@ -155,7 +155,6 @@ google-api-core[grpc]==2.10.1 \
     #   google-ads
     #   google-api-python-client
     #   google-cloud-bigquery
-    #   google-cloud-bigquery-storage
     #   google-cloud-core
     #   google-cloud-storage
 google-api-python-client==2.80.0 \
@@ -180,14 +179,10 @@ google-auth-oauthlib==0.7.1 \
     --hash=sha256:860e54c4b58b2664116c9cb44325bc0ec92bcd93e8211698ceea911b1b873b86 \
     --hash=sha256:9940f543f77d1447432a93781d7c931fb53e418023351ad4bf9e92837a1154ec
     # via google-ads
-google-cloud-bigquery==3.3.6 \
-    --hash=sha256:7119e78d58d8a72d367dac9fcc05575fe9acda4c72722551f136814ad428e99c \
-    --hash=sha256:78df088821643eef2f401357321570e3c5b060864ae5b95f053f0296c00399eb
+google-cloud-bigquery==3.11.4 \
+    --hash=sha256:5fa7897743a0ed949ade25a0942fc9e7557d8fce307c6f8a76d1b604cf27f1b1 \
+    --hash=sha256:697df117241a2283bcbb93b21e10badc14e51c9a90800d2a7e1a3e1c7d842974
     # via google-ads-api-report-fetcher
-google-cloud-bigquery-storage==2.16.2 \
-    --hash=sha256:d037f238d0ab417c1e102a262c3fdb4b80cc630303bab358b1179260f47af0b7 \
-    --hash=sha256:e6aca4f7b6f4eadb87f8510906177563518e1587c8b7b162bcf8e1c9e75ef416
-    # via google-cloud-bigquery
 google-cloud-core==2.3.2 \
     --hash=sha256:8417acf6466be2fa85123441696c4badda48db314c607cf1e5d543fa8bdc22fe \
     --hash=sha256:b9529ee7047fd8d4bf4a2182de619154240df17fbe60ead399078c1ae152af9a
@@ -496,7 +491,6 @@ proto-plus==1.22.1 \
     # via
     #   google-ads
     #   google-cloud-bigquery
-    #   google-cloud-bigquery-storage
 protobuf==4.21.9 \
     --hash=sha256:2c9c2ed7466ad565f18668aa4731c535511c5d9a40c6da39524bccf43e441719 \
     --hash=sha256:48e2cd6b88c6ed3d5877a3ea40df79d08374088e89bedc32557348848dff250b \
@@ -516,7 +510,6 @@ protobuf==4.21.9 \
     #   google-ads
     #   google-api-core
     #   google-cloud-bigquery
-    #   google-cloud-bigquery-storage
     #   googleapis-common-protos
     #   grpcio-status
     #   proto-plus
@@ -550,7 +543,6 @@ pyarrow==9.0.0 \
     # via
     #   db-dtypes
     #   google-ads-api-report-fetcher
-    #   google-cloud-bigquery
 pyasn1==0.4.8 \
     --hash=sha256:39c7e2ec30515947ff4e87fb6f456dfc6e84857d34be479c9d4a4ba4bf46aa5d \
     --hash=sha256:aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba
@@ -565,9 +557,9 @@ pycparser==2.21 \
     --hash=sha256:8ee45429555515e1f6b185e78100aea234072576aa43ab53aefcae078162fca9 \
     --hash=sha256:e644fdec12f7872f86c58ff790da456218b10f863970249516d60a5eaca77206
     # via cffi
-pygments==2.14.0 \
-    --hash=sha256:b3ed06a9e8ac9a9aae5a6f5dbe78a8a58655d17b43b93c078f094ddc476ae297 \
-    --hash=sha256:fa7bd7bd2771287c0de303af8bfdfc731f51bd2c6a47ab69d117138893b82717
+pygments==2.15.0 \
+    --hash=sha256:77a3299119af881904cd5ecd1ac6a66214b6e9bed1f2db16993b54adede64094 \
+    --hash=sha256:f7e36cffc4c517fbc252861b9a6e4644ca0e5abadf9a113c72d1358ad09b9500
     # via rich
 pyparsing==3.0.9 \
     --hash=sha256:2b020ecf7d21b687f219b71ecad3631f644a47f01403fa1d1036b0c6416d70fb \
@@ -694,5 +686,6 @@ urllib3==1.26.12 \
     #   requests
 
 # WARNING: The following packages were not pinned, but pip requires them to be
-# pinned when the requirements file includes hashes. Consider using the --allow-unsafe flag.
+# pinned when the requirements file includes hashes and the requirement is not
+# satisfied by a package already installed. Consider using the --allow-unsafe flag.
 # setuptools
