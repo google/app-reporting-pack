@@ -59,6 +59,8 @@ WITH
           UNNEST(GENERATE_ARRAY(1, 90)) AS lag
       LEFT JOIN RawAssetConversionLags
           USING(day_of_interaction, ad_group_id, asset_id, network, lag, field_type)
+      -- Filter only lags in the past
+      WHERE day_of_interaction <= DATE_SUB(CURRENT_DATE(), INTERVAL lag DAY)
       GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
     )
 SELECT
@@ -84,4 +86,3 @@ WHERE
   AND lag <= 90
 GROUP BY 1, 2, 3, 4, 5
 );
-
