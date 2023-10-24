@@ -43,6 +43,7 @@ solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 quiet="n"
 generate_config_only="n"
 modules="core,assets,disapprovals,ios_skan,geo"
+incremental="y"
 
 while :; do
 case $1 in
@@ -111,7 +112,7 @@ welcome() {
 setup() {
   # get default value from google-ads.yaml
   if [[ $defaults != "y" ]]; then
-    echo "Please answer a couple of questions. The default answers are specified in parentheses, press Enter to select them"
+    echo "Please configure the solution. The default answers are specified in parentheses, press Enter to select them"
     if [[ -n $ads_config ]]; then
       parse_yaml $ads_config "GOOGLE_ADS_"
       local login_customer_id=$GOOGLE_ADS_login_customer_id
@@ -215,8 +216,7 @@ print_configuration() {
   echo "  account_id: $customer_id"
   echo "  BigQuery project_id: $project"
   echo "  BigQuery dataset: $bq_dataset"
-  echo "  Start date: $start_date"
-  echo "  End date: $end_date"
+  echo "  Reporting window: Last $start_date_days days"
   echo "  Ads config: $ads_config"
   echo "  Cohorts: $cohorts_final"
   echo "  Video parsing mode: $video_parsing_mode_output"
@@ -358,6 +358,7 @@ check_gaarf_version
 check_ads_config
 
 # defaults
+start_date_days=90
 start_date=":YYYYMMDD-90"
 end_date=":YYYYMMDD-1"
 bq_dataset="arp"

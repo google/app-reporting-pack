@@ -150,7 +150,6 @@ check_initial_load () {
   initial_date=`echo "$initial_load_date" | sed 's/-//g' | sed 's/ //g'`
   infer_answer_from_config $config_file project
   infer_answer_from_config $config_file start_date
-  # TODO (amarkin): dynamically specify table name
   echo "SELECT * FROM ${target_dataset}.ad_group_network_split_${initial_date};" > /tmp/initial_load.sql
 
   missing_initial_load=`gaarf-bq /tmp/initial_load.sql -c $config_file | grep "404 Not found" | wc -l`

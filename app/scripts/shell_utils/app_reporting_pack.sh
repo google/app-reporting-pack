@@ -88,9 +88,10 @@ ask_for_cohorts() {
   echo -e "${COLOR}App Reporting Pack will calculate cohort stats for conversion lags 1,3,5,7,14,30.${NC}"
   echo -n "Provide additional conversion lag days as comma separated list or press Enter to use the ones above: "
   read -r cohorts_string
-  cohorts_string=${cohorts_string:-0}
+  cohorts_string=${cohorts_string:-1}
   IFS="," read -ra cohorts_array <<< $cohorts_string
   combined_cohorts=("${default_cohorts[@]}" "${cohorts_array[@]}")
+  # TODO: Always exclude 0 cohort
   unique_cohorts=($(for f in "${combined_cohorts[@]}"; do echo "${f}"; done | sort -u -n))
   _cohorts="${unique_cohorts[@]}"
   cohorts_final=$(echo ${_cohorts// /,})
@@ -98,30 +99,32 @@ ask_for_cohorts() {
 
 ask_for_incremental_saving() {
   bq_dataset_output=$(echo $bq_dataset"_output")
-  echo -e "${COLOR}App Reporting Pack will extract fresh data from Google Ads API between provided start and end date (i.e. last 30 days).${NC}"
+  echo -e "${COLOR}App Reporting Pack will extract fresh performance data from Google Ads API within selected reporting window (i.e. last 30 days).${NC}"
   echo -e "${COLOR}(More at https://github.com/google/app-reporting-pack/blob/main/docs/storing-data-for-extended-period.md):${NC}"
-  echo -n "Would you like to have reporting for the period before the start date? [Y/n]: "
-  read -r incremental
-  incremental=$(convert_answer $incremental)
-  if [[ $incremental = "y" ]]; then
-    get_start_end_date
-    initial_load="n"
-    echo -n -e "\tPlease provide initial date for the extended load in YYYY-MM-DD format, i.e. 2022-01-01: "
+  get_start_end_date
+  echo -n "Download historical performance data starting from YYYY-MM-DD or press Enter to skip: "
+  read -r initial_load_date
+  initial_load="n"
+  if [ -z $initial_load_date ]; then
+    echo -e "\tYou haven't entered initial date"
+    echo -n -e "\tPlease provide initial date or press Enter to skip: "
     read -r initial_load_date
-    if [ -z $initial_load_date ]; then
-      echo -e "\tYou haven't entered initial date"
-      echo -n -e "\tPlease provide initial date or press Enter to skip: "
+  fi
+  if [ ! -z $initial_load_date ]; then
+    validate_load_date $initial_load_date
+    if [[ $invalid_initial_load_date = "y" ]]; then
+      echo -e "\tYou've entered invalid initial date"
+      echo -n -e "\tPlease provide initial date in YYYY-MM-DD format (i.e. 2023-01-01) or press Enter to skip: "
       read -r initial_load_date
+      validate_load_date $initial_load_date
     fi
-    if [ ! -z $initial_load_date ]; then
-      if echo "$start_date" | grep -E ":YYYYMMDD-*"; then
-        initial_load="y"
-      else
-        echo "start_date is not dynamic ($start_date), skipping initial load"
-      fi
+    if [[ $invalid_initial_load_date = "y" ]]; then
+      echo "invalid initial load date ($invalid_load_date), skipping initial load"
+    elif echo "$start_date" | grep -E ":YYYYMMDD-*"; then
+      initial_load="y"
+    else
+      echo "start_date is not dynamic ($start_date), skipping initial load"
     fi
-  else
-    get_start_end_date
   fi
 }
 
@@ -139,10 +142,18 @@ generate_bq_macros() {
 }
 
 get_start_end_date() {
-  echo -n -e "\tEnter start_date in YYYY-MM-DD format or use :YYYYMMDD-90 for last 90 days (:YYYYMMDD-90): "
-  read -r start_date
-  echo -n -e "\tEnter end_date in YYYY-MM-DD format or use :YYYYMMDD-1 for yesterday (:YYYYMMDD-1): "
-  read -r end_date
+  echo -n -e "Enter reporting window in days (default '90 days' but not less than conversion window): "
+  read -r start_date_days
+  start_date=":YYYYMMDD-${start_date_days}"
   start_date=${start_date:-:YYYYMMDD-90}
-  end_date=${end_date:-:YYYYMMDD-1}
+  end_date=":YYYYMMDD-1"
+}
+
+validate_load_date() {
+  local _initial_load_date=$1
+  if [[ ! $_initial_load_date =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; then
+    invalid_initial_load_date="y"
+  else
+    invalid_initial_load_date="n"
+  fi
 }
