@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-CREATE OR REPLACE VIEW {legacy_dataset}.geo_performance AS
+CREATE OR REPLACE VIEW `{legacy_dataset}.geo_performance` AS
 SELECT
     Day,
     campaign_id AS CampaignID,
@@ -38,4 +38,10 @@ SELECT
     installs,
     inapps,
     conversions_value AS conversion_value
-FROM {target_dataset}.geo_performance;
+FROM
+{% if incremental == "true" %}
+    `{target_dataset}.geo_performance_*`
+{% else %}
+    `{target_dataset}.geo_performance`
+{% endif %}
+;

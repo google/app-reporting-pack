@@ -15,7 +15,12 @@
 -- Contains campaign level iOS SKAN performance with decoded events from SKAN input schema
 {% if has_skan == "true" %}
 CREATE OR REPLACE VIEW `{legacy_dataset}.skan_decoder`
-AS SELECT * except(app_id), app_id AS AppId FROM `{target_dataset}.skan_decoder`;
+AS SELECT * except(app_id), app_id AS AppId FROM
+    {% if incremental == "true" %}
+        `{target_dataset}.skan_decoder_*`
+    {% else %}
+    `{target_dataset}.skan_decoder`;
+    {% endif %}
 {% else %}
 SELECT FALSE;
 {% endif %}

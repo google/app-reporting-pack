@@ -144,9 +144,15 @@ SELECT
             inapps_{{day}}_day AS InApp_day_{{day}},
             conversions_value_{{day}}_day AS conversion_value_day_{{day}},
         {% endfor %}
-FROM {target_dataset}.asset_performance;
+FROM
+{% if incremental == "true" %}
+    `{target_dataset}.asset_performance_*`
+{% else %}
+    `{target_dataset}.asset_performance`
+{% endif %}
+;
 
-CREATE OR REPLACE VIEW {legacy_dataset}.uacassets_all_conversion_split AS
+CREATE OR REPLACE VIEW `{legacy_dataset}.uacassets_all_conversion_split` AS
 WITH AssetMapping AS (
   SELECT
     FORMAT_DATE("%F", Day) AS Day,
