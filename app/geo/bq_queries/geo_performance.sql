@@ -30,11 +30,28 @@ AS (
             SUM(IF(conversion_category != "DOWNLOAD", conversions, 0)) AS inapps
         FROM {bq_dataset}.geo_performance_conversion_split
         GROUP BY 1, 2, 3, 4
+    ),
+    MappingTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_group_name) AS ad_group_name,
+            ANY_VALUE(ad_group_status) AS ad_group_status,
+            ANY_VALUE(campaign_id) AS campaign_id,
+            ANY_VALUE(campaign_name) AS campaign_name,
+            ANY_VALUE(campaign_status) AS campaign_status,
+            ANY_VALUE(account_id) AS account_id,
+            ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(ocid) AS ocid,
+            ANY_VALUE(currency) AS currency
+        FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        LEFT JOIN `{bq_dataset}.ocid_mapping` USING(account_id)
+        GROUP BY 1
     )
     SELECT
         PARSE_DATE("%Y-%m-%d", GP.date) AS day,
         M.account_id,
         M.account_name,
+        M.ocid,
         M.currency,
         M.campaign_id,
         M.campaign_name,
@@ -61,11 +78,11 @@ AS (
     FROM {bq_dataset}.geo_performance AS GP
     LEFT JOIN ConversionsTable AS ConversionSplit
         USING(ad_group_id, network, date, country_id)
-    LEFT JOIN {bq_dataset}.account_campaign_ad_group_mapping AS M
+    LEFT JOIN MappingTable AS M
       ON GP.ad_group_id = M.ad_group_id
     LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
       ON M.campaign_id = ACS.campaign_id
     LEFT JOIN {bq_dataset}.geo_target_constant AS GeoTargetConstant
         ON GP.country_id = GeoTargetConstant.constant_id
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
 );

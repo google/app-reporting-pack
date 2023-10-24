@@ -37,6 +37,22 @@ WITH CampaignCostTable AS (
         FROM `{bq_dataset}.video_orientation`
         GROUP BY 1
     ),
+    MappingTable AS (
+        SELECT
+            ad_group_id,
+            ANY_VALUE(ad_group_name) AS ad_group_name,
+            ANY_VALUE(ad_group_status) AS ad_group_status,
+            ANY_VALUE(campaign_id) AS campaign_id,
+            ANY_VALUE(campaign_name) AS campaign_name,
+            ANY_VALUE(campaign_status) AS campaign_status,
+            ANY_VALUE(account_id) AS account_id,
+            ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(ocid) AS ocid,
+            ANY_VALUE(currency) AS currency
+        FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        LEFT JOIN `{bq_dataset}.ocid_mapping` USING(account_id)
+        GROUP BY 1
+    ),
     VideoDurations AS (
         SELECT
             video_id,
@@ -49,6 +65,7 @@ SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
     M.account_id,
     M.account_name,
+    M.ocid,
     M.currency,
     M.campaign_id,
     M.campaign_name,
@@ -113,7 +130,7 @@ SELECT
 FROM `{bq_dataset}.asset_conversion_split` AS AP
 LEFT JOIN `{bq_dataset}.app_conversions_mapping` AS ConversionMapping
   ON AP.conversion_id = ConversionMapping.conversion_id
-LEFT JOIN `{bq_dataset}.account_campaign_ad_group_mapping` AS M
+LEFT JOIN MappingTable AS M
   ON AP.ad_group_id = M.ad_group_id
 LEFT JOIN CampaignCostTable AS CampCost
     ON AP.date = CampCost.date
@@ -132,5 +149,5 @@ LEFT JOIN VideoDurations
   ON Assets.youtube_video_id = VideoDurations.video_id
 LEFT JOIN VideoOrientation
     ON Assets.youtube_video_id = VideoOrientation.video_id
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34
 );

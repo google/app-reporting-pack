@@ -88,8 +88,10 @@ WITH CampaignCostTable AS (
             ANY_VALUE(campaign_status) AS campaign_status,
             ANY_VALUE(account_id) AS account_id,
             ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(ocid) AS ocid,
             ANY_VALUE(currency) AS currency
         FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        LEFT JOIN `{bq_dataset}.ocid_mapping` USING(account_id)
         GROUP BY 1
     ),
     AssetReferenceTable AS (
@@ -127,6 +129,7 @@ SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
     M.account_id,
     M.account_name,
+    M.ocid,
     M.currency,
     M.campaign_id,
     M.campaign_name,
@@ -232,4 +235,4 @@ LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
         AND AP.network = AssetCohorts.network
         AND AP.asset_id = AssetCohorts.asset_id
         AND AP.field_type = AssetCohorts.field_type
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31);
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);

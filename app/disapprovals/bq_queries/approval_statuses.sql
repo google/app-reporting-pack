@@ -77,14 +77,17 @@ WITH
             ANY_VALUE(campaign_status) AS campaign_status,
             ANY_VALUE(account_id) AS account_id,
             ANY_VALUE(account_name) AS account_name,
+            ANY_VALUE(ocid) AS ocid,
             ANY_VALUE(currency) AS currency
         FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+        LEFT JOIN `{bq_dataset}.ocid_mapping` USING(account_id)
         GROUP BY 1
     )
 SELECT
     day,
     M.account_id,
     M.account_name,
+    M.ocid,
     M.currency,
     M.campaign_id,
     M.campaign_name,
@@ -129,4 +132,4 @@ LEFT JOIN `{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
 LEFT JOIN {bq_dataset}.asset_mapping AS Assets
   ON Disapprovals.asset_id = Assets.id
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27);
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28);

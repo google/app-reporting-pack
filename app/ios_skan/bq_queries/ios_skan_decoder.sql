@@ -26,8 +26,10 @@ AS (
       ANY_VALUE(campaign_status) AS campaign_status,
       ANY_VALUE(account_id) AS account_id,
       ANY_VALUE(account_name) AS account_name,
+      ANY_VALUE(ocid) AS ocid,
       ANY_VALUE(currency) AS currency
     FROM `{bq_dataset}.account_campaign_ad_group_mapping`
+    LEFT JOIN `{bq_dataset}.ocid_mapping` USING(account_id)
     GROUP BY 1
   ),
   SkanInputSchema AS (
@@ -46,6 +48,7 @@ AS (
       PARSE_DATE("%Y-%m-%d", CAST(date AS STRING)) AS day,
       M.account_id,
       M.account_name,
+      M.ocid,
       M.currency,
       M.campaign_id,
       M.campaign_name,
@@ -81,7 +84,7 @@ AS (
         AND ACS.app_id = S.app_id
     LEFT JOIN MappingTable AS M
       USING(campaign_id)
-    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18
+    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19
   )
   SELECT
     day,
@@ -127,5 +130,5 @@ AS (
     SUM(IF(bidding_strategy IN ("OPTIMIZE_IN_APP_CONVERSIONS_TARGET_CONVERSION_COST","OPTIMIZE_INSTALLS_WITHOUT_TARGET_INSTALL_COST"), sum_wo_null_zero_values, 0)) AS tcpa_skan_values_wo_null_zero,
     SUM(IF(bidding_strategy = "OPTIMIZE_RETURN_ON_ADVERTISING_SPEND", sum_wo_null_zero_values, 0)) AS troas_skan_values_wo_null_zero
   FROM PreparedData
-  GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21
+  GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22
   );
