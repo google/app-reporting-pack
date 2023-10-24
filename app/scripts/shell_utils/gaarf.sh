@@ -46,13 +46,3 @@ generate_output_tables() {
   gaarf-bq $(dirname $0)/core/bq_queries/*.sql \
     --project=$project --target=$bq_dataset_output $macros "$@"
 }
-
-save_initial() {
-  gaarf-bq $(dirname $0)/incremental/bq_queries/initial_run.sql \
-    --project=$project $initial_run_macros "$@"
-}
-
-save_incremental() {
-  gaarf-bq $(dirname $0)/incremental/bq_queries/incremental_saving.sql \
-    --project=$project $macros "$@"
-}

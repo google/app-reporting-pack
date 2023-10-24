@@ -20,7 +20,11 @@ AS (
     arr[SAFE_OFFSET(day)]
 );
 
-CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{date_iso}`
+{% if incremental == "true" %}
+    CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{date_iso}`
+{% else %}
+    CREATE OR REPLACE TABLE `{target_dataset}.asset_performance`
+{% endif %}
 AS (
 WITH CampaignCostTable AS (
     SELECT

@@ -113,6 +113,8 @@ infer_answer_from_config() {
   if [[ $value != "y" ]]; then
     if cat $config | grep -q "$section: true"; then
       value="y"
+    else
+      value=`cat $config | grep $section | cut -d ":" -f2- | head -n1 | sed "s/'//g" | sed 's/"//g'`
     fi
   fi
   declare -g "$section"="$value"
@@ -139,5 +141,23 @@ save_to_config() {
     else
       echo "$section: false" >> $config
     fi
+  fi
+}
+
+check_initial_load () {
+  infer_answer_from_config $config_file target_dataset
+  infer_answer_from_config $config_file initial_load_date
+  initial_date=`echo "$initial_load_date" | sed 's/-//g' | sed 's/ //g'`
+  infer_answer_from_config $config_file project
+  infer_answer_from_config $config_file start_date
+  # TODO (amarkin): dynamically specify table name
+  echo "SELECT * FROM ${target_dataset}.ad_group_network_split_${initial_date};" > /tmp/initial_load.sql
+
+  missing_initial_load=`gaarf-bq /tmp/initial_load.sql -c $config_file | grep "404 Not found" | wc -l`
+
+  if (( $missing_initial_load == 1 )) ; then
+    initial_load="y"
+  else
+    infer_answer_from_config $config_file initial_load
   fi
 }

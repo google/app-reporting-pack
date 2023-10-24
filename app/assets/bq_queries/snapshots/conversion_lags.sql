@@ -30,6 +30,7 @@ SELECT
     SUM(AP.view_through_conversions) AS view_through_conversions,
     SUM(AP.conversions_value) AS conversions_value
 FROM `{bq_dataset}.asset_performance` AS AP
+-- TODO: Remove join
 LEFT JOIN `{bq_dataset}.account_campaign_ad_group_mapping` AS M
   ON AP.ad_group_id = M.ad_group_id
 GROUP BY 1, 2, 3, 4, 5, 6);

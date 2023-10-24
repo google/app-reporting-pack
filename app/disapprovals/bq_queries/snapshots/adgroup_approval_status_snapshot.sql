@@ -1,4 +1,4 @@
--- Copyright 2023 Google LLC
+-- Copyright 2022 Google LLC
 --
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -12,12 +12,16 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- Save asset performance data for a single day
-CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{yesterday_iso}` AS
-SELECT * FROM `{target_dataset}.asset_performance_{date_iso}`
-WHERE day <= "{start_date}";
-
--- Save asset conversion_split data for a single day
-CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split_{yesterday_iso}` AS
-SELECT * FROM `{target_dataset}.asset_conversion_split_{date_iso}`
-WHERE day <= "{start_date}";
+-- Contains dynamics by ad_group approval status.
+CREATE OR REPLACE TABLE `{bq_dataset}.ad_group_approval_statuses_{date_iso}`
+AS (
+SELECT
+    CURRENT_DATE() AS day,
+    A.ad_group_id,
+    A.approval_status,
+    A.review_status,
+    A.policy_topic_type,
+    A.policy_topics,
+    "" AS evidences
+FROM `{bq_dataset}.ad_group_ad_disapprovals` AS A
+);

@@ -71,7 +71,7 @@ case $1 in
     initial_mode=0
     ;;
   --initial-load-start-date)
-    initial_mode_start_date=$1
+    initial_mode_date=$1
     ;;
   --backfill-only)
     backfill_only="y"
@@ -95,7 +95,7 @@ done
 
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
-API_VERSION="13"
+API_VERSION="14"
 #
 welcome() {
   echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
@@ -129,14 +129,7 @@ setup() {
     read -r bq_dataset
     bq_dataset=${bq_dataset:-arp}
 
-    if [[ $modules =~ "incremental" ]]; then
-      ask_for_incremental_saving
-    else
-      echo -n -e "Enter start_date in YYYY-MM-DD format or use :YYYYMMDD-90 for last 90 days (:YYYYMMDD-90): "
-      read -r start_date
-      echo -n -e "Enter end_date in YYYY-MM-DD format or use :YYYYMMDD-1 for yesterday (:YYYYMMDD-1): "
-      read -r end_date
-    fi
+    ask_for_incremental_saving
     start_date=${start_date:-:YYYYMMDD-90}
     end_date=${end_date:-:YYYYMMDD-1}
 
@@ -160,7 +153,11 @@ setup() {
     config_file="app/$solution_name_lowercase.yaml"
     save_config="--save-config --config-destination=$config_file"
     echo -e "${COLOR}Saving configuration to $config_file${NC}"
-    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+    if [[ $initial_load = "y" ]]; then
+      fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run --macro.initial_load_date=$initial_load_date
+    else
+      fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+    fi
     generate_output_tables $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
     if [[ $skan_answer = "y" ]]; then
@@ -191,7 +188,11 @@ setup() {
   fi
   save_config="--save-config --config-destination=$config_file"
   echo -e "${COLOR}Saving configuration to $config_file${NC}"
-  fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+  if [[ $initial_load = "y" ]]; then
+    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run --macro.initial_load_date=$initial_load_date
+  else
+    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+  fi
   generate_output_tables $save_config --log=$loglevel --dry-run
   fetch_video_orientation $save_config --log=$loglevel --dry-run
   if [[ $skan_answer = "y" ]]; then
@@ -241,11 +242,14 @@ print_configuration() {
 
 ###
 
+
 run_google_ads_queries() {
   echo -e "${COLOR}===$1===${NC}"
+    local config_file=${2:-$config_file}
     gaarf $(dirname $0)/$1/google_ads_queries/*.sql -c=$config_file \
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
 }
+
 run_bq_queries() {
   if [ -d "$(dirname $0)/$1/bq_queries/snapshots/" ]; then
     echo -e "${COLOR}===generating snapshots for $1===${NC}"
@@ -263,6 +267,25 @@ run_bq_queries() {
       gaarf-bq $(dirname $0)/$1/bq_queries/legacy_views/*.sql -c=$config_file --log=$loglevel
     fi
   fi
+
+  if [ -d "$(dirname $0)/$1/bq_queries/incremental/" ]; then
+    if [[ $initial_load = "y" ]]; then
+      echo -e "${COLOR}===performing initial load of performance data for $1===${NC}"
+      gaarf-bq $(dirname $0)/$1/bq_queries/incremental/initial_load.sql \
+        --project=`echo $project` --macro.target_dataset=`echo $target_dataset` \
+        --macro.initial_date=`echo $initial_date` \
+        --macro.start_date=`echo $start_date` --log=$loglevel
+    else
+      infer_answer_from_config $config_file incremental
+      if [[ $incremental = "y" ]]; then
+        echo -e "${COLOR}===saving incremental performance data for $1===${NC}"
+        gaarf-bq $(dirname $0)/$1/bq_queries/incremental/incremental_saving.sql \
+        --project=`echo $project` --macro.target_dataset=`echo $target_dataset` \
+        --macro.initial_date=`echo $initial_date` \
+        --macro.start_date=`echo $start_date` --log=$loglevel
+      fi
+    fi
+  fi
 }
 
 run_with_config() {
@@ -277,17 +300,36 @@ run_with_config() {
         --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
       exit
   fi
+  check_initial_load
+  if [[ $initial_load = "y" ]];
+  then
+    cat $config_file | sed '/start_date/d;' | \
+            sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
+    runtime_config=/tmp/$solution_name_lowercase.yaml
+    # TODO: Remove debug statement
+    echo "Doing initial load and here's runtime config:"
+    cat $runtime_config
+  else
+    runtime_config=$config_file
+  fi
   echo -e "${COLOR}===fetching reports===${NC}"
   if [[ $modules =~ "core" ]]; then
-    run_google_ads_queries "core"
+    run_google_ads_queries "core" $runtime_config
     echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
     $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
       -c=$config_file \
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    infer_answer_from_config $config_file backfill
+    if [[ $backfill = "y" ]]; then
+      echo -e "${COLOR}===backfilling snapshots===${NC}"
+        $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
+          -c=$config_file \
+          --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    fi
     run_bq_queries "core"
   fi
   if [[ $modules =~ "assets" ]]; then
-    run_google_ads_queries "assets"
+    run_google_ads_queries "assets" $runtime_config
       echo -e "${COLOR}===getting video orientation===${NC}"
       $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
         -c=$config_file \
@@ -298,26 +340,17 @@ run_with_config() {
     run_google_ads_queries "disapprovals"
     run_bq_queries "disapprovals"
   fi
+  if [[ $modules =~ "geo" ]]; then
+    run_google_ads_queries "geo"
+    run_bq_queries "geo"
+  fi
   if [[ $modules =~ "ios_skan" ]]; then
     if cat "$config_file" | grep -q skan_mode:; then
-    run_google_ads_queries "ios_skan"
+    run_google_ads_queries "ios_skan" $runtime_config
     echo -e "${COLOR}===getting SKAN schema===${NC}"
     $(which python3) $(dirname $0)/scripts/create_skan_schema.py -c=$config_file
     run_bq_queries "ios_skan"
     fi
-  fi
-  infer_answer_from_config $config_file backfill
-  if [[ $backfill = "y" ]]; then
-    echo -e "${COLOR}===backfilling snapshots===${NC}"
-      $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
-        -c=$config_file \
-        --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
-  fi
-  infer_answer_from_config $config_file legacy
-  infer_answer_from_config $config_file incremental
-  if [[ $incremental = "y" ]]; then
-    echo -e "${COLOR}===Saving increments and define views===${NC}"
-    gaarf-bq $(dirname $0)/incremental/incremental_saving.sql -c=$config_file --log=$loglevel
   fi
 }
 
@@ -332,7 +365,7 @@ project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
 parse_yaml $ads_config "GOOGLE_ADS_"
 customer_id=$GOOGLE_ADS_login_customer_id
 video_parsing_mode_output="placeholders"
-cohorts_final="0,1,2,3,5,7,14,30"
+cohorts_final="1,2,3,5,7,14,30"
 skan_schema_mode="placeholders"
 generate_bq_macros
 
@@ -344,7 +377,6 @@ if [[ $generate_config_only = "y" ]]; then
   welcome
   setup
 fi
-
 
 if [[ -n "$config_file" || -f $solution_name_lowercase.yaml ]]; then
   config_file=${config_file:-$solution_name_lowercase.yaml}

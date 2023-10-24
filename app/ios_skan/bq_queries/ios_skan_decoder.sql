@@ -13,7 +13,11 @@
 # limitations under the License.
 
 -- Contains campaign level iOS SKAN performance with decoded events from SKAN input schema
-CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{date_iso}`
+{% if incremental == "true" %}
+  CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{date_iso}`
+{% else %}
+  CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder`
+{% endif %}
 AS (
   WITH MappingTable AS (
     SELECT

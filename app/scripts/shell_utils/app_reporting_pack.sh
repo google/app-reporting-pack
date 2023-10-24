@@ -84,8 +84,8 @@ ask_for_video_orientation() {
 }
 
 ask_for_cohorts() {
-  default_cohorts=(0 1 3 5 7 14 30)
-  echo -e "${COLOR}App Reporting Pack will calculate cohort stats for conversion lags 0,1,3,5,7,14,30.${NC}"
+  default_cohorts=(1 3 5 7 14 30)
+  echo -e "${COLOR}App Reporting Pack will calculate cohort stats for conversion lags 1,3,5,7,14,30.${NC}"
   echo -n "Provide additional conversion lag days as comma separated list or press Enter to use the ones above: "
   read -r cohorts_string
   cohorts_string=${cohorts_string:-0}
@@ -105,26 +105,20 @@ ask_for_incremental_saving() {
   incremental=$(convert_answer $incremental)
   if [[ $incremental = "y" ]]; then
     get_start_end_date
-    initial_mode=1
+    initial_load="n"
     echo -n -e "\tPlease provide initial date for the extended load in YYYY-MM-DD format, i.e. 2022-01-01: "
-    read -r initial_mode_start_date
-    if [ -z $initial_mode_start_date ]; then
+    read -r initial_load_date
+    if [ -z $initial_load_date ]; then
       echo -e "\tYou haven't entered initial date"
       echo -n -e "\tPlease provide initial date or press Enter to skip: "
-      read -r initial_mode_start_date
+      read -r initial_load_date
     fi
-    if [ ! -z $initial_mode_start_date ]; then
-      initial_date=`echo $initial_mode_start_date | sed 's/-//g'`
+    if [ ! -z $initial_load_date ]; then
       if echo "$start_date" | grep -E ":YYYYMMDD-*"; then
-        cutoff_days_ago=`echo $start_date | cut -d "-" -f2`
-        cutoff_date=`date --date="$cutoff_days_ago day ago" +%Y-%m-%d`
-        initial_run_macros="$macros --macro.initial_date=$initial_date --macro.cutoff_date=$cutoff_date --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output"
+        initial_load="y"
       else
         echo "start_date is not dynamic ($start_date), skipping initial load"
-        initial_mode=0
       fi
-    else
-      initial_mode=0
     fi
   else
     get_start_end_date
@@ -135,9 +129,12 @@ generate_bq_macros() {
   bq_dataset_output=$(echo $bq_dataset"_output")
   bq_dataset_legacy=$(echo $bq_dataset"_legacy")
   skan_schema_table=$(echo $bq_dataset".skan_schema")
-  macros=$(echo --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy --template.cohort_days=$cohorts_final --macro.skan_schema_input_table=$skan_schema_input_table)
+  macros=$(echo --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy  --template.cohort_days=$cohorts_final --macro.skan_schema_input_table=$skan_schema_input_table)
   if [[ $skan_answer = "y" ]]; then
     macros="$macros --template.has_skan=true"
+  fi
+  if [[ $initial_load = "y" || $incremental = "y" ]]; then
+    macros="$macros --template.incremental=true"
   fi
 }
 

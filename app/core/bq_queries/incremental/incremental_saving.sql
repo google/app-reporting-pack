@@ -12,13 +12,8 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
--- Save asset performance data for a single day
-CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{yesterday_iso}` AS
-WITH Temp AS (
-    SELECT
-        *,
-        MIN(day) OVER() AS min_day
-    FROM `{target_dataset}.asset_performance_{date_iso}`
-)
-SELECT * EXCEPT (min_day) FROM temp WHERE day = min_day;
+-- Save ad_group performance data for a single day
+CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{yesterday_iso}` AS
+SELECT * FROM `{target_dataset}.ad_group_network_split_{date_iso}`
+WHERE day <= "{start_date}";
 

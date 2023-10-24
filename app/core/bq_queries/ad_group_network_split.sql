@@ -13,7 +13,11 @@
 -- limitations under the License.
 
 -- Contains ad group level performance segmented by network (Search, Display, YouTube).
-CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{date_iso}`
+{% if incremental == "true" %}
+    CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{date_iso}`
+{% else %}
+    CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split`
+{% endif %}
 AS (
     WITH ConversionsTable AS (
         SELECT

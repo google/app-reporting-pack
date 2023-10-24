@@ -12,8 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
--- Contains dynamics by approval status.
-CREATE OR REPLACE TABLE `{target_dataset}.geo_performance_{date_iso}`
+-- Contains geo performance data.
+{% if incremental == "true" %}
+    CREATE OR REPLACE TABLE `{target_dataset}.geo_performance_{date_iso}`
+{% else %}
+    CREATE OR REPLACE TABLE `{target_dataset}.geo_performance`
+{% endif %}
 AS (
     WITH ConversionsTable AS (
         SELECT

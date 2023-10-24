@@ -14,7 +14,11 @@
 
 -- Contains conversion metrics (*conversions and *converions_value) on asset_id level
 -- segmented by network (Search, Display, YouTube) and conversion_name.
-CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split`
+{% if incremental == "true" %}
+    CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split_{date_iso}`
+{% else %}
+    CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split`
+{% endif %}
 AS (
 WITH CampaignCostTable AS (
     SELECT
