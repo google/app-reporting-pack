@@ -12,6 +12,7 @@ case $1 in
 		config=$1
 		project_id=`grep -A1 "gaarf-bq" $config | tail -n1 | cut -d ":" -f 2 | tr -d " "`
 		dataset_id=`grep target_dataset $config | tail -n1 | cut -d ":" -f 2 | tr -d " "`
+		incremental=`grep 'incremental: true' $config | wc -l`
 		;;
   -p|--project)
 		shift
@@ -41,7 +42,12 @@ case $1 in
 	shift
 done
 
-link=`cat $(dirname $0)/linking_api.http | sed "s/REPORT_ID/$report_id/; s/REPORT_NAME/$report_name/; s/YOUR_PROJECT_ID/$project_id/g; s/YOUR_DATASET_ID/$dataset_id/g" | sed '/^$/d;' | tr -d '\n'`
+if [ $incremental -eq 0 ]; then
+	link=`cat $(dirname $0)/linking_api.http | sed "s/REPORT_ID/$report_id/; s/REPORT_NAME/$report_name/; s/YOUR_PROJECT_ID/$project_id/g; s/YOUR_DATASET_ID/$dataset_id/g" | sed '/^$/d;' | tr -d '\n'`
+else
+	echo "open incremental version"
+	link=`cat $(dirname $0)/linking_api_incremental.http | sed "s/REPORT_ID/$report_id/; s/REPORT_NAME/$report_name/; s/YOUR_PROJECT_ID/$project_id/g; s/YOUR_DATASET_ID/$dataset_id/g" | sed '/^$/d;' | tr -d '\n'`
+fi
 if [ $return_link -eq 1 ]; then
   echo "$link"
 else
