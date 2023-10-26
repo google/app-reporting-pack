@@ -90,6 +90,7 @@ AS (
     day,
     account_id,
     account_name,
+    ocid,
     currency,
     campaign_id,
     campaign_name,

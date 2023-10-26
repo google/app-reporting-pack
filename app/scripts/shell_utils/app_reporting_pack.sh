@@ -105,11 +105,6 @@ ask_for_incremental_saving() {
   echo -n "Download historical performance data starting from YYYY-MM-DD or press Enter to skip: "
   read -r initial_load_date
   initial_load="n"
-  if [ -z $initial_load_date ]; then
-    echo -e "\tYou haven't entered initial date"
-    echo -n -e "\tPlease provide initial date or press Enter to skip: "
-    read -r initial_load_date
-  fi
   if [ ! -z $initial_load_date ]; then
     validate_load_date $initial_load_date
     if [[ $invalid_initial_load_date = "y" ]]; then
@@ -144,8 +139,7 @@ generate_bq_macros() {
 get_start_end_date() {
   echo -n -e "Enter reporting window in days (default '90 days' but not less than conversion window): "
   read -r start_date_days
-  start_date=":YYYYMMDD-${start_date_days}"
-  start_date=${start_date:-:YYYYMMDD-90}
+  start_date=":YYYYMMDD-${start_date_days:-90}"
   end_date=":YYYYMMDD-1"
 }
 

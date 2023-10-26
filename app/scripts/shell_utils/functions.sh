@@ -147,16 +147,20 @@ save_to_config() {
 check_initial_load () {
   infer_answer_from_config $config_file target_dataset
   infer_answer_from_config $config_file initial_load_date
-  initial_date=`echo "$initial_load_date" | sed 's/-//g' | sed 's/ //g'`
   infer_answer_from_config $config_file project
   infer_answer_from_config $config_file start_date
-  echo "SELECT * FROM ${target_dataset}.ad_group_network_split_${initial_date};" > /tmp/initial_load.sql
+  if [[ ! -z $initial_load_date ]]; then
+    initial_date=`echo "$initial_load_date" | sed 's/-//g' | sed 's/ //g'`
+    echo "SELECT * FROM ${target_dataset}.ad_group_network_split_${initial_date};" > /tmp/initial_load.sql
 
-  missing_initial_load=`gaarf-bq /tmp/initial_load.sql -c $config_file | grep "404 Not found" | wc -l`
+    missing_initial_load=`gaarf-bq /tmp/initial_load.sql -c $config_file | grep "404 Not found" | wc -l`
 
-  if (( $missing_initial_load == 1 )) ; then
-    initial_load="y"
+    if (( $missing_initial_load == 1 )) ; then
+      initial_load="y"
+    else
+      infer_answer_from_config $config_file initial_load
+    fi
   else
-    infer_answer_from_config $config_file initial_load
+    initial_load="n"
   fi
 }
