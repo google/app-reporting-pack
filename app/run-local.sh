@@ -44,6 +44,7 @@ quiet="n"
 generate_config_only="n"
 modules="core,assets,disapprovals,ios_skan,geo"
 incremental="y"
+backfill="y"
 
 while :; do
 case $1 in
@@ -306,9 +307,6 @@ run_with_config() {
     cat $config_file | sed '/start_date/d;' | \
             sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
     runtime_config=/tmp/$solution_name_lowercase.yaml
-    # TODO: Remove debug statement
-    echo "Doing initial load and here's runtime config:"
-    cat $runtime_config
   else
     runtime_config=$config_file
   fi
@@ -321,19 +319,28 @@ run_with_config() {
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
     infer_answer_from_config $config_file backfill
     if [[ $backfill = "y" ]]; then
-      echo -e "${COLOR}===backfilling snapshots===${NC}"
+      echo -e "${COLOR}===backfilling bid budget snapshots===${NC}"
         $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
           -c=$config_file \
+          --restore-bid-budgets \
           --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
     fi
     run_bq_queries "core"
   fi
   if [[ $modules =~ "assets" ]]; then
     run_google_ads_queries "assets" $runtime_config
-      echo -e "${COLOR}===getting video orientation===${NC}"
-      $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
-        -c=$config_file \
-        --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    echo -e "${COLOR}===getting video orientation===${NC}"
+    $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
+      -c=$config_file \
+      --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    infer_answer_from_config $config_file backfill
+    if [[ $backfill = "y" ]]; then
+      echo -e "${COLOR}===backfilling asset cohort snapshots===${NC}"
+        $(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
+          -c=$config_file \
+          --restore-cohorts \
+          --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    fi
     run_bq_queries "assets"
   fi
   if [[ $modules =~ "disapprovals" ]]; then

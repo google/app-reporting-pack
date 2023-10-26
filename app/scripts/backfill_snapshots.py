@@ -17,34 +17,154 @@ from datetime import datetime, timedelta
 from bisect import bisect_left
 import itertools
 import logging
-from rich.logging import RichHandler
 from functools import reduce
 import pandas as pd
 import numpy as np
-from google.api_core.exceptions import Conflict
+from google.api_core.exceptions import Conflict, NotFound, BadRequest
 from google.cloud import bigquery
 from smart_open import open
 import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.query_executor import AdsReportFetcher
-from gaarf.cli.utils import GaarfConfigBuilder, init_logging
+from gaarf.cli.utils import GaarfConfig, GaarfConfigBuilder, init_logging
 
 import src.queries as queries
 from src.utils import write_data_to_bq
 
 
-def restore_missing_cohorts(bq_client: bigquery.Client, bq_dataset: str) -> None:
-    job = bq_client.query(
-        f"SELECT DISTINCT day_of_interaction AS day FROM `{bq_dataset}.conversion_lags_*` ORDER BY 1"
-    )
-    snapshot_dates = set(job.result().to_dataframe()["day"])
+def restore_missing_bid_budgets(google_ads_client: GoogleAdsApiClient,
+                                config: GaarfConfig,
+                                bq_client: bigquery.Client,
+                                bq_dataset: str) -> None:
+    try:
+        job = bq_client.query(
+            f"SELECT DISTINCT CAST(day AS STRING) AS day "
+            f"FROM `{bq_dataset}.bid_budgets_*`"
+        )
+        result = job.result()
+    except BadRequest:
+        return
+    snapshot_dates = set(result.to_dataframe()["day"])
+
+    # Change history can be fetched only for the last 28 days
+    days_ago_28 = (datetime.now() - timedelta(days=28)).strftime("%Y-%m-%d")
+    days_ago_1 = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    dates = [
+        date.strftime("%Y-%m-%d") for date in pd.date_range(
+            days_ago_28, days_ago_1).to_pydatetime().tolist()
+    ]
+    missing_dates = set(dates).difference(snapshot_dates)
+    if not missing_dates:
+        logging.info("No bid budget snapshots to backfill")
+    report_fetcher = AdsReportFetcher(google_ads_client)
+    customer_ids = report_fetcher.expand_mcc(config.account,
+                                             config.customer_ids_query)
+
+    logging.info("Restoring change history for %d accounts: %s",
+                 len(customer_ids), customer_ids)
+    # extract change history report
+    change_history = report_fetcher.fetch(
+        queries.ChangeHistory(days_ago_28, days_ago_1),
+        customer_ids).to_pandas()
+
+    logging.info("Restoring change history for %d accounts: %s",
+                 len(customer_ids), customer_ids)
+    # Filter rows where budget change occurred
+    budgets = change_history.loc[(change_history["old_budget_amount"] > 0)
+                                 & (change_history["new_budget_amount"] > 0)]
+    if not budgets.empty:
+        budgets = format_partial_change_history(budgets, "budget_amount")
+        logging.info("%d budgets events were found", len(budgets))
+    else:
+        logging.info("no budgets events were found")
+
+    # Filter rows where bid change occurred
+    target_cpas = change_history.loc[change_history["old_target_cpa"] > 0]
+    if not target_cpas.empty:
+        target_cpas = format_partial_change_history(target_cpas, "target_cpa")
+        logging.info("%d target_cpa events were found", len(target_cpas))
+    else:
+        logging.info("no target_cpa events were found")
+
+    target_roas = change_history.loc[change_history["old_target_roas"] > 0]
+    if not target_roas.empty:
+        target_roas = format_partial_change_history(target_roas, "target_roas")
+        logging.info("%d target_roas events were found", len(target_roas))
+    else:
+        logging.info("no target_roas events were found")
+    # get all campaigns with an non-zero impressions to build placeholders df
+    campaign_ids = report_fetcher.fetch(
+        queries.CampaignsWithSpend(days_ago_28, days_ago_1),
+        customer_ids).to_pandas()
+    logging.info("Change history will be restored for %d campaign_ids",
+                 len(campaign_ids))
+
+    # get latest bids and budgets to replace values in campaigns without any changes
+    current_bids_budgets_active_campaigns = report_fetcher.fetch(
+        queries.BidsBudgetsActiveCampaigns(), customer_ids).to_pandas()
+    current_bids_budgets_inactive_campaigns = report_fetcher.fetch(
+        queries.BidsBudgetsInactiveCampaigns(days_ago_28, days_ago_1),
+        customer_ids).to_pandas()
+    current_bids_budgets = pd.concat([
+        current_bids_budgets_inactive_campaigns,
+        current_bids_budgets_active_campaigns
+    ],
+                                     sort=False).drop_duplicates()
+
+    # generate a placeholder dataframe that contain possible variations of
+    # campaign_ids with non-zero impressions and last 28 days date range
+    placeholders = pd.DataFrame(data=list(
+        itertools.product(list(campaign_ids.campaign_id.values), dates)),
+                                columns=["campaign_id", "day"])
+
+    restored_budgets = restore_history(placeholders, budgets,
+                                       current_bids_budgets, "budget_amount")
+    restored_target_cpas = restore_history(placeholders, target_cpas,
+                                           current_bids_budgets, "target_cpa")
+    restored_target_roas = restore_history(placeholders, target_roas,
+                                           current_bids_budgets, "target_roas")
+    # Combine restored change histories
+    restored_bid_budget_history = reduce(
+        lambda left, right: pd.merge(
+            left, right, on=["day", "campaign_id"], how="left"),
+        [restored_budgets, restored_target_cpas, restored_target_roas])
+
+    # Writer data for each date to BigQuery dated table (with _YYYYMMDD suffix)
+    for date in missing_dates:
+        daily_history = restored_bid_budget_history.loc[
+            restored_bid_budget_history["day"] == date]
+        daily_history.loc[:, ("day")] = datetime.strptime(date,
+                                                          "%Y-%m-%d").date()
+        table_id = f"{bq_dataset}.bid_budgets_{date.replace('-','')}"
+        try:
+            write_data_to_bq(bq_client=bq_client,
+                             data=daily_history,
+                             table_id=table_id,
+                             write_disposition="WRITE_EMPTY")
+            logging.info("table '%s' has been created", table_id)
+        except Conflict as e:
+            logging.warning("table '%s' already exists", table_id)
+
+
+def restore_missing_cohorts(bq_client: bigquery.Client,
+                            bq_dataset: str) -> None:
+    try:
+        job = bq_client.query(
+            f"SELECT DISTINCT _TABLE_SUFFIX AS day FROM "
+            f"`{bq_dataset}.conversion_lags_*` ORDER BY 1"
+        )
+        result = job.result()
+    except BadRequest:
+        return
+    snapshot_dates = set(result.to_dataframe()["day"])
     dates = [
         date for date in pd.date_range(min(snapshot_dates), max(
             snapshot_dates)).to_pydatetime().tolist()
     ]
     missing_dates = list(set(dates).difference(snapshot_dates))
-    snapshot_dates = sorted(list(snapshot_dates))
+    snapshot_dates = sorted(
+        [datetime.strptime(date, "%Y%m%d").date() for date in snapshot_dates])
     if not missing_dates:
         logging.info("No asset cohort snapshots to backfill")
         return
@@ -126,9 +246,12 @@ def main():
     parser.add_argument("--output", dest="save", default="bq")
     parser.add_argument("--ads-config", dest="ads_config")
     parser.add_argument("--account", dest="customer_id")
-    parser.add_argument("--api-version", dest="api_version", default="12")
+    parser.add_argument("--api-version", dest="api_version", default="14")
     parser.add_argument("--log", "--loglevel", dest="loglevel", default="info")
     parser.add_argument("--logger", dest="logger", default="local")
+    parser.add_argument("--restore-bid-budgets",
+                        dest="bid_budgets",
+                        action="store_true")
     parser.add_argument("--restore-cohorts",
                         dest="cohorts",
                         action="store_true")
@@ -148,119 +271,13 @@ def main():
     bq_project = config.writer_params.get("project")
     bq_dataset = config.writer_params.get("dataset")
     bq_client = bigquery.Client(bq_project)
-    job = bq_client.query(
-        f"SELECT DISTINCT CAST(day AS STRING) AS day FROM `{bq_dataset}.bid_budgets_*`"
-    )
-    snapshot_dates = set(job.result().to_dataframe()["day"])
-
-    # Change history can be fetched only for the last 28 days
-    days_ago_28 = (datetime.now() - timedelta(days=28)).strftime("%Y-%m-%d")
-    days_ago_1 = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    dates = [
-        date.strftime("%Y-%m-%d") for date in pd.date_range(
-            days_ago_28, days_ago_1).to_pydatetime().tolist()
-    ]
-    missing_dates = set(dates).difference(snapshot_dates)
-    if not missing_dates:
-        logger.info("No bid budget snapshots to backfill")
-        if not args[0].cohorts:
-            return
-        else:
-            restore_missing_cohorts(bq_client, bq_dataset)
-            return
-
     with open(args[0].ads_config, "r", encoding="utf-8") as f:
         google_ads_config_dict = yaml.safe_load(f)
     google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
-    report_fetcher = AdsReportFetcher(google_ads_client)
-    customer_ids = report_fetcher.expand_mcc(config.account,
-                                             config.customer_ids_query)
-
-    logger.info("Restoring change history for %d accounts: %s",
-                len(customer_ids), customer_ids)
-    # extract change history report
-    change_history = report_fetcher.fetch(
-        queries.ChangeHistory(days_ago_28, days_ago_1),
-        customer_ids).to_pandas()
-
-    logger.info("Restoring change history for %d accounts: %s",
-                len(customer_ids), customer_ids)
-    # Filter rows where budget change occurred
-    budgets = change_history.loc[(change_history["old_budget_amount"] > 0)
-                                 & (change_history["new_budget_amount"] > 0)]
-    if not budgets.empty:
-        budgets = format_partial_change_history(budgets, "budget_amount")
-        logger.info("%d budgets events were found", len(budgets))
-    else:
-        logger.info("no budgets events were found")
-
-    # Filter rows where bid change occurred
-    target_cpas = change_history.loc[change_history["old_target_cpa"] > 0]
-    if not target_cpas.empty:
-        target_cpas = format_partial_change_history(target_cpas, "target_cpa")
-        logger.info("%d target_cpa events were found", len(target_cpas))
-    else:
-        logger.info("no target_cpa events were found")
-
-    target_roas = change_history.loc[change_history["old_target_roas"] > 0]
-    if not target_roas.empty:
-        target_roas = format_partial_change_history(target_roas, "target_roas")
-        logger.info("%d target_roas events were found", len(target_roas))
-    else:
-        logger.info("no target_roas events were found")
-    # get all campaigns with an non-zero impressions to build placeholders df
-    campaign_ids = report_fetcher.fetch(
-        queries.CampaignsWithSpend(days_ago_28, days_ago_1),
-        customer_ids).to_pandas()
-    logger.info("Change history will be restored for %d campaign_ids",
-                len(campaign_ids))
-
-    # get latest bids and budgets to replace values in campaigns without any changes
-    current_bids_budgets_active_campaigns = report_fetcher.fetch(
-        queries.BidsBudgetsActiveCampaigns(), customer_ids).to_pandas()
-    current_bids_budgets_inactive_campaigns = report_fetcher.fetch(
-        queries.BidsBudgetsInactiveCampaigns(days_ago_28, days_ago_1),
-        customer_ids).to_pandas()
-    current_bids_budgets = pd.concat([
-        current_bids_budgets_inactive_campaigns,
-        current_bids_budgets_active_campaigns
-    ],
-                                     sort=False).drop_duplicates()
-
-    # generate a placeholder dataframe that contain possible variations of
-    # campaign_ids with non-zero impressions and last 28 days date range
-    placeholders = pd.DataFrame(data=list(
-        itertools.product(list(campaign_ids.campaign_id.values), dates)),
-                                columns=["campaign_id", "day"])
-
-    restored_budgets = restore_history(placeholders, budgets,
-                                       current_bids_budgets, "budget_amount")
-    restored_target_cpas = restore_history(placeholders, target_cpas,
-                                           current_bids_budgets, "target_cpa")
-    restored_target_roas = restore_history(placeholders, target_roas,
-                                           current_bids_budgets, "target_roas")
-    # Combine restored change histories
-    restored_bid_budget_history = reduce(
-        lambda left, right: pd.merge(
-            left, right, on=["day", "campaign_id"], how="left"),
-        [restored_budgets, restored_target_cpas, restored_target_roas])
-
-    # Writer data for each date to BigQuery dated table (with _YYYYMMDD suffix)
-    for date in missing_dates:
-        daily_history = restored_bid_budget_history.loc[
-            restored_bid_budget_history["day"] == date]
-        daily_history.loc[:, ("day")] = datetime.strptime(date,
-                                                          "%Y-%m-%d").date()
-        table_id = f"{bq_project}.{bq_dataset}.bid_budgets_{date.replace('-','')}"
-        try:
-            write_data_to_bq(bq_client=bq_client,
-                             data=daily_history,
-                             table_id=table_id,
-                             write_disposition="WRITE_EMPTY")
-            logger.info("table '%s' has been created", table_id)
-        except Conflict as e:
-            logger.warning("table '%s' already exists", table_id)
+    if args[0].bid_budgets:
+        restore_missing_bid_budgets(google_ads_client, config, bq_client,
+                                    bq_dataset)
     if args[0].cohorts:
         restore_missing_cohorts(bq_client, bq_dataset)
 
