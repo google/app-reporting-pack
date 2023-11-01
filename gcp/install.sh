@@ -33,7 +33,7 @@ pip install --require-hashes -r ./app/requirements.txt --no-deps
 echo -e "${CYAN}Generating configuration...${WHITE}"
 RUNNING_IN_GCE=true
 export RUNNING_IN_GCE   # signaling to run-local.sh that we're runnign inside GCE (there'll be less questions)
-./app/run-local.sh --generate-config-only
+./app/run-local.sh --generate-config-only --validate-google-ads-config
 
 # deploy solution
 echo -e "${CYAN}Deploying Cloud components...${WHITE}"
