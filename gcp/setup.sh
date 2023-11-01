@@ -94,7 +94,7 @@ create_registry() {
   REPO_EXISTS=$(gcloud artifacts repositories list --location=$REPOSITORY_LOCATION --filter="REPOSITORY=projects/'$PROJECT_ID'/locations/'$REPOSITORY_LOCATION'/repositories/'"$REPOSITORY"'" --format="value(REPOSITORY)" 2>/dev/null)
   if [[ ! -n $REPO_EXISTS ]]; then
     echo "Creating a repository in Artifact Registry"
-    # repo doesn't exist, creating    
+    # repo doesn't exist, creating
     gcloud artifacts repositories create ${REPOSITORY} \
         --repository-format=docker \
         --location=$REPOSITORY_LOCATION
@@ -125,6 +125,7 @@ set_iam_permissions() {
   gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/artifactregistry.repoAdmin
   gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/compute.admin
   gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/monitoring.editor
+  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/logging.logWriter
 }
 
 
