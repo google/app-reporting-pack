@@ -42,6 +42,7 @@ solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
 
 quiet="n"
 generate_config_only="n"
+validate_ads_config="n"
 modules="core,assets,disapprovals,ios_skan,geo"
 incremental="y"
 backfill="y"
@@ -80,6 +81,9 @@ case $1 in
     ;;
   --generate-config-only)
     generate_config_only="y"
+    ;;
+  --validate-google-ads-config)
+    validate_ads_config="y"
     ;;
   --modules)
     shift
@@ -220,28 +224,11 @@ print_configuration() {
   echo "  Reporting window: Last $start_date_days days"
   echo "  Ads config: $ads_config"
   echo "  Cohorts: $cohorts_final"
-  echo "  Video parsing mode: $video_parsing_mode_output"
+  echo "  Parse video dimensions: $video_parsing_mode_output"
   if [[ $skan_answer = "y" ]]; then
     echo "  SKAN schema mode: $skan_schema_mode"
   fi
 }
-
-###
-# if [[ $initial_mode -eq 1 ]]; then
-#     if [[ $end_date == *"YYYYMMDD"* ]]; then
-#       end_date_days_ago=$(echo $end_date | cut -d '-' -f2)
-#       end_date_formatted=`date --date="$end_date_days_ago day ago" +%Y-%m-%d`
-#     else
-#       end_date_formatted=$end_date
-#     fi
-#     echo -e "${COLOR}===Extending fetching period: $initial_mode_start_date - $end_date_formatted===${NC}"
-#     start_date=$initial_mode_start_date
-#     fetch_reports --log=$loglevel --api-version=$API_VERSION
-#   else
-#     fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION
-#   fi
-
-###
 
 
 run_google_ads_queries() {
@@ -362,7 +349,7 @@ run_with_config() {
 }
 
 check_gaarf_version
-check_ads_config
+check_ads_config $validate_ads_config
 
 # defaults
 start_date_days=90
@@ -373,7 +360,7 @@ project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
 parse_yaml $ads_config "GOOGLE_ADS_"
 customer_id=$GOOGLE_ADS_login_customer_id
 video_parsing_mode_output="placeholders"
-cohorts_final="1,2,3,5,7,14,30"
+cohorts_final="1,3,5,7,14,30"
 skan_schema_mode="placeholders"
 generate_bq_macros
 

@@ -29,57 +29,52 @@ ask_for_skan_queries() {
 }
 
 ask_for_video_orientation() {
-  echo -e "${COLOR}In order to have video orientation dimension in your report you might want to set up video orientation parsing${NC}"
+  echo -e "${COLOR}Setup asset video orientation parsing:${NC}"
   echo -e "${COLOR}(More at https://github.com/google/app-reporting-pack/blob/main/docs/how-to-get-video-orientation-for-assets.md):${NC}"
-  echo -n "Do you want to set it up now [Y/n]: "
-  read -r video_orientation_answer
-  video_orientation_answer=$(convert_answer $video_orientation_answer)
-  if [[ $video_orientation_answer = "y" ]]; then
-    echo -e "Please select one of the following options:"
-    echo -e "\t1. Video dimension is encoded in asset names."
-    echo -e "\t2. I can access YouTube Data API (needs authorization) to fetch orientation from there."
-    echo -e "\t3. Skip for now"
-    echo -n "Specify option or Press Enter to skip:  "
-    read -r video_parsing_mode
-    video_parsing_mode=$(convert_answer $video_parsing_mode)
-    video_parsing_mode=${video_parsing_mode:-3}
-    if [[ $video_parsing_mode = "1" ]]; then
-      video_parsing_mode_output="regex"
-      echo -n "(Optional) Provide sample asset_name to validate parsing [Q to skip]: "
-      read -r template_string
-      echo -n "Select the delimiter for asset_name: "
-      read -r element_delimiter
-      if [[ $template_string != "q" ]]; then
-        element_delimiter=$(convert_answer $element_delimiter)
-        IFS="$element_delimiter" read -ra splitted <<< "$template_string"
-        for i in "${!splitted[@]}"; do
-          printf "$i) ${splitted[$i]}; "
-        done
-        echo
-      fi
-
-      echo -n "Select the orientation position (starting from zero): "
-      read -r orientation_position
-      orientation_position=$(convert_answer $orientation_position)
-
-      if [[ $template_string != "q" ]]; then
-        video_orientation=`echo ${splitted[$orientation_position]}`
-        echo "Video orientation: $video_orientation"
-      fi
-      echo -n "Select the orientation_delimiter: "
-      read -r orientation_delimiter
-      orientation_delimiter=$(convert_answer $orientation_delimiter)
-      if [[ $template_string != "q" ]]; then
-        echo "Video width will be `echo $video_orientation | cut -d $orientation_delimiter -f1`"
-        echo "Video height will be `echo $video_orientation | cut -d $orientation_delimiter -f2`"
-      fi
-    elif [[ $video_parsing_mode = "2" ]]; then
-      video_parsing_mode_output="youtube"
-      echo -n "Please enter path to youtube_config.yaml file: "
-      read -r youtube_config_path
-    else
-      video_parsing_mode_output="placeholders"
+  echo -e "Please select one of the following options:"
+  echo -e "\t1. Video dimension is encoded in asset names."
+  echo -e "\t2. I can access YouTube Data API (needs authorization) to fetch orientation from there."
+  echo -e "\t3. Skip for now"
+  echo -n "Specify option or Press Enter to skip:  "
+  read -r video_parsing_mode
+  video_parsing_mode=$(convert_answer $video_parsing_mode)
+  video_parsing_mode=${video_parsing_mode:-3}
+  if [[ $video_parsing_mode = "1" ]]; then
+    video_parsing_mode_output="regex"
+    echo -n "(Optional) Provide sample asset_name to validate parsing [Q to skip]: "
+    read -r template_string
+    echo -n "Select the delimiter for asset_name: "
+    read -r element_delimiter
+    if [[ $template_string != "q" ]]; then
+      element_delimiter=$(convert_answer $element_delimiter)
+      IFS="$element_delimiter" read -ra splitted <<< "$template_string"
+      for i in "${!splitted[@]}"; do
+        printf "$i) ${splitted[$i]}; "
+      done
+      echo
     fi
+
+    echo -n "Select the orientation position (starting from zero): "
+    read -r orientation_position
+    orientation_position=$(convert_answer $orientation_position)
+
+    if [[ $template_string != "q" ]]; then
+      video_orientation=`echo ${splitted[$orientation_position]}`
+      echo "Video orientation: $video_orientation"
+    fi
+    echo -n "Select the orientation_delimiter: "
+    read -r orientation_delimiter
+    orientation_delimiter=$(convert_answer $orientation_delimiter)
+    if [[ $template_string != "q" ]]; then
+      echo "Video width will be `echo $video_orientation | cut -d $orientation_delimiter -f1`"
+      echo "Video height will be `echo $video_orientation | cut -d $orientation_delimiter -f2`"
+    fi
+  elif [[ $video_parsing_mode = "2" ]]; then
+    video_parsing_mode_output="youtube"
+    echo -n "Please enter path to youtube_config.yaml file: "
+    read -r youtube_config_path
+  else
+    video_parsing_mode_output="placeholders"
   fi
 }
 
@@ -115,7 +110,7 @@ ask_for_incremental_saving() {
     fi
     if [[ $invalid_initial_load_date = "y" ]]; then
       echo "invalid initial load date ($invalid_load_date), skipping initial load"
-    elif echo "$start_date" | grep -E ":YYYYMMDD-*"; then
+    elif [[ "$start_date" =~ ":YYYYMMDD-" ]]; then
       initial_load="y"
     else
       echo "start_date is not dynamic ($start_date), skipping initial load"
