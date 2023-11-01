@@ -234,11 +234,10 @@ It will guide you through a series of questions to get all necessary parameters 
 - `account_id` - id of Google Ads MCC account (no dashes, 111111111 format)
 - `BigQuery project_id` - id of BigQuery project where script will store the data (i.e. `my_project`)
 - `BigQuery dataset` - id of BigQuery dataset where script will store the data (i.e. `my_dataset`)
-- `start date` - first date from which you want to get performance data (i.e., `2022-01-01`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
+- `Reporting window` - Number of days (i.e. `90`) for performance data fetching.
 - `end date` - last date from which you want to get performance data (i.e., `2022-12-31`). Relative dates are supported [see more](https://github.com/google/ads-api-report-fetcher#dynamic-dates).
 - `Ads config` - path to `google-ads.yaml` file.
-- `Video orientation mode` - how to get video orientation for video assets - from YouTube (`youtube` mode, [learn more on authentication](docs/setup-youtube-api-to-fetch-video-orientation.md)), from asset name (`regex` mode) or use placeholders (`placeholders` mode).
-
+- `Parse video dimensions` - how to get video orientation for video assets - from YouTube (`youtube` mode, [learn more about using the YouTube Data API](docs/how-to-get-video-orientation-for-assets.md#get-video-orientation-from-youtube-data-api)), from asset name (`regex` mode) or use placeholders (`placeholders` mode).
 After the initial run of `run-local.sh` command it will generate `app_reporting_pack.yaml` config file with all necessary information to be used for future runs.
 When you run `bash run-local.sh` next time it will automatically pick up the created configuration.
 
@@ -296,7 +295,7 @@ Once queries ran successfully you can proceed with dashboard replication.\
 Run the following command in the terminal to get a link for cloning the dashboard:
 
 ```
-bash ./app/scripts/create_dashboard.sh -c app_reporting_pack.yaml -L
+bash ./app/scripts/create_dashboard.sh -c app/app_reporting_pack.yaml -L
 ```
 
 If you're running on a local machine you can omit `-L` flag and then the link will be opened in the browser.
