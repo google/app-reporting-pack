@@ -105,6 +105,7 @@ API_VERSION="14"
 #
 welcome() {
   echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
+  echo -e "${COLOR}Follow this link for detailed installation guide: https://github.com/google/app-reporting-pack/blob/main/docs/installation-guide.md${NC} "
   echo
   echo "The solution will be deployed with the following default values"
   print_configuration
