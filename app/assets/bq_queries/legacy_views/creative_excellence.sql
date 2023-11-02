@@ -1,20 +1,20 @@
-# Copyright 2022 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+-- Copyright 2022 Google LLC
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     https://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
 
-CREATE OR REPLACE VIEW {legacy_dataset}.uachygiene AS
+CREATE OR REPLACE VIEW `{legacy_dataset}.uachygiene` AS
 SELECT
-    "" AS CID,
+    ocid AS CID,
     account_id,
     account_name AS AccountName,
     campaign_sub_type AS CampaignSubType,
@@ -77,4 +77,4 @@ SELECT
     average_bid_7_days AS AverageBid7Days,
     dramatic_bid_changes AS DramaticBidChanges,
     dramatic_budget_changes AS DramaticBudgetChanges
-FROM {target_dataset}.creative_excellence;
+FROM `{target_dataset}.creative_excellence`;

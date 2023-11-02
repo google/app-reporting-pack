@@ -13,8 +13,7 @@
 -- limitations under the License.
 
 CREATE OR REPLACE VIEW `{legacy_dataset}.change_history` AS
-SELECT
-    Day,
+SELECT Day,
     account_name AS AccountName,
     ocid AS CID,
     account_id,
@@ -80,13 +79,14 @@ SELECT
     is_budget_underspend AS Underspend,
     is_cpa_overshooting AS CPAOvershooting,
     geo_changes AS GeoChanges,
-    0 AS ImageChanges,
-    0 AS TextChanges,
-    0 AS HTML5Changes,
-    0 AS VideoChanges,
-    0 AS ad_groups_added,
+    image_changes AS ImageChanges,
+    text_changes AS TextChanges,
+    html5_changes AS HTML5Changes,
+    video_changes AS VideoChanges,
+     AS ad_groups_added,
     0 AS ad_groups_resumed,
     0 AS ad_groups_paused,
     0 AS ad_groups_deleted,
-    SAFE_DIVIDE(cost, conversions) AS CPA,
-FROM `{target_dataset}.change_history`;
+    SAFE_DIVIDE(cost, conversions) AS CPA
+FROM `{target_dataset}.change_history`
+USING(day, campaign_id);

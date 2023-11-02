@@ -80,13 +80,22 @@ SELECT
     is_budget_underspend AS Underspend,
     is_cpa_overshooting AS CPAOvershooting,
     geo_changes AS GeoChanges,
-    0 AS ImageChanges,
-    0 AS TextChanges,
-    0 AS HTML5Changes,
-    0 AS VideoChanges,
+    image_changes AS ImageChanges,
+    text_changes AS TextChanges,
+    html5_changes AS HTML5Changes,
+    video_changes AS VideoChanges,
     0 AS ad_groups_added,
     0 AS ad_groups_resumed,
     0 AS ad_groups_paused,
     0 AS ad_groups_deleted,
     SAFE_DIVIDE(cost, conversions) AS CPA,
-FROM `{target_dataset}.change_history`;
+    S.skan_postbacks
+FROM `{target_dataset}.change_history`
+LEFT JOIN (
+    SELECT
+        PARSE_DATE("%Y-%m-%d", CAST(date AS STRING)) AS day,
+        campaign_id,
+        SUM(skan_postbacks) AS skan_postbacks
+    FROM `{bq_dataset}.ios_campaign_skan_performance`
+    GROUP BY 1, 2) AS S
+USING(day, campaign_id);
