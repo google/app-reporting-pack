@@ -83,10 +83,9 @@ SELECT Day,
     text_changes AS TextChanges,
     html5_changes AS HTML5Changes,
     video_changes AS VideoChanges,
-     AS ad_groups_added,
+    0 AS ad_groups_added,
     0 AS ad_groups_resumed,
     0 AS ad_groups_paused,
     0 AS ad_groups_deleted,
     SAFE_DIVIDE(cost, conversions) AS CPA
-FROM `{target_dataset}.change_history`
-USING(day, campaign_id);
+FROM `{target_dataset}.change_history`;
