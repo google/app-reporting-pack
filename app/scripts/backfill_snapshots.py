@@ -68,8 +68,6 @@ def restore_missing_bid_budgets(google_ads_client: GoogleAdsApiClient,
         queries.ChangeHistory(days_ago_28, days_ago_1),
         customer_ids).to_pandas()
 
-    logging.info("Restoring change history for %d accounts: %s",
-                 len(customer_ids), customer_ids)
     # Filter rows where budget change occurred
     budgets = change_history.loc[(change_history["old_budget_amount"] > 0)
                                  & (change_history["new_budget_amount"] > 0)]

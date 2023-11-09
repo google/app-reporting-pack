@@ -277,6 +277,17 @@ run_bq_queries() {
   fi
 }
 
+define_runtime_config () {
+  if [[ $initial_load = "y" ]];
+  then
+    cat $config_file | sed '/start_date/d;' | \
+            sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
+    runtime_config=/tmp/$solution_name_lowercase.yaml
+  else
+    runtime_config=$config_file
+  fi
+}
+
 run_with_config() {
   echo -e "${COLOR}Running with $config_file${NC}"
   if [[ -f "$config_file" ]]; then
@@ -290,14 +301,7 @@ run_with_config() {
       exit
   fi
   check_initial_load
-  if [[ $initial_load = "y" ]];
-  then
-    cat $config_file | sed '/start_date/d;' | \
-            sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
-    runtime_config=/tmp/$solution_name_lowercase.yaml
-  else
-    runtime_config=$config_file
-  fi
+  define_runtime_config
   echo -e "${COLOR}===fetching reports===${NC}"
   if [[ $modules =~ "core" ]]; then
     run_google_ads_queries "core" $runtime_config
@@ -316,6 +320,8 @@ run_with_config() {
     run_bq_queries "core"
   fi
   if [[ $modules =~ "assets" ]]; then
+    check_initial_load "asset_performance"
+    define_runtime_config
     run_google_ads_queries "assets" $runtime_config
     echo -e "${COLOR}===getting video orientation===${NC}"
     $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
@@ -336,10 +342,14 @@ run_with_config() {
     run_bq_queries "disapprovals"
   fi
   if [[ $modules =~ "geo" ]]; then
+    check_initial_load "geo_performance"
+    define_runtime_config
     run_google_ads_queries "geo"
     run_bq_queries "geo"
   fi
   if [[ $modules =~ "ios_skan" ]]; then
+    check_initial_load "skan_decoder"
+    define_runtime_config
     if cat "$config_file" | grep -q skan_mode:; then
     run_google_ads_queries "ios_skan" $runtime_config
     echo -e "${COLOR}===getting SKAN schema===${NC}"
