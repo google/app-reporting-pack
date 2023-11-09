@@ -61,9 +61,13 @@ deploy_files() {
 
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
 
+  echo "Removing existing files at $GCS_BASE_PATH"
   gsutil -m rm -r $GCS_BASE_PATH/
+  pwd
   # NOTE: if an error "module 'sys' has no attribute 'maxint'" occures, run this: `pip3 install -U crcmod`
+  echo "Copying application files to $GCS_BASE_PATH"
   gsutil -m rsync -r -x ".*/__pycache__/.*|[.].*" ./../app $GCS_BASE_PATH
+  echo "Copying configs to $GCS_BASE_PATH"
   gsutil -h "Content-Type:text/plain" cp ./../app/*.yaml $GCS_BASE_PATH/
   if [[ -f ./../google-ads.yaml ]]; then
     gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
@@ -72,6 +76,7 @@ deploy_files() {
   else
     echo "Please upload google-ads.yaml"
   fi
+  echo "done"
 }
 
 
