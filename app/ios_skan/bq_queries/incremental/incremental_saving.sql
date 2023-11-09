@@ -13,10 +13,13 @@
 -- limitations under the License.
 
 
--- Save geo performance data for a single day
+-- Save skan decoder performance data for a single day
 CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{yesterday_iso}` AS
 SELECT * FROM `{target_dataset}.skan_decoder_{date_iso}`
 WHERE day <= "{start_date}";
 
-
+-- Save skan decoder performance data for the current fetch
+CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{date_iso}` AS
+SELECT * FROM `{target_dataset}.skan_decoder_{date_iso}`
+WHERE day > "{start_date}";
 

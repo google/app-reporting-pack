@@ -18,4 +18,8 @@ CREATE OR REPLACE TABLE `{target_dataset}.geo_performance_{yesterday_iso}` AS
 SELECT * FROM `{target_dataset}.geo_performance_{date_iso}`
 WHERE day <= "{start_date}";
 
+-- Save geo performance data  for the current fetch
+CREATE OR REPLACE TABLE `{target_dataset}.geo_performance_{date_iso}` AS
+SELECT * FROM `{target_dataset}.geo_performance_{date_iso}`
+WHERE day > "{start_date}";
 

@@ -17,3 +17,8 @@ CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{yesterday_iso}
 SELECT * FROM `{target_dataset}.ad_group_network_split_{date_iso}`
 WHERE day <= "{start_date}";
 
+-- Save ad_group performance data for the current fetch
+CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{date_iso}` AS
+SELECT * FROM `{target_dataset}.ad_group_network_split_{date_iso}`
+WHERE day > "{start_date}";
+

@@ -21,3 +21,13 @@ WHERE day <= "{start_date}";
 CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split_{yesterday_iso}` AS
 SELECT * FROM `{target_dataset}.asset_conversion_split_{date_iso}`
 WHERE day <= "{start_date}";
+
+-- Save asset performance for the current fetch
+CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{date_iso}` AS
+SELECT * FROM `{target_dataset}.asset_performance_{date_iso}`
+WHERE day > "{start_date}";
+
+-- Save asset conversion_split for the current fetch
+CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split_{date_iso}` AS
+SELECT * FROM `{target_dataset}.asset_conversion_split_{date_iso}`
+WHERE day > "{start_date}";
