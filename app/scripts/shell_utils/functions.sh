@@ -116,8 +116,9 @@ check_gaarf_version() {
     IFS='.' read -r -a version_array <<< "$gaarf_version"
     major_version="${version_array[0]}"
     minor_version="${version_array[1]}"
+    patch_version="${version_array[2]}"
 
-    if [[ $major_version -ge 1 && $minor_version -ge 9 ]]; then
+    if [[ $major_version -ge 1 && $minor_version -ge 11 && $patch_version -ge 5 ]]; then
       echo "google-ads-api-report-fetcher is up-to-date"
     else
       echo "You are using an old version of google-ads-api-report-fetcher library"
