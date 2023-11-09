@@ -55,6 +55,7 @@ SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 deploy_files() {
   echo 'Deploying files to GCS'
   if ! gsutil ls gs://$PROJECT_ID > /dev/null 2> /dev/null; then
+    echo "Creating GCS bucket gs://$PROJECT_ID"
     gsutil mb -b on gs://$PROJECT_ID
   fi
 
@@ -62,7 +63,7 @@ deploy_files() {
 
   gsutil -m rm -r $GCS_BASE_PATH/
   # NOTE: if an error "module 'sys' has no attribute 'maxint'" occures, run this: `pip3 install -U crcmod`
-  gsutil -m rsync -r -x ".*/__pycache__/.*|\..*" ./../app $GCS_BASE_PATH
+  gsutil -m rsync -r -x ".*/__pycache__/.*|[.].*" ./../app $GCS_BASE_PATH
   gsutil -h "Content-Type:text/plain" cp ./../app/*.yaml $GCS_BASE_PATH/
   if [[ -f ./../google-ads.yaml ]]; then
     gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
