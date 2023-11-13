@@ -65,7 +65,7 @@ deploy_files() {
   GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
 
   echo "Removing existing files at $GCS_BASE_PATH"
-  gsutil -m rm -r $GCS_BASE_PATH/
+  gsutil rm -r $GCS_BASE_PATH/
 
   # NOTE: if an error "module 'sys' has no attribute 'maxint'" occures, run this: `pip3 install -U crcmod`
   echo "Copying application files to $GCS_BASE_PATH"
@@ -338,11 +338,11 @@ enable_private_google_access() {
 deploy_all() {
   enable_apis
   set_iam_permissions
+  deploy_files
   #create_registry
   #build_docker_image
   build_docker_image_gcr
   deploy_cf
-  deploy_files
   schedule_run
 }
 
