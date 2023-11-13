@@ -53,6 +53,9 @@ TOPIC=$(eval echo $(git config -f $SETTING_FILE pubsub.topic))
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 
 deploy_files() {
+  set -e
+  set -x
+
   echo 'Deploying files to GCS'
   if ! gsutil ls gs://$PROJECT_ID > /dev/null 2> /dev/null; then
     echo "Creating GCS bucket gs://$PROJECT_ID"
