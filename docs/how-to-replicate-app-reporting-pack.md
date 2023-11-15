@@ -1,7 +1,10 @@
-# Creating App Reporting Pack in DataStudio
+# Creating App Reporting Pack in Looker Studio
 
 Once data for App Reporting Pack data are generated and stored in BigQuery you can
 proceed with replication of the [App Reporting Pack dashboard](https://lookerstudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO).
+
+> **_IMPORTANT:_** After the dashboard is created you need to enable image previews, read details on how it can be done [here](#enable-image-previews).
+
 
 ## Automatic creation
 
@@ -82,4 +85,14 @@ In order to replicate dashboard please do the following:
 
 Once all template datasources are replaced with new ones, click *Copy Report* and enjoy your new shiny App Reporting Pack!
 
+## Enable image previews
+
+After the dashboard is created all rendered images are [disabled](https://support.google.com/looker-studio/answer/7570489?hl=en#zippy=%2Cin-this-article). To activate them follow the steps below:
+
+* Click on **Edit** button
+* Go to **Resource**  and select the **asset_performance_copy** datasource.
+* Search for `asset_preview` field
+* Click on three docs and select **Show** to enable preview
+
+	![enable preview](src/preview_enable.png)
 
