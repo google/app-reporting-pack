@@ -19,6 +19,7 @@ source $SCRIPT_PATH/scripts/shell_utils/gaarf.sh
 source $SCRIPT_PATH/scripts/shell_utils/functions.sh
 
 set -e
+RED='\033[0;31m'
 COLOR='\033[0;36m' # Cyan
 NC='\033[0m' # No color
 usage="bash run-local.sh -c|--config <config> -q|--quiet\n\n
@@ -127,10 +128,21 @@ setup() {
     read -r customer_id
     customer_id=${customer_id:-$login_customer_id}
 
-    default_project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
-    echo -n "Enter BigQuery project_id ($default_project): "
+
+    gcloud_project=`gcloud config get-value project 2>/dev/null || echo`
+    default_project=${GOOGLE_CLOUD_PROJECT:-$gcloud_project}
+    if [[ -z ${default_project} ]]; then
+      echo -n "Enter BigQuery project_id: "
+    else
+      echo -n "Enter BigQuery project_id ($default_project): "
+    fi
     read -r project
+    if [[ -z ${project} && -z {default_project} ]]; then
+      echo -e "${RED}No BigQuery project specified, exiting...${NC}"
+      exit
+    fi
     project=${project:-$default_project}
+
 
     echo -n "Enter BigQuery dataset (arp): "
     read -r bq_dataset
@@ -148,6 +160,14 @@ setup() {
       ask_for_skan_queries
     fi
   else
+    if [[ -z ${project} ]]; then
+      echo -n "Enter BigQuery project_id: "
+      read -r project
+      if [[ -z ${project} ]]; then
+        echo -e "${RED}No BigQuery project specified, exiting...${NC}"
+        exit
+      fi
+    fi
     if [[ $modules =~ "ios_skan" ]]; then
       ask_for_skan_queries
     fi
@@ -157,7 +177,7 @@ setup() {
   if [[ -n $RUNNING_IN_GCE && $generate_config_only ]]; then
     # if you're running inside Google Cloud Compute Engine as generating config
     # (see gcp/cloud-run-button/main.sh) then there's no need for additional questions
-    config_file="app/$solution_name_lowercase.yaml"
+    config_file="$SCRIPT_PATH/$solution_name_lowercase.yaml"
     save_config="--save-config --config-destination=$config_file"
     echo -e "${COLOR}Saving configuration to $config_file${NC}"
     if [[ $initial_load = "y" ]]; then
@@ -185,13 +205,14 @@ setup() {
       read -r config_file_name
       config_file_name=${config_file_name:-$solution_name_lowercase.yaml}
       config_file=$(echo "`echo $config_file_name | sed 's/\.yaml//'`.yaml")
+      config_file=$SCRIPT_PATH/$config_file
     elif [[ $save_config_answer = "q" ]]; then
       exit
     else
       config_file="/tmp/app_reporting_pack.yaml"
     fi
   else
-    config_file=$solution_name_lowercase.yaml
+    config_file=$SCRIPT_PATH/$solution_name_lowercase.yaml
   fi
   save_config="--save-config --config-destination=$config_file"
   echo -e "${COLOR}Saving configuration to $config_file${NC}"
@@ -367,7 +388,8 @@ start_date_days=90
 start_date=":YYYYMMDD-90"
 end_date=":YYYYMMDD-1"
 bq_dataset="arp"
-project=${GOOGLE_CLOUD_PROJECT:-$(gcloud config get-value project 2>/dev/null)}
+gcloud_project=`gcloud config get-value project 2>/dev/null || echo`
+project=${GOOGLE_CLOUD_PROJECT:-$gcloud_project}
 parse_yaml $ads_config "GOOGLE_ADS_"
 customer_id=$GOOGLE_ADS_login_customer_id
 video_parsing_mode_output="placeholders"
