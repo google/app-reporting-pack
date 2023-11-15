@@ -1,6 +1,7 @@
 # App Reporting Pack Release Notes
 
 ## Version 1.3.0 [2023-11-01]
+> Breaking changes. Please re-create your existing version of your App Reporting Pack.
 
 ### Dashboard
 

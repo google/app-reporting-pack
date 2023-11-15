@@ -302,6 +302,9 @@ If you're running on a local machine you can omit `-L` flag and then the link wi
 
 For more details on dashboard please refer to [how-to-replicate-app-reporting-pack](docs/how-to-replicate-app-reporting-pack.md) document.
 
+> **_IMPORTANT:_** After the dashboard is created you need to enable image previews, read details on how it can be done [here](docs/how-to-replicate-dashboard.md#enable-image-previews).
+
+
 ## Disclaimer
 
 This is not an officially supported Google product.
