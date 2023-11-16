@@ -36,7 +36,6 @@ export RUNNING_IN_GCE   # signaling to run-local.sh that we're runnign inside GC
 ./app/run-local.sh --generate-config-only --validate-google-ads-config
 
 # deploy solution
-pip install -U crcmod # to work around possible issues with 'gsutil rsync'
 echo -e "${CYAN}Deploying Cloud components...${WHITE}"
 ./gcp/setup.sh deploy_public_index deploy_all start
 
