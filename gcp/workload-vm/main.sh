@@ -39,7 +39,7 @@ fi
 
 # Check if index.html exists in the bucket. If so - create and upload dashboard.json
 gcs_base_path_public=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/gcs_base_path_public -s --fail)
-create_dashboard_url=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/create_dashboard_url-s --fail)
+create_dashboard_url=$(curl -H Metadata-Flavor:Google http://metadata.google.internal/computeMetadata/v1/instance/attributes/create_dashboard_url -s --fail)
 if [[ $exitcode -eq 0 && -n "$gcs_base_path_public" && -n "$create_dashboard_url" ]]; then
   echo "{\"dashboardUrl\":\"$create_dashboard_url\"}" > dashboard.json
   echo "Created dashboard.json with cloning url: $create_dashboard_link"
