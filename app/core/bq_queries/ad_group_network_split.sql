@@ -59,6 +59,20 @@ AS (
         FROM `{bq_dataset}.account_campaign_ad_group_mapping`
         LEFT JOIN `{bq_dataset}.ocid_mapping` USING(account_id)
         GROUP BY 1
+    ),
+    CustomConvSplit AS (
+        SELECT
+            date,
+            ad_group_id,
+            network,
+            {% for custom_conversion in custom_conversions %}
+                {% for conversion_alias, conversion_name in custom_conversion.items() %}
+                    SUM(IF(conversion_name IN ('{{conversion_name}}'), all_conversions, 0)) AS conversions_{{conversion_alias}},
+                    SUM(IF(conversion_name IN ('{{conversion_name}}'), all_conversions_value, 0)) AS conversions_value_{{conversion_alias}},
+                {% endfor %}
+            {% endfor %}
+        FROM `{bq_dataset}.ad_group_conversion_split`
+        GROUP BY 1, 2, 3
     )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
@@ -91,7 +105,13 @@ SELECT
     SUM(inapps_adjusted) AS inapps_adjusted,
     SUM(AP.view_through_conversions) AS view_through_conversions,
     SUM(AP.video_views) AS video_views,
-    SUM(AP.conversions_value) AS conversions_value
+    SUM(AP.conversions_value) AS conversions_value,
+    {% for custom_conversion in custom_conversions %}
+        {% for conversion_alias, conversion_name in custom_conversion.items() %}
+            SUM(COALESCE(CCS.conversions_{{conversion_alias}}, 0)) AS conversions_{{conversion_alias}},
+            SUM(COALESCE(CCS.conversions_value_{{conversion_alias}}, 0)) AS conversions_value_{{conversion_alias}},
+        {% endfor %}
+    {% endfor %}
 FROM {bq_dataset}.ad_group_performance AS AP
 LEFT JOIN ConversionsTable AS ConvSplit
     USING(date, ad_group_id, network)
@@ -101,4 +121,8 @@ LEFT JOIN `{bq_dataset}.AppCampaignSettingsView` AS ACS
   ON M.campaign_id = ACS.campaign_id
 LEFT JOIN `{bq_dataset}.GeoLanguageView` AS G
   ON M.campaign_id =  G.campaign_id
+LEFT JOIN CustomConvSplit AS CCS
+    ON AP.date = CCS.date
+        AND AP.ad_group_id = CCS.ad_group_id
+        AND AP.network = CCS.network
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);

@@ -1,16 +1,16 @@
-# Copyright 2022 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+-- Copyright 2022 Google LLC
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--     https://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
 
 -- Contains performance (clicks, impressions, installs, inapps, etc) on asset_id level
 -- segmented by network (Search, Display, YouTube).
@@ -124,6 +124,24 @@ WITH CampaignCostTable AS (
             ANY_VALUE(video_orientation) AS video_orientation
         FROM `{bq_dataset}.video_orientation`
         GROUP BY 1
+    ),
+    CustomConvSplit AS (
+        SELECT
+            C.date,
+            C.ad_group_id,
+            C.asset_id,
+            C.field_type,
+            C.network,
+            {% for custom_conversion in custom_conversions %}
+                {% for conversion_alias, conversion_name in custom_conversion.items() %}
+                    SUM(IF(ConversionMapping.conversion_name IN ('{{conversion_name}}'), C.all_conversions, 0)) AS conversions_{{conversion_alias}},
+                    SUM(IF(ConversionMapping.conversion_name IN ('{{conversion_name}}'), C.all_conversions_value, 0)) AS conversions_value_{{conversion_alias}},
+                {% endfor %}
+            {% endfor %}
+        FROM `{bq_dataset}.asset_conversion_split` AS C
+        LEFT JOIN `{bq_dataset}.app_conversions_mapping` AS ConversionMapping
+          ON C.conversion_id = ConversionMapping.conversion_id
+        GROUP BY 1, 2, 3, 4, 5
     )
 SELECT
     PARSE_DATE("%Y-%m-%d", AP.date) AS day,
@@ -198,6 +216,12 @@ SELECT
     SUM(ConvSplit.inapps_adjusted) AS inapps_adjusted,
     SUM(AP.view_through_conversions) AS view_through_conversions,
     SUM(AP.conversions_value) AS conversions_value,
+    {% for custom_conversion in custom_conversions %}
+        {% for conversion_alias, conversion_name in custom_conversion.items() %}
+            SUM(COALESCE(CCS.conversions_{{conversion_alias}}, 0)) AS conversions_{{conversion_alias}},
+            SUM(COALESCE(CCS.conversions_value_{{conversion_alias}}, 0)) AS conversions_value_{{conversion_alias}},
+        {% endfor %}
+    {% endfor %}
     {% for day in cohort_days %}
         SUM(GetCohort(AssetCohorts.lag_data.installs, {{day}})) AS installs_{{day}}_day,
         SUM(GetCohort(AssetCohorts.lag_data.inapps, {{day}})) AS inapps_{{day}}_day,
@@ -235,4 +259,10 @@ LEFT JOIN `{bq_dataset}.AssetCohorts` AS AssetCohorts
         AND AP.network = AssetCohorts.network
         AND AP.asset_id = AssetCohorts.asset_id
         AND AP.field_type = AssetCohorts.field_type
+LEFT JOIN CustomConvSplit AS CCS
+    ON AP.date = CCS.date
+        AND AP.ad_group_id = CCS.ad_group_id
+        AND AP.network = CCS.network
+        AND AP.asset_id = CCS.asset_id
+        AND AP.field_type = CCS.field_type
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32);
