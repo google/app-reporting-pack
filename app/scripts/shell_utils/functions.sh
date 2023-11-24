@@ -98,7 +98,7 @@ prompt_running() {
   fi
 }
 
-parse_yaml () {
+parse_yaml() {
    local yaml_file="$1"
    local prefix="$2"
    while read line; do
@@ -118,15 +118,24 @@ check_gaarf_version() {
     minor_version="${version_array[1]}"
     patch_version="${version_array[2]}"
 
-    if [[ $major_version -ge 1 && $minor_version -ge 11 && $patch_version -ge 5 ]]; then
-      echo "google-ads-api-report-fetcher is up-to-date"
-    else
-      echo "You are using an old version of google-ads-api-report-fetcher library"
-      echo "Please update it by running the following command:"
-      echo -e "${COLOR}pip install -U google-ads-api-report-fetcher${NC}"
-      exit 1
+    if [[ $major_version -lt 1 ]]; then
+      require_newer_gaarf
     fi
+    if [[ $minor_version -lt 11 ]]; then
+      require_newer_gaarf
+    fi
+    if [[ $minor_version -eq 11 && $patch_version < 5 ]]; then
+      require_newer_gaarf
+    fi
+    echo "google-ads-api-report-fetcher is up-to-date"
   fi
+}
+
+require_newer_gaarf() {
+  echo "You are using an old version of google-ads-api-report-fetcher library"
+  echo "Please update it by running the following command:"
+  echo -e "${COLOR}pip install -U google-ads-api-report-fetcher${NC}"
+  exit 1
 }
 
 infer_answer_from_config() {
