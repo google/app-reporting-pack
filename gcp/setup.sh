@@ -52,6 +52,15 @@ TOPIC=$(eval echo $(git config -f $SETTING_FILE pubsub.topic))
 
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 
+check_billing() {
+  BILLING_ENABLED=$(gcloud beta billing projects describe $PROJECT_ID --format="csv(billingEnabled)" | tail -n 1)
+  if [[ "$BILLING_ENABLED" = 'False' ]]
+  then
+    echo -e "${RED}The project $PROJECT_ID does not have a billing enabled. Please activate billing${NC}"
+    exit -1
+  fi
+}
+
 deploy_files() {
   echo 'Deploying files to GCS'
   if ! gsutil ls gs://$PROJECT_ID > /dev/null 2> /dev/null; then
@@ -333,12 +342,13 @@ enable_private_google_access() {
 
 
 deploy_all() {
+  check_billing
   enable_apis
   set_iam_permissions
   deploy_files
-  #create_registry
-  #build_docker_image
-  build_docker_image_gcr
+  #create_registry - uncomment then migrated back to Artifact Registry
+  #build_docker_image - uncomment to migrated back to Artifact Registry
+  build_docker_image_gcr  # using Container Registry as most reliable service but it's only safe till May 2024 (due to upcomming deprication)
   deploy_cf
   schedule_run
 }
