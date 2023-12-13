@@ -45,7 +45,6 @@ done
 if [ $incremental -eq 0 ]; then
 	link=`cat $(dirname $0)/linking_api.http | sed "s/REPORT_ID/$report_id/; s/REPORT_NAME/$report_name/; s/YOUR_PROJECT_ID/$project_id/g; s/YOUR_DATASET_ID/$dataset_id/g" | sed '/^$/d;' | tr -d '\n'`
 else
-	echo "open incremental version"
 	link=`cat $(dirname $0)/linking_api_incremental.http | sed "s/REPORT_ID/$report_id/; s/REPORT_NAME/$report_name/; s/YOUR_PROJECT_ID/$project_id/g; s/YOUR_DATASET_ID/$dataset_id/g" | sed '/^$/d;' | tr -d '\n'`
 fi
 if [ $return_link -eq 1 ]; then
