@@ -4,6 +4,7 @@ Video dimension (width x height) cannot be fetched from Google Ads API.
 
 There are several ways to get this data into App Reporting Pack:
 1. [Get video orientation from asset names](#get-video-orientation-from-asset-names)
+    1. [Use custom regexp for complex cases](#use-custom-regexp-for-complex-cases)
 1. [Get video orientation from YouTube Data API](#get-video-orientation-from-youtube-data-api)
 1. [Use placeholders](#use-placeholders)
 
@@ -33,6 +34,20 @@ scripts:
     element_delimiter: '_'
     orientation_position: '2'
     orientation_delimiter: 'x'
+```
+
+### Use custom regexp for complex cases
+
+If the rules for getting video orientation are complex and cannot be expressed
+with a single position approach explained above you can use `custom_regex` marker.\
+To activate custom_regex parsing add the following section into your `app_reporting_pack.yaml` config file:
+
+```
+scripts:
+  video_orientation:
+    mode: custom_regex
+    width_expression: 'YOUR_WIDTH_REGEXP_HERE'
+    height_expression: 'YOUR_HEIGHT_REGEXP_HERE'
 ```
 
 ## Get video orientation from YouTube Data API

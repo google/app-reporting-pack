@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from __future__ import annotations
 from dataclasses import dataclass, asdict
 import argparse
 import os
@@ -36,21 +36,27 @@ import src.queries as queries
 @dataclass
 class VideoOrientationConfig:
     mode: str
-    params: Dict[str, Any]
+    params: dict
+
+
+@dataclass
+class CustomVideoOrientationRegexp:
+    width_expression: str
+    height_expression: str
 
 
 @dataclass
 class VideoOrientationRegexp:
-    element_delimiter: Optional[str] = None
-    orientation_position: Optional[int] = None
-    orientation_delimiter: Optional[str] = None
+    element_delimiter: str | None = None
+    orientation_position: int | None = None
+    orientation_delimiter: str | None = None
 
 
-def update_config(
-        path: str,
-        mode: str,
-        youtube_config_path: str = None,
-        video_orientation_regexp: Optional[VideoOrientationRegexp] = None):
+def update_config(path: str,
+                  mode: str,
+                  youtube_config_path: str = None,
+                  video_orientation_regexp: VideoOrientationRegexp
+                  | CustomVideoOrientationRegexp | None = None):
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
@@ -77,7 +83,7 @@ class YouTubeDataConnector:
     def __init__(self, credentials, api_version: str = "v3") -> None:
         self.service = build("youtube", api_version, credentials=credentials)
 
-    def get_response(self, elements: str) -> List[Tuple[str, Optional[float]]]:
+    def get_response(self, elements: str) -> list[tuple[str, float | None]]:
         videos = []
         video_orientations = []
         for i, element in enumerate(elements):
@@ -92,8 +98,8 @@ class YouTubeDataConnector:
         return GaarfReport(results=video_orientations,
                            column_names=["video_id", "video_orientation"])
 
-    def _parse_video_orientation(
-            self, videos: str) -> List[Tuple[str, Optional[str]]]:
+    def _parse_video_orientation(self,
+                                 videos: str) -> list[tuple[str, str | None]]:
         video_orientations = []
         response = self.service.videos().list(part="fileDetails",
                                               id=videos).execute()
@@ -109,7 +115,7 @@ class YouTubeDataConnector:
                      self._convert_aspect_ratio(aspect_ratio)))
         return video_orientations
 
-    def _convert_aspect_ratio(self, aspect_ratio: Optional[float]) -> str:
+    def _convert_aspect_ratio(self, aspect_ratio: float | None) -> str:
         if not aspect_ratio:
             return "Unknown"
         if aspect_ratio > 1:
@@ -173,6 +179,12 @@ def main():
     parser.add_argument("--youtube-config-path",
                         dest="youtube_config_path",
                         default=None)
+    parser.add_argument("--width-expression",
+                        dest="width_expression",
+                        default=None)
+    parser.add_argument("--height-expression",
+                        dest="height_expression",
+                        default=None)
     parser.add_argument("--dry-run", dest="dry_run", action="store_true")
     parser.set_defaults(save_config=False)
     parser.set_defaults(dry_run=False)
@@ -197,10 +209,16 @@ def main():
                         "orientation_delimiter")
                     youtube_config_path = video_orientation_config.get(
                         "youtube_config_path")
+                    width_expression = video_orientation_config.get(
+                        "width_expression")
+                    height_expression = video_orientation_config.get(
+                        "height_expression")
             else:
                 element_delimiter = None
                 orientation_position = None
                 orientation_delimiter = None
+                width_expression = None
+                height_expression = None
 
     save_config = args[0].save_config
     dry_run = args[0].dry_run
@@ -299,6 +317,34 @@ def main():
                         args[0].orientation_delimiter or orientation_delimiter
                     }
                 })
+    elif mode == "custom_regex":
+        logger.info(
+            "Parsing video orientation from asset name based on custom regexp")
+        script_path = os.path.dirname(__file__)
+        video_orientation_regexp = CustomVideoOrientationRegexp(
+            width_expression=args[0].width_expression,
+            height_expression=args[0].height_expression)
+        if save_config:
+            update_config(path=args[0].gaarf_config,
+                          mode=mode,
+                          video_orientation_regexp=video_orientation_regexp)
+        if dry_run:
+            exit()
+        bq_executor.execute(
+            "video_orientation",
+            FileReader().read(
+                os.path.join(script_path,
+                             "src/video_orientation_custom_regexp.sql")),
+            {
+                "macro": {
+                    "bq_dataset":
+                    bq_config.params.get("macro").get("bq_dataset"),
+                    "width_expression":
+                    args[0].width_expression or width_expression,
+                    "height_expression":
+                    args[0].height_expression or height_expression
+                }
+            })
     else:
         logger.info("Generating placeholders for video orientation")
         mode = "placeholders"
