@@ -50,6 +50,8 @@ class ConversionLagBuilder:
         for _, df_group in grouped:
             grouped_data = self.calculate_conversions_by_name_network_lag(
                 df_group)
+            if grouped_data.empty:
+                continue
             cumulative_data = self.calculate_cumulative_sum_ordered_by_n(
                 grouped_data)
             expanded_data = self.expand_and_join_lags(cumulative_data)
