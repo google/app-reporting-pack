@@ -45,7 +45,7 @@ quiet="n"
 generate_config_only="n"
 validate_ads_config="n"
 modules="core,assets,disapprovals,ios_skan,geo"
-incremental="y"
+incremental="n"
 backfill="y"
 
 while :; do
@@ -148,7 +148,7 @@ setup() {
     read -r bq_dataset
     bq_dataset=${bq_dataset:-arp}
 
-    ask_for_incremental_saving
+    # ask_for_incremental_saving
     start_date=${start_date:-:YYYYMMDD-90}
     end_date=${end_date:-:YYYYMMDD-1}
 
