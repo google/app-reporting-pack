@@ -27,6 +27,6 @@ AS (
     CP.* EXCEPT(skan_postbacks),
     IFNULL(S.skan_postbacks, 0) AS skan_postbacks
   FROM `{target_dataset}.change_history` AS CP
-  LEFT JOIN SkanPostbacksTable
+  LEFT JOIN SkanPostbacksTable AS S
     ON CP.day = S.day AND CP.campaign_id = S.campaign_id
 );
