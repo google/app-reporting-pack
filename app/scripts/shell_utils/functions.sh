@@ -149,7 +149,7 @@ infer_answer_from_config() {
       value=`cat $config | grep $section | cut -d ":" -f2- | head -n1 | sed "s/'//g" | sed 's/"//g'`
     fi
   fi
-  declare -g "$section"="$value"
+  declare -g "$section"="`echo $value | sed 's/ *$//g'`"
 }
 
 save_to_config() {
@@ -196,4 +196,35 @@ check_initial_load () {
   else
     initial_load="n"
   fi
+}
+
+
+check_missing_incremental_snapshot() {
+  table=${1:-ad_group_network_split}
+  infer_answer_from_config $config_file initial_load_date
+  infer_answer_from_config $config_file dataset
+  infer_answer_from_config $config_file target_dataset
+  echo "
+  CREATE OR REPLACE TABLE \`${dataset}.${table}_missing\` AS
+  WITH
+    MaxTableSuffix AS (
+      SELECT
+        MAX(_TABLE_SUFFIX) AS  _TABLE_SUFFIX
+        FROM \`${target_dataset}.${table}_*\`
+    ),
+    ValidMaxTableSuffix AS (
+      SELECT _TABLE_SUFFIX FROM MaxTableSuffix
+      WHERE
+        _TABLE_SUFFIX < FORMAT_DATE(
+          '%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+        )
+    )
+    SELECT
+      MIN(day) AS new_start_date,
+      ANY_VALUE(_TABLE_SUFFIX) AS TABLE_SUFFIX
+    FROM \`${target_dataset}.${table}_*\`
+    WHERE _TABLE_SUFFIX IN (SELECT _TABLE_SUFFIX FROM ValidMaxTableSuffix)
+    HAVING new_start_date IS NOT NULL" > /tmp/${table}_incremental_check.sql
+    echo "checking for missing performance snapshots for '$table'..."
+    gaarf-bq /tmp/${table}_incremental_check.sql -c $config_file
 }

@@ -45,7 +45,7 @@ quiet="n"
 generate_config_only="n"
 validate_ads_config="n"
 modules="core,assets,disapprovals,ios_skan,geo"
-incremental="n"
+incremental="y"
 backfill="y"
 
 while :; do
@@ -148,7 +148,7 @@ setup() {
     read -r bq_dataset
     bq_dataset=${bq_dataset:-arp}
 
-    # ask_for_incremental_saving
+    ask_for_incremental_saving
     start_date=${start_date:-:YYYYMMDD-90}
     end_date=${end_date:-:YYYYMMDD-1}
 
@@ -254,7 +254,7 @@ print_configuration() {
 
 
 run_google_ads_queries() {
-  echo -e "${COLOR}===$1===${NC}"
+  echo -e "${COLOR}===fetching ads data for $1===${NC}"
     local config_file=${2:-$config_file}
     gaarf $(dirname $0)/$1/google_ads_queries/*.sql -c=$config_file \
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
@@ -299,13 +299,26 @@ run_bq_queries() {
 }
 
 define_runtime_config () {
-  if [[ $initial_load = "y" ]];
-  then
-    cat $config_file | sed '/start_date/d;' | \
-            sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
+  local incremental_table=${1:-ad_group_network_split}
+  new_start_date=`$(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
+    -c=$config_file \
+    --restore-incremental-snapshots \
+    --incremental-table $incremental_table \
+    --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION`
+  if [[ ! -z $new_start_date ]]; then
+    echo "table '$incremental_table' has missing performance snapshots."
+    echo "adjusting start_date to '$new_start_date'."
+    cat $config_file | sed "/start_date/s/${start_date}/'${new_start_date}'/g" > \
+      /tmp/$solution_name_lowercase.yaml
     runtime_config=/tmp/$solution_name_lowercase.yaml
   else
+    echo "table '$incremental_table' doesn't have missing performance snapshots."
     runtime_config=$config_file
+  fi
+  if [[ $initial_load = "y" ]];
+  then
+    cat $runtime_config | sed '/start_date/d;' | \
+            sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
   fi
 }
 
@@ -321,10 +334,12 @@ run_with_config() {
         --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
       exit
   fi
-  check_initial_load
-  define_runtime_config
   echo -e "${COLOR}===fetching reports===${NC}"
   if [[ $modules =~ "core" ]]; then
+    echo -e "${COLOR}===Running 'core' module===${NC}"
+    check_initial_load "ad_group_network_split"
+    check_missing_incremental_snapshot "ad_group_network_split"
+    define_runtime_config "ad_group_network_split"
     run_google_ads_queries "core" $runtime_config
     echo -e "${COLOR}===calculating conversion lag adjustment===${NC}"
     $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
@@ -341,8 +356,10 @@ run_with_config() {
     run_bq_queries "core"
   fi
   if [[ $modules =~ "assets" ]]; then
+    echo -e "${COLOR}===Running 'assets' module===${NC}"
     check_initial_load "asset_performance"
-    define_runtime_config
+    check_missing_incremental_snapshot "asset_performance"
+    define_runtime_config "asset_performance"
     run_google_ads_queries "assets" $runtime_config
     echo -e "${COLOR}===getting video orientation===${NC}"
     $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
@@ -359,18 +376,23 @@ run_with_config() {
     run_bq_queries "assets"
   fi
   if [[ $modules =~ "disapprovals" ]]; then
+    echo -e "${COLOR}===Running 'disapprovals' module===${NC}"
     run_google_ads_queries "disapprovals"
     run_bq_queries "disapprovals"
   fi
   if [[ $modules =~ "geo" ]]; then
+    echo -e "${COLOR}===Running 'geo' module===${NC}"
     check_initial_load "geo_performance"
-    define_runtime_config
+    check_missing_incremental_snapshot "geo_performance"
+    define_runtime_config "geo_performance"
     run_google_ads_queries "geo"
     run_bq_queries "geo"
   fi
   if [[ $modules =~ "ios_skan" ]]; then
+    echo -e "${COLOR}===Running 'ios_skan' module===${NC}"
     check_initial_load "skan_decoder"
-    define_runtime_config
+    check_missing_incremental_snapshot "skan_decoder"
+    define_runtime_config "skan_decoder"
     if cat "$config_file" | grep -q skan_mode:; then
     run_google_ads_queries "ios_skan" $runtime_config
     echo -e "${COLOR}===getting SKAN schema===${NC}"
