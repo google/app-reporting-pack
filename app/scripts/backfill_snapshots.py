@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Entrypoint for performing various backfilling operations."""
 
 import argparse
 from datetime import datetime, timedelta
@@ -33,15 +34,45 @@ import src.queries as queries
 from src.utils import write_data_to_bq
 
 
+def get_new_date_for_missing_incremental_snapshots(bq_client: bigquery.Client,
+                                                   bq_dataset: str,
+                                                   table_name: str) -> None:
+    """Checks for missing snapshots and outputs new start date.
+
+    If there's a gap in data we need to remove the table with the problematic
+    TABLE_SUFFIX and find a new start_date that should be use by the
+    application when running data fetching.
+
+    Args:
+        bq_client: Client for BigQuery I/O.
+        bq_dataset: BQ dataset to get data from.
+        table_name: BQ table that are checked for incremental snapshots.
+    """
+    start_date = ""
+    base_table_id = f"{bq_client.project}.{bq_dataset}.{table_name}"
+    try:
+        job = bq_client.query("SELECT TABLE_SUFFIX, new_start_date "
+                              f"FROM `{base_table_id}_missing`")
+        result = job.result().to_dataframe()
+        if not result.empty:
+            start_date = result.new_start_date.squeeze().strftime(
+                "%Y-%m-%d")
+            suffix = result.TABLE_SUFFIX.squeeze()
+            delete_ddl = f"DELETE `{base_table_id}_{suffix}`;"
+            job = bq_client.query(delete_ddl)
+            job.result()
+    except (BadRequest, NotFound):
+        pass
+    print(start_date)
+
+
 def restore_missing_bid_budgets(google_ads_client: GoogleAdsApiClient,
                                 config: GaarfConfig,
                                 bq_client: bigquery.Client,
                                 bq_dataset: str) -> None:
     try:
-        job = bq_client.query(
-            f"SELECT DISTINCT CAST(day AS STRING) AS day "
-            f"FROM `{bq_dataset}.bid_budgets_*`"
-        )
+        job = bq_client.query(f"SELECT DISTINCT CAST(day AS STRING) AS day "
+                              f"FROM `{bq_dataset}.bid_budgets_*`")
         result = job.result()
     except BadRequest:
         return
@@ -148,10 +179,8 @@ def restore_missing_bid_budgets(google_ads_client: GoogleAdsApiClient,
 def restore_missing_cohorts(bq_client: bigquery.Client,
                             bq_dataset: str) -> None:
     try:
-        job = bq_client.query(
-            f"SELECT DISTINCT _TABLE_SUFFIX AS day FROM "
-            f"`{bq_dataset}.conversion_lags_*` ORDER BY 1"
-        )
+        job = bq_client.query(f"SELECT DISTINCT _TABLE_SUFFIX AS day FROM "
+                              f"`{bq_dataset}.conversion_lags_*` ORDER BY 1")
         result = job.result()
     except BadRequest:
         return
@@ -253,6 +282,11 @@ def main():
     parser.add_argument("--restore-cohorts",
                         dest="cohorts",
                         action="store_true")
+    parser.add_argument("--restore-incremental-snapshots",
+                        dest="incremental",
+                        action="store_true")
+    parser.add_argument("--incremental-table",
+                        dest="incremental_table")
     parser.add_argument("--customer-ids-query",
                         dest="customer_ids_query",
                         default=None)
@@ -273,6 +307,9 @@ def main():
         google_ads_config_dict = yaml.safe_load(f)
     google_ads_client = GoogleAdsApiClient(config_dict=google_ads_config_dict,
                                            version=f"v{config.api_version}")
+    if args[0].incremental:
+        get_new_date_for_missing_incremental_snapshots(
+            bq_client, bq_dataset, args[0].incremental_table)
     if args[0].bid_budgets:
         restore_missing_bid_budgets(google_ads_client, config, bq_client,
                                     bq_dataset)
