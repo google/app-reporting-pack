@@ -319,6 +319,7 @@ define_runtime_config () {
   then
     cat $runtime_config | sed '/start_date/d;' | \
             sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
+    runtime_config=/tmp/$solution_name_lowercase.yaml
   fi
 }
 

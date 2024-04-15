@@ -99,7 +99,6 @@ ask_for_incremental_saving() {
   get_start_end_date
   echo -n "Download historical performance data starting from YYYY-MM-DD or press Enter to skip: "
   read -r initial_load_date
-  initial_load="n"
   if [ ! -z $initial_load_date ]; then
     validate_load_date $initial_load_date
     if [[ $invalid_initial_load_date = "y" ]]; then
