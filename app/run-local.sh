@@ -48,6 +48,8 @@ modules="core,assets,disapprovals,ios_skan,geo"
 incremental="y"
 backfill="y"
 
+trap cleanup EXIT
+
 while :; do
 case $1 in
   -q|--quiet)
@@ -400,6 +402,12 @@ run_with_config() {
     $(which python3) $(dirname $0)/scripts/create_skan_schema.py -c=$config_file
     run_bq_queries "ios_skan"
     fi
+  fi
+}
+
+cleanup() {
+  if [[ -f "/tmp/$solution_name_lowercase.yaml" ]]; then
+    rm "/tmp/$solution_name_lowercase.yaml"
   fi
 }
 
