@@ -24,7 +24,7 @@ AS (
     GROUP BY 1, 2
   )
   SELECT
-    CP.* EXCEPT(skan_postbacks),
+    CP.*,
     IFNULL(S.skan_postbacks, 0) AS skan_postbacks
   FROM `{target_dataset}.change_history` AS CP
   LEFT JOIN SkanPostbacksTable AS S
