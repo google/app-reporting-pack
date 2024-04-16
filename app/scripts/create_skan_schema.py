@@ -56,7 +56,7 @@ def has_existing_schema(bq_executor, config: GaarfBqConfig) -> bool:
 
 def copy_schema(bq_executor, config: GaarfBqConfig) -> None:
     query = """
-            CREATE OR REPLACE TABLE `{bq_dataset}.skan_schema` AS
+            CREATE OR REPLACE TABLE `{bq_dataset}.skan_schema_input_table` AS
             SELECT
               app_id,
               skan_conversion_value,
@@ -73,7 +73,7 @@ def copy_schema(bq_executor, config: GaarfBqConfig) -> None:
 
 def generate_placeholder_schema(bq_executor, config: GaarfBqConfig) -> None:
     query = """
-            CREATE OR REPLACE TABLE `{bq_dataset}.skan_schema` AS
+            CREATE OR REPLACE TABLE `{bq_dataset}.skan_schema_input_table` AS
             SELECT
               "com.example" AS app_id,
               0 AS skan_conversion_value,

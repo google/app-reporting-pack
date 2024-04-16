@@ -41,7 +41,7 @@ AS (
       skan_event_value_high,
       skan_event_value_mean,
       skan_mapped_event
-    FROM `{bq_dataset}.skan_schema`
+    FROM `{bq_dataset}.skan_schema_input_table`
   ),
   PreparedData AS (
     SELECT
