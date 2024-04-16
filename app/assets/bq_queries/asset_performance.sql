@@ -125,6 +125,12 @@ WITH CampaignCostTable AS (
         FROM `{bq_dataset}.video_orientation`
         GROUP BY 1
     ),
+    ConversionMapping AS (
+        SELECT DISTINCT
+            conversion_id,
+            conversion_name
+        FROM `{bq_dataset}.app_conversions_mapping`
+    ),
     CustomConvSplit AS (
         SELECT
             C.date,
@@ -139,7 +145,7 @@ WITH CampaignCostTable AS (
                 {% endfor %}
             {% endfor %}
         FROM `{bq_dataset}.asset_conversion_split` AS C
-        LEFT JOIN `{bq_dataset}.app_conversions_mapping` AS ConversionMapping
+        LEFT JOIN ConversionMapping
           ON C.conversion_id = ConversionMapping.conversion_id
         GROUP BY 1, 2, 3, 4, 5
     )
