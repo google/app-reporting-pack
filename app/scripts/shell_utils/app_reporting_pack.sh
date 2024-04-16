@@ -17,15 +17,26 @@ NC='\033[0m' # No color
 
 ask_for_skan_queries() {
   skan_answer="y"
+  reserved_skan_schema_table_name=$(echo $project.$bq_dataset".skan_schema_input_table")
   echo -e "${COLOR}App Reporting Pack SKAN Reports can be enriched with decoded SKAN conversion values${NC}"
   echo -e "${COLOR}(More at https://github.com/google/app-reporting-pack/blob/main/docs/how-to-specify-ios-skan-schema.md):${NC}"
   echo -n "Enter fully qualified table name in BigQuery (PROJECT.DATASET.TABLE_NAME) or press Enter to skip: "
   read -r skan_schema_input_table
+  while [[ $skan_schema_input_table == $reserved_skan_schema_table_name ]];
+  do
+    _check_reserved_skan_table_name
+  done
   if [[ -z $skan_schema_input_table  ]]; then
     skan_schema_mode="placeholders"
   else
     skan_schema_mode="table"
   fi
+}
+
+_check_reserved_skan_table_name() {
+    echo "Cannot used reserved name for the skan input table ($reserved_skan_schema_table_name)."
+    echo -n "Enter fully qualified table name in BigQuery (PROJECT.DATASET.TABLE_NAME) or press Enter to skip: "
+    read -r skan_schema_input_table
 }
 
 ask_for_video_orientation() {
@@ -120,7 +131,7 @@ ask_for_incremental_saving() {
 generate_bq_macros() {
   bq_dataset_output=$(echo $bq_dataset"_output")
   bq_dataset_legacy=$(echo $bq_dataset"_legacy")
-  skan_schema_table=$(echo $bq_dataset".skan_schema")
+  skan_schema_table=$(echo $bq_dataset".skan_schema_input_table")
   macros=$(echo --macro.bq_dataset=$bq_dataset --macro.target_dataset=$bq_dataset_output --macro.legacy_dataset=$bq_dataset_legacy  --template.cohort_days=$cohorts_final --macro.skan_schema_input_table=$skan_schema_input_table)
   if [[ $skan_answer = "y" ]]; then
     macros="$macros --template.has_skan=true"
