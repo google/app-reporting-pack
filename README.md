@@ -35,13 +35,12 @@ App Reporting Pack fetches all necessary data from Ads API and creates a central
 - `performance_grouping_history`
 - `ad_group_network_split`
 - `geo_performance`
-- `cannibalization`
 
 ## Prerequisites
 
 1. [A Google Ads Developer token](https://developers.google.com/google-ads/api/docs/first-call/dev-token#:~:text=A%20developer%20token%20from%20Google,SETTINGS%20%3E%20SETUP%20%3E%20API%20Center.)
 
-1. A GCP project with billing account attached
+1. A GCP project with billing account attached; a person responsible for deployment of App Reporting Pack should have **OWNER** permissions to the project.
 
 1. Membership in `app-reporting-pack-readers-external` Google group (join [here](https://groups.google.com/g/app-reporting-pack-readers-external)) to get access to the [dashboard template](https://lookerstudio.google.com/c/u/0/reporting/3f042b13-f767-4195-b092-35b94e0b430c/page/0hcO).
 
@@ -303,6 +302,8 @@ If you're running on a local machine you can omit `-L` flag and then the link wi
 For more details on dashboard please refer to [how-to-replicate-app-reporting-pack](docs/how-to-replicate-app-reporting-pack.md) document.
 
 > **_IMPORTANT:_** After the dashboard is created you need to enable image previews, read details on how it can be done [here](docs/how-to-replicate-dashboard.md#enable-image-previews).
+
+Once the dashboard is saved it's important that all its users have access to underlying BigQuery dataset. If it's not possible, you'll need to change data credentials for all datasources from *Viewer* to *Owner* (see details [here](https://support.google.com/looker-studio/answer/6371135)).
 
 
 ## Disclaimer
