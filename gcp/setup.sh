@@ -283,6 +283,8 @@ start() {
 
   # Check if there is a public bucket and index.html and echo the url
   local PUBLIC_URL=$(print_public_gcs_url)/index.html
+  local ARP_GOOGLE_GROUP="https://groups.google.com/g/app-reporting-pack-readers-external"
+  echo -e "${CYAN}[ * ] Please join Google group to get access to the dashboard - ${GREEN}${ARP_GOOGLE_GROUP}${NC}"
   STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" $PUBLIC_URL)
 
   if [[ $STATUS_CODE -eq 200 ]]; then
