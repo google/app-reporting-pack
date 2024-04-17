@@ -15,7 +15,8 @@ During the deployment the wizard will ask you to provide a fully qualified SKAN 
 > When adding schema to an existing `app_reporting_pack.yaml` add the following fields
 > * under `gaarf-bq > params > macro` add `skan_schema_input_table: PROJECT.DATASET.TABLE_NAME`
 > * under `gaarf-bq > params > template` add `has_skan: 'true'`
-> * under `scripts > skan_mode > template` add `skan_mode: table` (if `skan_mode` is set to `placeholders` replace `placeholders` with `table`)
+> * under `scripts > skan_mode` add `skan_mode: table` (if `skan_mode` is set to `placeholders` replace `placeholders` with `table`)
+> You can refer to [config.yaml.template](../app/config.yaml.template) to check config structure.
 
 The SKAN table schema is expected to have the following fields:
 ```
