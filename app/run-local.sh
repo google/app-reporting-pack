@@ -85,6 +85,9 @@ case $1 in
   --generate-config-only)
     generate_config_only="y"
     ;;
+  --reset-incremental-performance-snapshots)
+    reset_snapshots="y"
+    ;;
   --validate-google-ads-config)
     validate_ads_config="y"
     ;;
@@ -105,7 +108,34 @@ done
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
 API_VERSION="14"
-#
+
+
+reset_snapshot_data() {
+  echo -e "${COLOR}Incremental performance snapshots will be  removed for the following modules: $modules ${NC}"
+  echo -n "Press q to abort this operation or Enter to continue: "
+  read -r continue_ressetting_snapshots
+  continue_ressetting_snapshots=$(convert_answer $continue_ressetting_snapshots 'y')
+  if [[ $continue_ressetting_snapshots == "y" ]]; then
+    if [[ $modules =~ "core" ]]; then
+      delete_incremental_snapshots "ad_group_network_split"
+    fi
+    if [[ $modules =~ "assets" ]]; then
+      delete_incremental_snapshots "asset_performance"
+      delete_incremental_snapshots "asset_conversion_split"
+    fi
+    if [[ $modules =~ "geo" ]]; then
+      delete_incremental_snapshots "geo_performance"
+    fi
+    if [[ $modules =~ "ios_skan" ]]; then
+      delete_incremental_snapshots "skan_decoder"
+    fi
+    echo -e "${COLOR}Incremental performance snapshots were removed${NC}"
+    echo -n "Press q to exit the application or Enter to continue: "
+    read -r proceed_after_resetting_snapshots
+    proceed_after_resetting_snapshots=$(convert_answer $proceed_after_resetting_snapshots 'y')
+  fi
+}
+
 welcome() {
   echo -e "${COLOR}Welcome to installation of $solution_name${NC} "
   echo -e "${COLOR}Follow this link for detailed installation guide: https://github.com/google/app-reporting-pack/blob/main/docs/installation-guide.md${NC} "
@@ -388,7 +418,7 @@ run_with_config() {
     check_initial_load "geo_performance"
     check_missing_incremental_snapshot "geo_performance"
     define_runtime_config "geo_performance"
-    run_google_ads_queries "geo"
+    run_google_ads_queries "geo" $runtime_config
     run_bq_queries "geo"
   fi
   if [[ $modules =~ "ios_skan" ]]; then
@@ -410,6 +440,14 @@ cleanup() {
     rm "/tmp/$solution_name_lowercase.yaml"
   fi
 }
+
+if [[ $reset_snapshots == "y" ]]; then
+  reset_snapshot_data
+fi
+
+if [[ $reset_snapshots == "y" && $proceed_after_resetting_snapshots != "y" ]]; then
+  exit
+fi
 
 check_gaarf_version
 check_ads_config $validate_ads_config

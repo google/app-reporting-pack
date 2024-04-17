@@ -199,6 +199,21 @@ check_initial_load () {
 }
 
 
+delete_incremental_snapshots() {
+  table=${1:-ad_group_network_split}
+  infer_answer_from_config $config_file target_dataset
+  echo "
+  FOR deletes IN (
+    SELECT CONCAT(table_schema || '.' || table_name) AS full_table_name
+      FROM \`$target_dataset.INFORMATION_SCHEMA.TABLES\`
+      WHERE table_name LIKE 'geo_performance_%')
+  DO
+    EXECUTE IMMEDIATE FORMAT('DROP TABLE \`%s\`', deletes.full_table_name);
+  END FOR;
+  " > /tmp/${table}_delete_incremental_snapshots.sql
+  gaarf-bq /tmp/${table}_delete_incremental_snapshots.sql -c $config_file
+}
+
 check_missing_incremental_snapshot() {
   table=${1:-ad_group_network_split}
   infer_answer_from_config $config_file initial_load_date
