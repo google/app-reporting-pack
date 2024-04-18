@@ -20,7 +20,11 @@ SELECT
     segments.sk_ad_network_user_type AS skan_user_type,
     segments.sk_ad_network_ad_event_type AS skan_ad_event_type,
     segments.sk_ad_network_attribution_credit AS skan_ad_network_attribution_credit,
-    metrics.sk_ad_network_conversions AS skan_postbacks
+    {% if skan4 == "true" %}
+        metrics.sk_ad_network_total_conversions AS skan_postbacks
+    {% else %}
+        metrics.sk_ad_network_conversions AS skan_postbacks
+    {% endif %}
 FROM campaign
 WHERE
     campaign.advertising_channel_type = "MULTI_CHANNEL"
