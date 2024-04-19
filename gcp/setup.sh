@@ -24,6 +24,8 @@ SETTING_FILE="./settings.ini"
 SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
 SETTING_FILE="${SCRIPT_PATH}/settings.ini"
 
+trap _upload_install_log EXIT
+
 # changing the cwd to the script's containing folder so all pathes inside can be local to it
 # (important as the script can be called via absolute path and as a nested path)
 pushd $SCRIPT_PATH >/dev/null
@@ -135,13 +137,14 @@ build_docker_image_gcr() {
 
 
 set_iam_permissions() {
+  required_roles="storage.objectViewer artifactregistry.repoAdmin compute.admin monitoring.editor logging.logWriter iam.serviceAccountTokenCreator"
   echo "Setting up IAM permissions"
-  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/storage.objectViewer
-  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/artifactregistry.repoAdmin
-  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/compute.admin
-  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/monitoring.editor
-  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/logging.logWriter
-  gcloud projects add-iam-policy-binding $PROJECT_ID --member=serviceAccount:$SERVICE_ACCOUNT --role=roles/iam.serviceAccountTokenCreator
+  for role in $required_roles; do
+    gcloud projects add-iam-policy-binding $PROJECT_ID \
+      --member=serviceAccount:$SERVICE_ACCOUNT \
+      --role=roles/$role \
+      --no-user-output-enabled
+  done
 }
 
 
@@ -356,6 +359,12 @@ deploy_all() {
   schedule_run
 }
 
+_upload_install_log() {
+  if [[ -f "/tmp/${NAME}_installer.log" ]]; then
+    gsutil cp /tmp/${NAME}_installer.log gs://$PROJECT_ID/$NAME/
+    rm "/tmp/${NAME}_installer.log"
+  fi
+}
 
 _list_functions() {
   # list all functions in this file not starting with "_"
@@ -368,7 +377,7 @@ if [[ $# -eq 0 ]]; then
 else
   for i in "$@"; do
     if declare -F "$i" > /dev/null; then
-      "$i"
+      "$i" 2>&1 | tee -a /tmp/${NAME}_installer.log
       exitcode=$?
       if [ $exitcode -ne 0 ]; then
         echo "Breaking script as command '$i' failed"
