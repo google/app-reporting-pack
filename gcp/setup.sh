@@ -45,6 +45,7 @@ done
 NAME=$(git config -f $SETTING_FILE config.name)
 PROJECT_ID=$(gcloud config get-value project 2> /dev/null)
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="csv(projectNumber)" | tail -n 1)
+USER_EMAIL=$(gcloud config get-value account 2> /dev/null)
 
 APP_CONFIG_FILE=$(eval echo $(git config -f $SETTING_FILE config.config-file))
 REPOSITORY=$(eval echo $(git config -f $SETTING_FILE repository.name))
@@ -346,8 +347,21 @@ enable_private_google_access() {
   gcloud compute networks subnets update default --region=$REGION --enable-private-ip-google-access
 }
 
+check_owners() {
+  local project_admins=$(gcloud projects get-iam-policy $PROJECT_ID \
+    --flatten="bindings" \
+    --filter="bindings.role=roles/owner" \
+    --format="value(bindings.members[])"
+  )
+  if [[ ! $project_admins =~ $USER_EMAIL ]]; then
+      echo "User $USER_EMAIL does not have admin right to project $PROJECT_ID"
+      exit
+  fi
+}
+
 
 deploy_all() {
+  check_owners
   check_billing
   enable_apis
   set_iam_permissions
