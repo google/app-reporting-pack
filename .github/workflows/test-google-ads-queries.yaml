@@ -1,0 +1,31 @@
+name: Test Google Ads API queries
+
+on:
+  push:
+    paths:
+    - '**/google_ads_queries/*.sql'
+  schedule:
+    - cron: "* 1 * * *"
+
+jobs:
+  simulate-queries:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version: [14, 15, 16]
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ./app/requirements.in
+      - name: Run test script
+        run: |
+          chmod a+x ./tests/test_google_queries.sh
+          ./tests/test_google_queries.sh ${{matrix.version}}
