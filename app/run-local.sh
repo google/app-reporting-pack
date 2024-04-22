@@ -107,7 +107,7 @@ done
 
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
-API_VERSION="14"
+API_VERSION="16"
 
 
 reset_snapshot_data() {
