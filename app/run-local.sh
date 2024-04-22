@@ -47,6 +47,7 @@ validate_ads_config="n"
 modules="core,assets,disapprovals,ios_skan,geo"
 incremental="y"
 backfill="y"
+skan4="true"
 
 trap cleanup EXIT
 
@@ -108,7 +109,6 @@ done
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
 API_VERSION="16"
-
 
 reset_snapshot_data() {
   echo -e "${COLOR}Incremental performance snapshots will be  removed for the following modules: $modules ${NC}"
@@ -213,9 +213,18 @@ setup() {
     save_config="--save-config --config-destination=$config_file"
     echo -e "${COLOR}Saving configuration to $config_file${NC}"
     if [[ $initial_load = "y" ]]; then
-      fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run --macro.initial_load_date=$initial_load_date
+      fetch_reports $save_config --log=$loglevel \
+        --api-version=$API_VERSION \
+        --dry-run \
+        --macro.initial_load_date=$initial_load_date \
+        --template.skan4="$skan4"
     else
-      fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+      echo "Skan: $skan4"
+      fetch_reports $save_config \
+        --log=$loglevel \
+        --api-version=$API_VERSION \
+        --dry-run \
+        --template.skan4="$skan4"
     fi
     generate_output_tables $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
@@ -249,9 +258,17 @@ setup() {
   save_config="--save-config --config-destination=$config_file"
   echo -e "${COLOR}Saving configuration to $config_file${NC}"
   if [[ $initial_load = "y" ]]; then
-    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run --macro.initial_load_date=$initial_load_date
+      fetch_reports $save_config --log=$loglevel \
+        --api-version=$API_VERSION \
+        --dry-run \
+        --macro.initial_load_date=$initial_load_date \
+        --template.skan4="$skan4"
   else
-    fetch_reports $save_config --log=$loglevel --api-version=$API_VERSION --dry-run
+      fetch_reports $save_config --log=$loglevel \
+        --api-version=$API_VERSION \
+        --dry-run \
+        --macro.initial_load_date=$initial_load_date \
+        --template.skan4="$skan4"
   fi
   generate_output_tables $save_config --log=$loglevel --dry-run
   fetch_video_orientation $save_config --log=$loglevel --dry-run
