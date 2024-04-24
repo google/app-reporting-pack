@@ -450,6 +450,7 @@ run_with_config() {
     run_bq_queries "ios_skan"
     fi
   fi
+  upload_last_run_to_bq
 }
 
 cleanup() {

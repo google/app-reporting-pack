@@ -180,6 +180,17 @@ save_to_config() {
   fi
 }
 
+upload_last_run_to_bq() {
+  local last_run_tmp_file="/tmp/${NAME}_last_run.sql"
+  infer_answer_from_config $config_file dataset
+  echo "
+  CREATE OR REPLACE TABLE \`$dataset.last_run\` AS
+  SELECT CURRENT_DATETIME() AS last_run
+  " > $last_run_tmp_file
+  gaarf-bq $last_run_tmp_file -c $config_file
+  rm $last_run_tmp_file
+}
+
 check_initial_load () {
   table=${1:-ad_group_network_split}
   infer_answer_from_config $config_file target_dataset
