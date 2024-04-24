@@ -40,7 +40,6 @@ with DAG('app_reporting_pack_local', default_args=default_args, schedule_interva
         command=[
             "-g", "/google-ads.yaml",
             "-c", "/app_reporting_pack.yaml",
-            "--legacy"
         ],
         docker_url="unix://var/run/docker.sock",
         mounts=[
@@ -65,7 +64,7 @@ with DAG('app_reporting_pack_local', default_args=default_args, schedule_interva
 ### Getting configuration files from Google Cloud Storage
 
 > Don't forget to change `gs://path/to/google-ads.yaml`, `path/to/service_account.json`
-> and `gs://path/to/app_reporting_pack.yaml` with valid paths.
+> and `path/to/app_reporting_pack.yaml` with valid paths.
 ```
 from airflow import DAG
 from datetime import datetime, timedelta
@@ -93,14 +92,17 @@ with DAG('app_reporting_pack_remote', default_args=default_args, schedule_interv
         },
         command=[
             "-g", "gs://path/to/google-ads.yaml",
-            "-c", "gs://path/to/app_reporting_pack.yaml",
-            "--legacy"
+            "-c", "/app_reporting_pack.yaml",
         ],
         docker_url="unix://var/run/docker.sock",
         mounts=[
             Mount(
                 source="/path/to/service_account.json",
                 target="/app/service_account.json",
+                type="bind"),
+            Mount(
+                source="/path/to/app_reporting_pack.yaml",
+                target="/app_reporting_pack.yaml",
                 type="bind")
     )
     app_reporting_pack
