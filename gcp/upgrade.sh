@@ -17,7 +17,7 @@
 CYAN='\033[0;36m' # Cyan
 WHITE='\033[0;37m'  # White
 
-git gull --tags > /dev/null
+git pull > /dev/null
 git checkout tags/stable
 trap "git checkout main" EXIT
 
