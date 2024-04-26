@@ -221,7 +221,7 @@ delete_incremental_snapshots() {
   FOR deletes IN (
     SELECT CONCAT(table_schema || '.' || table_name) AS full_table_name
       FROM \`$target_dataset.INFORMATION_SCHEMA.TABLES\`
-      WHERE table_name LIKE 'geo_performance_%')
+      WHERE table_name LIKE '$table%')
   DO
     EXECUTE IMMEDIATE FORMAT('DROP TABLE \`%s\`', deletes.full_table_name);
   END FOR;
