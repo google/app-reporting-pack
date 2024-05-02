@@ -1,4 +1,4 @@
-google-ads-api-report-fetcher[bq]==1.13.0
+google-ads-api-report-fetcher[bq]==1.13.1
 db-dtypes
 pyyaml
 google-api-python-client==2.80.0
