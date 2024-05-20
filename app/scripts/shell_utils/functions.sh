@@ -149,6 +149,8 @@ infer_answer_from_config() {
   if [[ $value != "y" ]]; then
     if cat $config | grep -q "$section: true"; then
       value="y"
+    elif cat $config | grep -q "$section: false"; then
+      value="n"
     else
       value=`cat $config | grep $section | cut -d ":" -f2- | head -n1 | sed "s/'//g" | sed 's/"//g'`
     fi
@@ -195,10 +197,10 @@ check_initial_load () {
   table=${1:-ad_group_network_split}
   infer_answer_from_config $config_file target_dataset
   infer_answer_from_config $config_file initial_load_date
+  infer_answer_from_config $config_file initial_date
   infer_answer_from_config $config_file project
   infer_answer_from_config $config_file start_date
   if [[ ! -z $initial_load_date ]]; then
-    initial_date=`echo "$initial_load_date" | sed 's/-//g' | sed 's/ //g'`
     echo "SELECT * FROM ${target_dataset}.${table}_${initial_date};" > /tmp/initial_load.sql
 
     missing_initial_load=`gaarf-bq /tmp/initial_load.sql -c $config_file | grep "404 Not found" | wc -l`

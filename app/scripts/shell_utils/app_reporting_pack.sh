@@ -122,6 +122,7 @@ ask_for_incremental_saving() {
       echo "invalid initial load date ($invalid_load_date), skipping initial load"
     elif [[ "$start_date" =~ ":YYYYMMDD-" ]]; then
       initial_load="y"
+      initial_date=`echo "$initial_load_date" | sed 's/-//g' | sed 's/ //g'`
     else
       echo "start_date is not dynamic ($start_date), skipping initial load"
     fi
@@ -137,7 +138,7 @@ generate_bq_macros() {
     macros="$macros --template.has_skan=true"
   fi
   if [[ $initial_load = "y" || $incremental = "y" ]]; then
-    macros="$macros --template.incremental=true"
+    macros="$macros --template.incremental=true --macro.initial_date=$initial_date"
   fi
 }
 

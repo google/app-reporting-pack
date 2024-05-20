@@ -310,6 +310,7 @@ run_google_ads_queries() {
 }
 
 run_bq_queries() {
+  local config_file=${2:-$config_file}
   if [ -d "$(dirname $0)/$1/bq_queries/snapshots/" ]; then
     echo -e "${COLOR}===generating snapshots for $1===${NC}"
     gaarf-bq $(dirname $0)/$1/bq_queries/snapshots/*.sql -c=$config_file --log=$loglevel
@@ -330,18 +331,12 @@ run_bq_queries() {
   if [ -d "$(dirname $0)/$1/bq_queries/incremental/" ]; then
     if [[ $initial_load = "y" ]]; then
       echo -e "${COLOR}===performing initial load of performance data for $1===${NC}"
-      gaarf-bq $(dirname $0)/$1/bq_queries/incremental/initial_load.sql \
-        --project=`echo $project` --macro.target_dataset=`echo $target_dataset` \
-        --macro.initial_date=`echo $initial_date` \
-        --macro.start_date=`echo $start_date` --log=$loglevel
+      gaarf-bq $(dirname $0)/$1/bq_queries/incremental/initial_load.sql -c $config --log=$loglevel
     else
       infer_answer_from_config $config_file incremental
       if [[ $incremental = "y" ]]; then
         echo -e "${COLOR}===saving incremental performance data for $1===${NC}"
-        gaarf-bq $(dirname $0)/$1/bq_queries/incremental/incremental_saving.sql \
-        --project=`echo $project` --macro.target_dataset=`echo $target_dataset` \
-        --macro.initial_date=`echo $initial_date` \
-        --macro.start_date=`echo $start_date` --log=$loglevel
+        gaarf-bq $(dirname $0)/$1/bq_queries/incremental/incremental_saving.sql -c $config_file --log=$loglevel
       fi
     fi
   fi
@@ -349,26 +344,28 @@ run_bq_queries() {
 
 define_runtime_config () {
   local incremental_table=${1:-ad_group_network_split}
-  new_start_date=`$(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
-    -c=$config_file \
-    --restore-incremental-snapshots \
-    --incremental-table $incremental_table \
-    --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION`
-  if [[ ! -z $new_start_date ]]; then
-    echo "table '$incremental_table' has missing performance snapshots."
-    echo "adjusting start_date to '$new_start_date'."
-    cat $config_file | sed "/start_date/s/${start_date}/'${new_start_date}'/g" > \
-      /tmp/$solution_name_lowercase.yaml
-    runtime_config=/tmp/$solution_name_lowercase.yaml
-  else
-    echo "table '$incremental_table' doesn't have missing performance snapshots."
-    runtime_config=$config_file
-  fi
   if [[ $initial_load = "y" ]];
   then
-    cat $runtime_config | sed '/start_date/d;' | \
+    cat $config_file | sed '/start_date/d;' | \
             sed 's/initial_load_date/start_date/' > /tmp/$solution_name_lowercase.yaml
     runtime_config=/tmp/$solution_name_lowercase.yaml
+  else
+    new_start_date=`$(which python3) $(dirname $0)/scripts/backfill_snapshots.py \
+      -c=$config_file \
+      --restore-incremental-snapshots \
+      --incremental-table $incremental_table \
+      --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION`
+    if [[ ! -z $new_start_date ]]; then
+      echo "table '$incremental_table' has missing performance snapshots."
+      echo "adjusting start_date to '$new_start_date'."
+      cat $config_file | sed "/start_date/s/${start_date}/'${new_start_date}'/g" > \
+        /tmp/$solution_name_lowercase.yaml
+      runtime_config=/tmp/$solution_name_lowercase.yaml
+      cat $runtime_config
+    else
+      echo "table '$incremental_table' doesn't have missing performance snapshots."
+      runtime_config=$config_file
+    fi
   fi
 }
 
@@ -403,7 +400,7 @@ run_with_config() {
           --restore-bid-budgets \
           --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
     fi
-    run_bq_queries "core"
+    run_bq_queries "core" $runtime_config
   fi
   if [[ $modules =~ "assets" ]]; then
     echo -e "${COLOR}===Running 'assets' module===${NC}"
@@ -423,12 +420,12 @@ run_with_config() {
           --restore-cohorts \
           --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
     fi
-    run_bq_queries "assets"
+    run_bq_queries "assets" $runtime_config
   fi
   if [[ $modules =~ "disapprovals" ]]; then
     echo -e "${COLOR}===Running 'disapprovals' module===${NC}"
     run_google_ads_queries "disapprovals"
-    run_bq_queries "disapprovals"
+    run_bq_queries "disapprovals" $runtime_config
   fi
   if [[ $modules =~ "geo" ]]; then
     echo -e "${COLOR}===Running 'geo' module===${NC}"
@@ -436,7 +433,7 @@ run_with_config() {
     check_missing_incremental_snapshot "geo_performance"
     define_runtime_config "geo_performance"
     run_google_ads_queries "geo" $runtime_config
-    run_bq_queries "geo"
+    run_bq_queries "geo" $runtime_config
   fi
   if [[ $modules =~ "ios_skan" ]]; then
     echo -e "${COLOR}===Running 'ios_skan' module===${NC}"
@@ -447,7 +444,7 @@ run_with_config() {
     run_google_ads_queries "ios_skan" $runtime_config
     echo -e "${COLOR}===getting SKAN schema===${NC}"
     $(which python3) $(dirname $0)/scripts/create_skan_schema.py -c=$config_file
-    run_bq_queries "ios_skan"
+    run_bq_queries "ios_skan" $runtime_config
     fi
   fi
   upload_last_run_to_bq
