@@ -1,0 +1,43 @@
+gaarf:
+  output: bq
+  api_version: '16'
+  account:
+  - '{{ account }}'
+  params:
+    macro:
+      start_date: :YYYYMMDD-4
+      end_date: :YYYYMMDD-2
+      date_iso: '20240519'
+      yesterday_iso: '20240518'
+      initial_load_date: '2024-05-01'
+    template:
+      skan4: 'true'
+  customer_ids_query: SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type
+    = "MULTI_CHANNEL"
+  bq:
+    project: '{{ project }}'
+    dataset: arp_e2e
+gaarf-bq:
+  project: '{{ project }}'
+  params:
+    macro:
+      bq_dataset: arp_e2e
+      target_dataset: arp_e2e_output
+      legacy_dataset: arp_e2e_legacy
+      initial_date: '20240501'
+      date_iso: '20240519'
+      yesterday_iso: '20240518'
+      start_date: :YYYYMMDD-4
+    template:
+      cohort_days: 1,3,5,7,14,30
+      has_skan: 'true'
+      incremental: 'true'
+      skan4: 'true'
+scripts:
+  video_orientation:
+    mode: placeholders
+  skan_mode:
+    mode: table
+backfill: false 
+incremental: true
+legacy: false
