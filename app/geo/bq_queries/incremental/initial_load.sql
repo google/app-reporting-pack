@@ -15,10 +15,10 @@
 -- Save geo performance data till some cutoff date
 CREATE OR REPLACE TABLE `{target_dataset}.geo_performance_{initial_date}` AS
 SELECT * FROM `{target_dataset}.geo_performance_*`
-WHERE day < "{start_date}";
+WHERE day <= "{start_date}";
 
 CREATE OR REPLACE TABLE `{target_dataset}.geo_performance_{date_iso}` AS
 SELECT * FROM `{target_dataset}.geo_performance_*`
-WHERE day >= "{start_date}";
+WHERE day > "{start_date}";
 
 

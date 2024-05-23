@@ -15,9 +15,9 @@
 -- Save performance data till some cutoff date
 CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{initial_date}` AS
 SELECT * FROM `{target_dataset}.ad_group_network_split_*`
-WHERE day < "{start_date}";
+WHERE day <= "{start_date}";
 
 CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{date_iso}` AS
 SELECT * FROM `{target_dataset}.ad_group_network_split_*`
-WHERE day >= "{start_date}";
+WHERE day > "{start_date}";
 
