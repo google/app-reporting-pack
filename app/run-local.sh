@@ -112,10 +112,14 @@ API_VERSION="16"
 
 reset_snapshot_data() {
   echo -e "${COLOR}Incremental performance snapshots will be  removed for the following modules: $modules ${NC}"
-  echo -n "Press q to abort this operation or Enter to continue: "
-  read -r continue_ressetting_snapshots
-  continue_ressetting_snapshots=$(convert_answer $continue_ressetting_snapshots 'y')
-  if [[ $continue_ressetting_snapshots == "y" ]]; then
+  if [[ $quiet = "y" ]]; then
+    continue_resetting_snapshots="y"
+  else
+    echo -n "Press q to abort this operation or Enter to continue: "
+    read -r continue_resetting_snapshots
+  fi
+  continue_resetting_snapshots=$(convert_answer $continue_resetting_snapshots 'y')
+  if [[ $continue_resetting_snapshots == "y" ]]; then
     if [[ $modules =~ "core" ]]; then
       delete_incremental_snapshots "ad_group_network_split"
     fi
@@ -130,9 +134,13 @@ reset_snapshot_data() {
       delete_incremental_snapshots "skan_decoder"
     fi
     echo -e "${COLOR}Incremental performance snapshots were removed${NC}"
-    echo -n "Press q to exit the application or Enter to continue: "
-    read -r proceed_after_resetting_snapshots
-    proceed_after_resetting_snapshots=$(convert_answer $proceed_after_resetting_snapshots 'y')
+    if [[ $quiet = "y" ]]; then
+      proceed_after_resetting_snapshots="y"
+    else
+      echo -n "Press q to exit the application or Enter to continue: "
+      read -r proceed_after_resetting_snapshots
+      proceed_after_resetting_snapshots=$(convert_answer $proceed_after_resetting_snapshots 'y')
+    fi
   fi
 }
 
@@ -357,11 +365,10 @@ define_runtime_config () {
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION`
     if [[ ! -z $new_start_date ]]; then
       echo "table '$incremental_table' has missing performance snapshots."
-      echo "adjusting start_date to '$new_start_date'."
-      cat $config_file | sed "/start_date/s/${start_date}/'${new_start_date}'/g" > \
-        /tmp/$solution_name_lowercase.yaml
+      echo "changing start_date from '$start_date' to '$new_start_date'."
+      cat $config_file | sed "/start_date/s/${start_date}/${new_start_date}/g" |\
+        sed "s/''/'/g"> /tmp/$solution_name_lowercase.yaml
       runtime_config=/tmp/$solution_name_lowercase.yaml
-      cat $runtime_config
     else
       echo "table '$incremental_table' doesn't have missing performance snapshots."
       runtime_config=$config_file
@@ -400,7 +407,7 @@ run_with_config() {
           --restore-bid-budgets \
           --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
     fi
-    run_bq_queries "core" $runtime_config
+    run_bq_queries "core"
   fi
   if [[ $modules =~ "assets" ]]; then
     echo -e "${COLOR}===Running 'assets' module===${NC}"
@@ -420,12 +427,12 @@ run_with_config() {
           --restore-cohorts \
           --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
     fi
-    run_bq_queries "assets" $runtime_config
+    run_bq_queries "assets"
   fi
   if [[ $modules =~ "disapprovals" ]]; then
     echo -e "${COLOR}===Running 'disapprovals' module===${NC}"
     run_google_ads_queries "disapprovals"
-    run_bq_queries "disapprovals" $runtime_config
+    run_bq_queries "disapprovals"
   fi
   if [[ $modules =~ "geo" ]]; then
     echo -e "${COLOR}===Running 'geo' module===${NC}"
@@ -433,7 +440,7 @@ run_with_config() {
     check_missing_incremental_snapshot "geo_performance"
     define_runtime_config "geo_performance"
     run_google_ads_queries "geo" $runtime_config
-    run_bq_queries "geo" $runtime_config
+    run_bq_queries "geo"
   fi
   if [[ $modules =~ "ios_skan" ]]; then
     echo -e "${COLOR}===Running 'ios_skan' module===${NC}"
@@ -444,7 +451,7 @@ run_with_config() {
     run_google_ads_queries "ios_skan" $runtime_config
     echo -e "${COLOR}===getting SKAN schema===${NC}"
     $(which python3) $(dirname $0)/scripts/create_skan_schema.py -c=$config_file
-    run_bq_queries "ios_skan" $runtime_config
+    run_bq_queries "ios_skan"
     fi
   fi
   upload_last_run_to_bq
