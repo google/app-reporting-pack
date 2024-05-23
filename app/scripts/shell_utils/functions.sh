@@ -187,7 +187,7 @@ upload_last_run_to_bq() {
   infer_answer_from_config $config_file dataset
   echo "
   CREATE OR REPLACE TABLE \`$dataset.last_run\` AS
-  SELECT CURRENT_DATETIME() AS last_run
+  SELECT '{current_datetime}' AS last_run
   " > $last_run_tmp_file
   gaarf-bq $last_run_tmp_file -c $config_file
   rm $last_run_tmp_file
@@ -248,7 +248,7 @@ check_missing_incremental_snapshot() {
       SELECT _TABLE_SUFFIX FROM MaxTableSuffix
       WHERE
         _TABLE_SUFFIX < FORMAT_DATE(
-          '%Y%m%d', DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY)
+          '%Y%m%d', DATE_SUB('{current_date}', INTERVAL 1 DAY)
         )
     )
     SELECT
