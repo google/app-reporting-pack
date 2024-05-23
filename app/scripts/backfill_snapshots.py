@@ -50,6 +50,7 @@ def get_new_date_for_missing_incremental_snapshots(bq_client: bigquery.Client,
     """
     start_date = ""
     base_table_id = f"{bq_client.project}.{bq_dataset}.{table_name}"
+    base_output_table_id = f"{bq_client.project}.{bq_dataset}_output.{table_name}"
     try:
         job = bq_client.query("SELECT TABLE_SUFFIX, new_start_date "
                               f"FROM `{base_table_id}_missing`")
@@ -58,7 +59,7 @@ def get_new_date_for_missing_incremental_snapshots(bq_client: bigquery.Client,
             start_date = result.new_start_date.squeeze().strftime(
                 "%Y-%m-%d")
             suffix = result.TABLE_SUFFIX.squeeze()
-            delete_ddl = f"DELETE `{base_table_id}_{suffix}`;"
+            delete_ddl = f"DROP TABLE `{base_output_table_id}_{suffix}`;"
             job = bq_client.query(delete_ddl)
             job.result()
     except (BadRequest, NotFound):
