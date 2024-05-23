@@ -15,11 +15,11 @@
 -- Save skan decoder performance data till some cutoff date
 CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{initial_date}` AS
 SELECT * FROM `{target_dataset}.skan_decoder_*`
-WHERE day < "{start_date}";
+WHERE day <= "{start_date}";
 
 CREATE OR REPLACE TABLE `{target_dataset}.skan_decoder_{date_iso}` AS
 SELECT * FROM `{target_dataset}.skan_decoder_*`
-WHERE day >= "{start_date}";
+WHERE day > "{start_date}";
 
 
 

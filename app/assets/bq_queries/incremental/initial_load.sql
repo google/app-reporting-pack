@@ -15,20 +15,20 @@
 -- Save performance data till some cutoff date
 CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{initial_date}` AS
 SELECT * FROM `{target_dataset}.asset_performance_*`
-WHERE day < "{start_date}";
+WHERE day <= "{start_date}";
 
 CREATE OR REPLACE TABLE `{target_dataset}.asset_performance_{date_iso}` AS
 SELECT * FROM `{target_dataset}.asset_performance_*`
-WHERE day >= "{start_date}";
+WHERE day > "{start_date}";
 
 -- Save conversion split data till some cutoff date
 CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split_{initial_date}` AS
 SELECT * FROM `{target_dataset}.asset_conversion_split_*`
-WHERE day < "{start_date}";
+WHERE day <= "{start_date}";
 
 CREATE OR REPLACE TABLE `{target_dataset}.asset_conversion_split_{date_iso}` AS
 SELECT * FROM `{target_dataset}.asset_conversion_split_*`
-WHERE day >= "{start_date}";
+WHERE day > "{start_date}";
 
 
 
