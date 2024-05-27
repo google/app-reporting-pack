@@ -28,7 +28,7 @@ import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.query_executor import AdsReportFetcher
-from gaarf.cli.utils import GaarfConfig, GaarfConfigBuilder, init_logging
+from gaarf.cli import utils as gaarf_utils
 
 import src.queries as queries
 from src.utils import write_data_to_bq
@@ -68,7 +68,7 @@ def get_new_date_for_missing_incremental_snapshots(bq_client: bigquery.Client,
 
 
 def restore_missing_bid_budgets(google_ads_client: GoogleAdsApiClient,
-                                config: GaarfConfig,
+                                config: gaarf_utils.GaarfConfig,
                                 bq_client: bigquery.Client,
                                 bq_dataset: str) -> None:
     try:
@@ -297,10 +297,9 @@ def main():
 
     args = parser.parse_known_args()
 
-    logger = init_logging(loglevel=args[0].loglevel.upper(),
+    logger = gaarf_utils.init_logging(loglevel=args[0].loglevel.upper(),
                           logger_type=args[0].logger)
-
-    config = GaarfConfigBuilder(args).build()
+    config = gaarf_utils.ConfigBuilder('gaarf').build(vars(args[0]), args[1])
     bq_project = config.writer_params.get("project")
     bq_dataset = config.writer_params.get("dataset")
     bq_client = bigquery.Client(bq_project)
