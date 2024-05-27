@@ -21,7 +21,7 @@ import yaml
 
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.query_executor import AdsReportFetcher
-from gaarf.cli.utils import GaarfConfigBuilder, init_logging
+from gaarf.cli import utils as gaarf_utils
 
 from src.queries import ConversionLagQuery
 from src.conv_lag_builder import ConversionLagBuilder
@@ -53,10 +53,7 @@ def main():
 
     args = parser.parse_known_args()
 
-    logger = init_logging(loglevel=args[0].loglevel.upper(),
-                          logger_type=args[0].logger)
-
-    config = GaarfConfigBuilder(args).build()
+    config = gaarf_utils.ConfigBuilder('gaarf').build(vars(args[0]), args[1])
 
     project, dataset = config.writer_params.get(
         "project"), config.writer_params.get("dataset")
