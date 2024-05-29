@@ -40,7 +40,9 @@ AS (
         WHEN name = "SEARCH_PARTNERS" THEN "Search Partners"
         WHEN name = "YOUTUBE_SEARCH" THEN "YouTube Search"
         WHEN name = "YOUTUBE_WATCH" THEN "YouTube Videos"
-        ELSE "Unknown" END
+        WHEN name = "YOUTUBE" THEN "YouTube"
+        WHEN name = "GOOGLE_TV" THEN "Google TV"
+        ELSE name END
 );
 
 -- Convert asset field types
