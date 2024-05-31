@@ -94,6 +94,7 @@ deploy_files() {
 
 enable_apis() {
   echo "Enabling APIs"
+  gcloud services enable bigquery.googleapis.com
   gcloud services enable compute.googleapis.com
   #gcloud services enable artifactregistry.googleapis.com
   gcloud services enable containerregistry.googleapis.com
