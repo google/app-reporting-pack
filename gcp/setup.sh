@@ -138,7 +138,7 @@ build_docker_image_gcr() {
 
 
 set_iam_permissions() {
-  required_roles="storage.objectViewer artifactregistry.repoAdmin compute.admin monitoring.editor logging.logWriter iam.serviceAccountTokenCreator"
+  required_roles="storage.objectViewer artifactregistry.repoAdmin compute.admin monitoring.editor logging.logWriter iam.serviceAccountTokenCreator pubsub.publisher run.invoker"
   echo "Setting up IAM permissions"
   for role in $required_roles; do
     gcloud projects add-iam-policy-binding $PROJECT_ID \
