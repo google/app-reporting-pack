@@ -138,7 +138,7 @@ generate_bq_macros() {
     macros="$macros --template.has_skan=true"
   fi
   if [[ $initial_load = "y" || $incremental = "y" ]]; then
-    macros="$macros --template.incremental=true --macro.initial_date=$initial_date"
+    macros="$macros --template.incremental=true --macro.initial_date=$initial_date --macro.start_date=$start_date"
   fi
 }
 
