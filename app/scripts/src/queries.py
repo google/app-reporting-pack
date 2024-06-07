@@ -18,9 +18,10 @@ from gaarf.base_query import BaseQuery
 
 
 class ConversionLagQuery(BaseQuery):
-    """Fetches all_conversions by network and conversion_id."""
-    def __init__(self, start_date, end_date):
-        self.query_text = f"""
+  """Fetches all_conversions by network and conversion_id."""
+
+  def __init__(self, start_date, end_date):
+    self.query_text = f"""
         SELECT
             campaign.id AS campaign_id,
             segments.ad_network_type AS network,
@@ -36,9 +37,10 @@ class ConversionLagQuery(BaseQuery):
 
 
 class ChangeHistory(BaseQuery):
-    """Fetches change history for bids and budgets."""
-    def __init__(self, start_date: str, end_date: str) -> None:
-        self.query_text = f"""
+  """Fetches change history for bids and budgets."""
+
+  def __init__(self, start_date: str, end_date: str) -> None:
+    self.query_text = f"""
         SELECT
             change_event.change_date_time AS change_date,
             campaign.id AS campaign_id,
@@ -59,9 +61,10 @@ class ChangeHistory(BaseQuery):
 
 
 class BidsBudgetsActiveCampaigns(BaseQuery):
-    """Fetches bids and budget values for active campaigns."""
-    def __init__(self) -> None:
-        self.query_text = """
+  """Fetches bids and budget values for active campaigns."""
+
+  def __init__(self) -> None:
+    self.query_text = """
         SELECT
             campaign.id AS campaign_id,
             campaign_budget.amount_micros AS budget_amount,
@@ -73,10 +76,12 @@ class BidsBudgetsActiveCampaigns(BaseQuery):
             AND campaign.status = 'ENABLED'
         """
 
+
 class BidsBudgetsInactiveCampaigns(BaseQuery):
-    """Fetches bids and budget values for inactive campaigns with non-zero impressions."""
-    def __init__(self, start_date: str, end_date: str) -> None:
-        self.query_text = f"""
+  """Fetches bids and budget values for inactive campaigns with non-zero impressions."""
+
+  def __init__(self, start_date: str, end_date: str) -> None:
+    self.query_text = f"""
         SELECT
             campaign.id AS campaign_id,
             campaign_budget.amount_micros AS budget_amount,
@@ -93,9 +98,10 @@ class BidsBudgetsInactiveCampaigns(BaseQuery):
 
 
 class CampaignsWithSpend(BaseQuery):
-    """Fetches campaign_ids with non-zero impressions."""
-    def __init__(self, start_date: str, end_date: str) -> None:
-        self.query_text = f"""
+  """Fetches campaign_ids with non-zero impressions."""
+
+  def __init__(self, start_date: str, end_date: str) -> None:
+    self.query_text = f"""
         SELECT
             campaign.id
         FROM campaign
@@ -109,9 +115,10 @@ class CampaignsWithSpend(BaseQuery):
 
 
 class Videos(BaseQuery):
-    """Fetches campaign_ids with non-zero impressions."""
-    def __init__(self) -> None:
-        self.query_text = f"""
+  """Fetches campaign_ids with non-zero impressions."""
+
+  def __init__(self) -> None:
+    self.query_text = """
         SELECT
             media_file.video.youtube_video_id AS video_id
         FROM media_file
