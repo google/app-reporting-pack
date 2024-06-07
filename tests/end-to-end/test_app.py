@@ -16,16 +16,18 @@
 Tests simulate running application for 3 days which controlling such parameters
 as current date.
 """
-import subprocess
-import pathlib
+
 import datetime
-from gaarf import bq_executor
-from gaarf.io import reader
-import jinja2
-import yaml
 import os
+import pathlib
+import subprocess
+
 import dotenv
+import jinja2
 import pandas as pd
+import yaml
+from gaarf.executors import bq_executor
+from gaarf.io import reader
 
 dotenv.load_dotenv()
 
@@ -34,7 +36,8 @@ _CONFIG_PARAMETERS = {
     'project': os.environ.get('ARP_TEST_PROJECT'),
 }
 
-executor = bq_executor.BigQueryExecutor(_CONFIG_PARAMETERS.get('project'))
+bigquery_executor = bq_executor.BigQueryExecutor(
+    _CONFIG_PARAMETERS.get('project'))
 
 
 def prepare_configs(configs_path: str, dataset: str) -> None:
@@ -56,24 +59,30 @@ def prepare_configs(configs_path: str, dataset: str) -> None:
           encoding='utf-8')
 
 
-def run_app_reporting_pack(configs_path: str, dataset: str):
+def run_app_reporting_pack(configs_path: str):
   for config in sorted(pathlib.Path(configs_path).glob('*_prepared.yaml')):
     command = (f'bash ../../app/run-local.sh -c {config} -q '
                '-g $HOME/google-ads.yaml --modules core')
-    subprocess.run(command, shell=True)
+    subprocess.run(command, shell=True, check=False)
 
 
 def clear_bq_datasets(executor: bq_executor.BigQueryExecutor,
                       bq_dataset_base: str) -> None:
   project_id = executor.project_id
-  for dataset_id in (bq_dataset_base, f'{bq_dataset_base}_output',
-                     f'{bq_dataset_base}_legacy'):
+  for dataset_id in (
+      bq_dataset_base,
+      f'{bq_dataset_base}_output',
+      f'{bq_dataset_base}_legacy',
+  ):
     executor.client.delete_dataset(
         f'{project_id}.{dataset_id}', delete_contents=True, not_found_ok=True)
 
 
-def get_bq_data(executor: bq_executor.BigQueryExecutor, dataset: str,
-                validation_query_path: str) -> pd.DataFrame:
+def get_bq_data(
+    executor: bq_executor.BigQueryExecutor,
+    dataset: str,
+    validation_query_path: str,
+) -> pd.DataFrame:
   validation_query = reader.FileReader().read(validation_query_path)
 
   return executor.execute(
@@ -84,13 +93,16 @@ def get_bq_data(executor: bq_executor.BigQueryExecutor, dataset: str,
               'project': executor.project_id,
               'dataset': f'{dataset}_output',
           }
-      })
+      },
+  )
 
 
-def assert_no_missing_data(executor: bq_executor.BigQueryExecutor, dataset: str,
-                           expected_df: pd.DataFrame,
-                           validation_query_path: str):
-
+def assert_no_missing_data(
+    executor: bq_executor.BigQueryExecutor,
+    dataset: str,
+    expected_df: pd.DataFrame,
+    validation_query_path: str,
+):
   results = get_bq_data(executor, dataset, validation_query_path)
   pd.testing.assert_frame_equal(results, expected_df, check_dtype=False)
 
@@ -127,12 +139,15 @@ def test_core_module_with_no_missing_runs():
       'max_day': max_days * len(app_modules),
   })
 
-  clear_bq_datasets(executor, bq_dataset_base)
+  clear_bq_datasets(bigquery_executor, bq_dataset_base)
   prepare_configs(configs_path, bq_dataset_base)
-  run_app_reporting_pack(configs_path, bq_dataset_base)
+  run_app_reporting_pack(configs_path)
 
-  assert_no_missing_data(executor, bq_dataset_base, expected_df,
-                         validation_query_path)
+  try:
+    assert_no_missing_data(bigquery_executor, bq_dataset_base, expected_df,
+                           validation_query_path)
+  finally:
+    clear_bq_datasets(bigquery_executor, bq_dataset_base)
 
 
 def test_core_module_with_one_missing_run():
@@ -164,10 +179,12 @@ def test_core_module_with_one_missing_run():
       'max_day': max_days * len(app_modules),
   })
 
-  clear_bq_datasets(executor, bq_dataset_base)
+  clear_bq_datasets(bigquery_executor, bq_dataset_base)
   prepare_configs(configs_path, bq_dataset_base)
-  run_app_reporting_pack(configs_path, bq_dataset_base)
+  run_app_reporting_pack(configs_path)
 
-  assert_no_missing_data(executor, bq_dataset_base, expected_df,
-                         validation_query_path)
-
+  try:
+    assert_no_missing_data(bigquery_executor, bq_dataset_base, expected_df,
+                           validation_query_path)
+  finally:
+    clear_bq_datasets(bigquery_executor, bq_dataset_base)
