@@ -258,5 +258,5 @@ check_missing_incremental_snapshot() {
     WHERE _TABLE_SUFFIX IN (SELECT _TABLE_SUFFIX FROM ValidMaxTableSuffix)
     HAVING new_start_date IS NOT NULL" > /tmp/${table}_incremental_check.sql
     echo "checking for missing performance snapshots for '$table'..."
-    gaarf-bq /tmp/${table}_incremental_check.sql -c $config_file
+    gaarf-bq /tmp/${table}_incremental_check.sql -c $config_file &> /dev/null
 }
