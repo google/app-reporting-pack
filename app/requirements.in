@@ -1,5 +1,6 @@
-google-ads-api-report-fetcher[bq]==1.13.4
+google-ads-api-report-fetcher[bq]==1.14.0
 db-dtypes
 pyyaml
 google-api-python-client==2.80.0
 urllib3==1.26.18  # remedy for pkg_resources.ContextualVersionConflict bug
+smart_open[gcs]
