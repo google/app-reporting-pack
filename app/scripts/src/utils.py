@@ -15,12 +15,16 @@
 from google.cloud import bigquery
 
 
-def write_data_to_bq(bq_client: bigquery.Client,
-                     data,
-                     table_id: str,
-                     write_disposition: str = "WRITE_TRUNCATE") -> None:
-    job_config = bigquery.LoadJobConfig(write_disposition=write_disposition, )
-    job = bq_client.load_table_from_dataframe(data,
-                                              table_id,
-                                              job_config=job_config)
-    job.result()
+def write_data_to_bq(
+  bq_client: bigquery.Client,
+  data,
+  table_id: str,
+  write_disposition: str = 'WRITE_TRUNCATE',
+) -> None:
+  job_config = bigquery.LoadJobConfig(
+    write_disposition=write_disposition, source_format='CSV'
+  )
+  job = bq_client.load_table_from_dataframe(
+    data, table_id, job_config=job_config
+  )
+  job.result()
