@@ -23,8 +23,7 @@ import yaml
 from gaarf.api_clients import GoogleAdsApiClient
 from gaarf.bq_executor import BigQueryExecutor
 from gaarf.cli.utils import (
-  GaarfBqConfigBuilder,
-  GaarfConfigBuilder,
+  ConfigBuilder,
   init_logging,
 )
 from gaarf.io.reader import FileReader
@@ -230,7 +229,9 @@ def main():
   dry_run = args[0].dry_run
   if dry_run:
     save_config = True
-  bq_config = GaarfBqConfigBuilder(args).build()
+  bq_config = ConfigBuilder('gaarf-bq').build(
+    vars(args[0]), args[1]
+  )
   bq_executor = BigQueryExecutor(bq_config.project)
   if mode == 'youtube':
     if save_config:
