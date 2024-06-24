@@ -17,7 +17,7 @@ import os
 
 import yaml
 from gaarf.bq_executor import BigQueryExecutor
-from gaarf.cli.utils import GaarfBqConfig, GaarfBqConfigBuilder, init_logging
+from gaarf.cli.utils import ConfigBuilder, GaarfBqConfig, init_logging
 from smart_open import open
 
 
@@ -107,7 +107,7 @@ def main():
     loglevel=args[0].loglevel.upper(), logger_type=args[0].logger
   )
 
-  config = GaarfBqConfigBuilder(args).build()
+  config = ConfigBuilder('gaarf-bq').build(vars(args[0]), args[1])
   bq_executor = BigQueryExecutor(config.project)
   if gaarf_config := args[0].gaarf_config:
     with open(gaarf_config, 'r', encoding='utf-8') as f:
