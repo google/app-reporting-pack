@@ -366,7 +366,7 @@ define_runtime_config () {
     if [[ ! -z $new_start_date ]]; then
       echo "table '$incremental_table' has missing performance snapshots."
       echo "changing start_date from '$start_date' to '$new_start_date'."
-      cat $config_file | sed "/start_date/s/${start_date}/${new_start_date}/g" |\
+      cat $config_file | sed "/start_date/s/${start_date}/\'${new_start_date}\'/g" |\
         sed "s/''/'/g"> /tmp/$solution_name_lowercase.yaml
       runtime_config=/tmp/$solution_name_lowercase.yaml
     else
