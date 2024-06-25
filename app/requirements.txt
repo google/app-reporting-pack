@@ -112,8 +112,8 @@ google-ads==24.1.0 \
     --hash=sha256:617ef1ab55f942238348435c6caf11aababac100fdc11fb883ea1ee63ffe6b9d \
     --hash=sha256:b77f0169e1e3f075f2482ee9b4a8b6a5acb8565ec4c35b8550a752d0cd557bc9
     # via google-ads-api-report-fetcher
-google-ads-api-report-fetcher[bq]==1.14.0 \
-    --hash=sha256:30423163d218290de3c152f143c21d782f7c34e438463a8d704c930d8231de33
+google-ads-api-report-fetcher[bq]==1.14.2 \
+    --hash=sha256:ab9ccb1cd1351de4d394f1e816845cd05ac615e046ef5541a052a69a2354961c
     # via
     #   -r requirements.in
     #   google-ads-api-report-fetcher
@@ -643,7 +643,7 @@ six==1.16.0 \
     --hash=sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926 \
     --hash=sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254
     # via python-dateutil
-smart-open[gcp,gcs]==7.0.4 \
+smart-open[gcs]==7.0.4 \
     --hash=sha256:4e98489932b3372595cddc075e6033194775165702887216b65eba760dfd8d47 \
     --hash=sha256:62b65852bdd1d1d516839fcb1f6bc50cd0f16e05b4ec44b52f43d38bcb838524
     # via
