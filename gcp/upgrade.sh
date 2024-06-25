@@ -111,7 +111,7 @@ fi
 
 # deploy solution
 echo -e "${CYAN}Upgrading application...${WHITE}"
-./gcp/setup.sh deploy_files build_docker_image_gcr start
+./gcp/setup.sh copy_application_scripts build_docker_image_gcr start
 
 popd >/dev/null
 
