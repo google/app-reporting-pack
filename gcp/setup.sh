@@ -54,6 +54,7 @@ REPOSITORY_LOCATION=$(git config -f $SETTING_FILE repository.location)
 TOPIC=$(eval echo $(git config -f $SETTING_FILE pubsub.topic))
 
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
+GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
 
 check_billing() {
   BILLING_ENABLED=$(gcloud beta billing projects describe $PROJECT_ID --format="csv(billingEnabled)" | tail -n 1)
@@ -64,24 +65,18 @@ check_billing() {
   fi
 }
 
-deploy_files() {
-  echo 'Deploying files to GCS'
-  if ! gsutil ls gs://$PROJECT_ID > /dev/null 2> /dev/null; then
-    echo "Creating GCS bucket gs://$PROJECT_ID"
-    gsutil mb -b on gs://$PROJECT_ID
-  fi
-
-  GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
-
-  # NOTE: DO NOT add -m flag for gsutil! When executed under cloudshell_open (via Cloud Run Button) it won't copy files
-  echo "Removing existing files at $GCS_BASE_PATH"
-  gsutil rm -r $GCS_BASE_PATH/
-
-  # NOTE: if an error "module 'sys' has no attribute 'maxint'" occures, run this: `pip3 install -U crcmod`
+copy_application_scripts() {
   echo "Copying application files to $GCS_BASE_PATH"
   gsutil rsync -r -x ".*/__pycache__/.*|[.].*" ./../app $GCS_BASE_PATH
+}
+
+copy_application_config() {
   echo "Copying configs to $GCS_BASE_PATH"
-  gsutil -h "Content-Type:text/plain" cp ./../app/*.yaml $GCS_BASE_PATH/
+  gsutil -h "Content-Type:text/plain" cp ./../app/$APP_CONFIG_FILE $GCS_BASE_PATH/
+}
+
+copy_googleads_config() {
+  echo 'Copying google-ads.yaml to GCS'
   if [[ -f ./../google-ads.yaml ]]; then
     gsutil -h "Content-Type:text/plain" cp ./../google-ads.yaml $GCS_BASE_PATH/google-ads.yaml
   elif [[ -f $HOME/google-ads.yaml ]]; then
@@ -89,6 +84,21 @@ deploy_files() {
   else
     echo "Please upload google-ads.yaml"
   fi
+}
+
+deploy_files() {
+  echo 'Deploying files to GCS'
+  if ! gsutil ls gs://$PROJECT_ID > /dev/null 2> /dev/null; then
+    echo "Creating GCS bucket gs://$PROJECT_ID"
+    gsutil mb -b on gs://$PROJECT_ID
+  fi
+
+  echo "Removing existing files at $GCS_BASE_PATH"
+  gsutil rm -r $GCS_BASE_PATH/
+
+  copy_application_scripts
+  copy_application_config
+  copy_googleads_config
 }
 
 
