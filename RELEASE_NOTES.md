@@ -1,5 +1,32 @@
 # App Reporting Pack Release Notes
 
+## Version 1.4.0 [2024-06-25]
+
+**tl;dr: Upgraded installation process and introduced upgrade procedure.**
+
+### Dashboard
+
+* Fixed incorrect date filters on SKAN Postbacks page
+* Fixed incorrect `Account % of total` in *Disapprovals* tab.
+
+### Data
+
+* Add support for resetting incremental performance snapshots.
+    * `./run-local.sh --reset-incremental-performance-snapshots` will delete all incremental snapshots and upload data again if prompted.
+* Application is upgraded to Google Ads API v16.
+* Add support for custom conversion mapping.
+* Improve installation process on Google Cloud:
+    * Add option for upgrading the application.
+    * Ensure OWNER permissions to GCP project when installing the application.
+    * Add support for remote (Google Cloud Storage only) application config files.
+    * Add helper for accessing application logs on Cloud Logging.
+* Bug fixes:
+    * iOS SKAN schema can be added.
+    * Incremental snapshots are not duplicated.
+* Update documentation.
+    * Document customizing solution via config.
+* Add support for custom regexp when inferring video orientation.
+
 ## Version 1.3.0 [2023-11-01]
 > Breaking changes. Please re-create your existing version of your App Reporting Pack.
 
