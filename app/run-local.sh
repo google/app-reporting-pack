@@ -37,17 +37,24 @@ Helper script for running App Reporting Pack queries.\n\n
 --modules - comma separated list of modules to run
 "
 
+cleanup() {
+  if [[ -f "/tmp/$solution_name_lowercase.yaml" ]]; then
+    rm "/tmp/$solution_name_lowercase.yaml"
+  fi
+}
+
 solution_name="App Reporting Pack"
 solution_name_lowercase=$(echo $solution_name | tr '[:upper:]' '[:lower:]' |\
   tr ' ' '_')
 
+API_VERSION="16"
+supported_api_versions="15 16 17"
 quiet="n"
 generate_config_only="n"
 validate_ads_config="n"
 modules="core,assets,disapprovals,ios_skan,geo"
 incremental="y"
 backfill="y"
-skan4="true"
 
 trap cleanup EXIT
 
@@ -96,6 +103,10 @@ case $1 in
     shift
     modules=$1
     ;;
+  --api-version)
+    shift
+    api_version=$1
+    ;;
   -h|--help)
     echo -e $usage;
     exit
@@ -108,7 +119,16 @@ done
 
 # Specify customer ids query that fetch data only from accounts that have at least one app campaign in them.
 customer_ids_query='SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type = "MULTI_CHANNEL"'
-API_VERSION="16"
+
+if [[ ! -z $api_version ]]; then
+  validate_api_version $api_version
+fi
+
+if [[ $API_VERSION -gt 16 ]]; then
+  skan_fine="true"
+else
+  skan_fine="false"
+fi
 
 reset_snapshot_data() {
   echo -e "${COLOR}Incremental performance snapshots will be  removed for the following modules: $modules ${NC}"
@@ -225,14 +245,14 @@ setup() {
         --api-version=$API_VERSION \
         --dry-run \
         --macro.initial_load_date=$initial_load_date \
-        --template.skan4="$skan4"
+        --template.skan_fine="$skan_fine"
     else
-      echo "Skan: $skan4"
+      echo "Skan: $skan_fine"
       fetch_reports $save_config \
         --log=$loglevel \
         --api-version=$API_VERSION \
         --dry-run \
-        --template.skan4="$skan4"
+        --template.skan_fine="$skan_fine"
     fi
     generate_output_tables $save_config --log=$loglevel --dry-run
     fetch_video_orientation $save_config --log=$loglevel --dry-run
@@ -270,13 +290,13 @@ setup() {
         --api-version=$API_VERSION \
         --dry-run \
         --macro.initial_load_date=$initial_load_date \
-        --template.skan4="$skan4"
+        --template.skan_fine="$skan_fine"
   else
       fetch_reports $save_config --log=$loglevel \
         --api-version=$API_VERSION \
         --dry-run \
         --macro.initial_load_date=$initial_load_date \
-        --template.skan4="$skan4"
+        --template.skan_fine="$skan_fine"
   fi
   generate_output_tables $save_config --log=$loglevel --dry-run
   fetch_video_orientation $save_config --log=$loglevel --dry-run
@@ -297,6 +317,7 @@ setup() {
 
 print_configuration() {
   echo "Your configuration:"
+  echo "  api_version: $API_VERSION"
   echo "  account_id: $customer_id"
   echo "  BigQuery project_id: $project"
   echo "  BigQuery dataset: $bq_dataset"
@@ -457,11 +478,6 @@ run_with_config() {
   upload_last_run_to_bq
 }
 
-cleanup() {
-  if [[ -f "/tmp/$solution_name_lowercase.yaml" ]]; then
-    rm "/tmp/$solution_name_lowercase.yaml"
-  fi
-}
 
 if [[ $reset_snapshots == "y" ]]; then
   reset_snapshot_data

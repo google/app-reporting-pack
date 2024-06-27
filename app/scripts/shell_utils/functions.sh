@@ -260,3 +260,14 @@ check_missing_incremental_snapshot() {
     echo "checking for missing performance snapshots for '$table'..."
     gaarf-bq /tmp/${table}_incremental_check.sql -c $config_file &> /dev/null
 }
+
+validate_api_version() {
+  local _api_version=$1
+  echo "$supported_api_versions"
+  if [[ $supported_api_versions =~ "$_api_version" ]]; then
+    API_VERSION=$_api_version
+  else
+    echo "unsupported API version, select one of $supported_api_versions"
+    exit 1
+  fi
+}
