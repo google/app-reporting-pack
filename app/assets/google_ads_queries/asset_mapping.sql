@@ -28,3 +28,4 @@ SELECT
     asset.youtube_video_asset.youtube_video_id AS youtube_video_id,
     asset.youtube_video_asset.youtube_video_title AS youtube_video_title
 FROM asset
+WHERE asset.type IN (IMAGE, YOUTUBE_VIDEO, TEXT, MEDIA_BUNDLE)
