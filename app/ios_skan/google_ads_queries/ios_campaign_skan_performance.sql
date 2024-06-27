@@ -1,11 +1,11 @@
 -- Copyright 2023 Google LLC
--- 
+--
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
--- 
+--
 --     https://www.apache.org/licenses/LICENSE-2.0
--- 
+--
 -- Unless required by applicable law or agreed to in writing, software
 -- distributed under the License is distributed on an "AS IS" BASIS,
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -15,16 +15,16 @@
 SELECT
     segments.date AS date,
     campaign.id AS campaign_id,
-    segments.sk_ad_network_conversion_value AS skan_conversion_value,
+    {% if skan_fine == "true" %}
+        segments.sk_ad_network_fine_conversion_value AS skan_conversion_value,
+    {% else %}
+        segments.sk_ad_network_conversion_value AS skan_conversion_value,
+    {% endif %}
     segments.sk_ad_network_source_app.sk_ad_network_source_app_id AS skan_source_app_id,
     segments.sk_ad_network_user_type AS skan_user_type,
     segments.sk_ad_network_ad_event_type AS skan_ad_event_type,
     segments.sk_ad_network_attribution_credit AS skan_ad_network_attribution_credit,
-    {% if skan4 == "true" %}
-        metrics.sk_ad_network_total_conversions AS skan_postbacks
-    {% else %}
-        metrics.sk_ad_network_conversions AS skan_postbacks
-    {% endif %}
+    metrics.sk_ad_network_total_conversions AS skan_postbacks
 FROM campaign
 WHERE
     campaign.advertising_channel_type = "MULTI_CHANNEL"
