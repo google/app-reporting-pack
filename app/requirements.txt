@@ -112,8 +112,8 @@ google-ads==24.1.0 \
     --hash=sha256:617ef1ab55f942238348435c6caf11aababac100fdc11fb883ea1ee63ffe6b9d \
     --hash=sha256:b77f0169e1e3f075f2482ee9b4a8b6a5acb8565ec4c35b8550a752d0cd557bc9
     # via google-ads-api-report-fetcher
-google-ads-api-report-fetcher[bq]==1.14.2 \
-    --hash=sha256:ab9ccb1cd1351de4d394f1e816845cd05ac615e046ef5541a052a69a2354961c
+google-ads-api-report-fetcher[bq]==1.14.3 \
+    --hash=sha256:288a51dc348db16ca90e35cc15f368f6cca21bbdc20ec052a17ef78a1e89d0dd
     # via
     #   -r requirements.in
     #   google-ads-api-report-fetcher
