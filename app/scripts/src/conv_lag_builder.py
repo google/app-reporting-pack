@@ -12,33 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Module for getting conversion lag adjustment table that can be applied
-to any performance dataset.
+"""Module for getting conversion lag adjustment table.
+
+Conversion lag adjustment tables contains network specific lags (from 1 till
+max 90) for each conversion_id that can be applied to any performance dataset.
 """
 
 import os
 from functools import reduce
-from typing import List
 
+import gaarf
 import pandas as pd
 
 
 class ConversionLagBuilder:
   """Class for generating conversion lag adjustment table."""
 
-  def __init__(self, lag_data: pd.DataFrame, base_groupby: List[str]):
+  def __init__(self, lag_data: pd.DataFrame, base_groupby: list[str]) -> None:
+    """Initilizes ConversionLagBuilder with lag_data and groupby bases.
+
+    Args:
+      lag_data:
+        DataFrame with number of conversions for each lag bucket for network,
+          campaign_id, and conversion_id.
+      base_groupby:
+        Attributes of lag_data to control the granularity of calculating
+          conversion lags.
+    """
     self.lag_data = lag_data
-    self.lag_enums = self._read_lag_enums()
     self.group_by = base_groupby
 
   def _read_lag_enums(self) -> pd.DataFrame:
     dirname = os.path.dirname(__file__)
-    lag_enums = pd.read_csv(
+    return pd.read_csv(
       os.path.join(dirname, '../data/conversion_lag_mapping.csv')
     )
-    return lag_enums
 
-  def calculate_reference_values(self) -> pd.DataFrame:
+  def calculate_reference_values(self) -> gaarf.report.GaarfReport:
     """Method for getting conversion lag adjustment table.
 
     Returns:
@@ -55,23 +65,23 @@ class ConversionLagBuilder:
       expanded_data = self.expand_and_join_lags(cumulative_data)
       incremental_lag = self.calculate_incremental_lag(expanded_data)
       conversion_lag_table.append(incremental_lag)
-    return reduce(
-      lambda left, right: pd.concat([left, right], ignore_index=True),
-      conversion_lag_table,
+    return gaarf.report.GaarfReport.from_pandas(
+      reduce(
+        lambda left, right: pd.concat([left, right], ignore_index=True),
+        conversion_lag_table,
+      )
     )
 
   def join_lag_data_and_enums(self, lag_data: pd.DataFrame) -> pd.DataFrame:
-    """Joins conversion lag data enums from Google Ads API with INT values.
-    """
+    """Joins conversion lag data enums from Google Ads API with INT values."""
     return pd.merge(
-      lag_data, self.lag_enums, on='conversion_lag_bucket', how='left'
+      lag_data, self._read_lag_enums(), on='conversion_lag_bucket', how='left'
     )
 
   def calculate_conversions_by_name_network_lag(
     self, joined_data: pd.DataFrame
   ) -> pd.DataFrame:
-    """Sums all_conversions by group_by parameter for each lag and sorts them.
-    """
+    """Sums and sorts all_conversions by group_by parameter for each lag."""
     return (
       joined_data.groupby(self.group_by + ['lag_number'], as_index=False)
       .agg({'all_conversions': 'sum'})
