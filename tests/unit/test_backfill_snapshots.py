@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
 import itertools
 
 import pandas as pd
@@ -85,3 +86,46 @@ def test_restore_bid_budget_history():
     }
   )
   assert restored_change_history.equals(expected_change_history)
+
+
+def test_restore_missing_cohorts_returns_correct_sql_statements():
+  max_snapshot_dates = 5
+  snapshot_dates = {
+    datetime.date(2024, 1, 1),
+    datetime.date(2024, 1, 5),
+  }
+  statements = list(
+    backfill_snapshots.restore_missing_cohorts(snapshot_dates, 'test_dataset')
+  )
+  assert len(statements) == max_snapshot_dates - len(snapshot_dates)
+
+def test_restore_missing_cohorts_without_missing_snapshots_does_nothing():
+  snapshot_dates = {
+    datetime.date(2024, 1, 1),
+    datetime.date(2024, 1, 2),
+    datetime.date(2024, 1, 3),
+    datetime.date(2024, 1, 4),
+    datetime.date(2024, 1, 5),
+  }
+  statements = list(
+    backfill_snapshots.restore_missing_cohorts(snapshot_dates, 'test_dataset')
+  )
+  assert not statements
+
+def test_restore_missing_cohorts_with_with_only_start_date_does_nothing():
+  snapshot_dates = {
+    datetime.date(2024, 1, 5),
+  }
+  statements = list(
+    backfill_snapshots.restore_missing_cohorts(snapshot_dates, 'test_dataset')
+  )
+  assert not statements
+
+def test_restore_missing_cohorts_with_with_only_end_date_does_nothing():
+  snapshot_dates = {
+    datetime.date(2024, 1, 1),
+  }
+  statements = list(
+    backfill_snapshots.restore_missing_cohorts(snapshot_dates, 'test_dataset')
+  )
+  assert not statements

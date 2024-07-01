@@ -19,7 +19,8 @@ import itertools
 import logging
 from bisect import bisect_left
 from collections.abc import Sequence
-from datetime import datetime, timedelta
+import datetime
+from typing import Generator
 
 import gaarf
 import numpy as np
@@ -29,7 +30,7 @@ from gaarf.cli import utils as gaarf_utils
 from gaarf.executors import bq_executor
 from gaarf.io.writers import bigquery_writer
 from google.api_core import exceptions as google_api_exceptions
-from scripts.src import queries
+from src import queries
 
 
 def get_new_date_for_missing_incremental_snapshots(
@@ -264,60 +265,119 @@ def _format_partial_event_history(
   return events.groupby(['day', 'campaign_id']).last()
 
 
-def restore_missing_cohorts(
+def _get_asset_cohorts_snapshots(
   bigquery_executor: bq_executor.BigQueryExecutor, bq_dataset: str
-) -> None:
+) -> set[datetime.date]:
+  """Get suffixes of asset cohorts snapshots for the last 5 days.
+
+  Args:
+    bigquery_executor: Instantiated executor to write data to BigQuery.
+    bq_dataset: BigQuery dataset to save data to.
+
+  Returns:
+    Days when snapshots are present.
+  """
+  snapshot_dates: set[datetime.date] = set()
   try:
     result = bigquery_executor.execute(
       'conversion_lags_snapshots',
-      f'SELECT DISTINCT _TABLE_SUFFIX AS day FROM '
-      f'`{bq_dataset}.conversion_lags_*` ORDER BY 1',
+      f"""
+      SELECT DISTINCT _TABLE_SUFFIX AS day
+      FROM
+      `{bq_dataset}.conversion_lags_*`
+      WHERE
+        _TABLE_SUFFIX >= FORMAT_DATE(
+           "%Y%m%d",DATE_SUB(CURRENT_DATE, INTERVAL 5 DAY)
+        )
+        AND _TABLE_SUFFIX < FORMAT_DATE( "%Y%m%d",CURRENT_DATE)
+      ORDER BY 1
+     """,
     )
   except bq_executor.BigQueryExecutorException:
-    return
-  snapshot_dates = set(result.to_dataframe()['day'])
-  dates = list(
-    pd.date_range(min(snapshot_dates), max(snapshot_dates))
+    logging.warning('failed to get data')
+  if result and (snapshots_days := set(result.day)):
+    snapshot_dates = {
+      datetime.datetime.strptime(date, '%Y%m%d').date()
+      for date in snapshots_days
+    }
+  else:
+    logging.warning('No available assert cohorts snapshots for the last 5 days')
+  return snapshot_dates
+
+
+def restore_missing_cohorts(
+  snapshot_dates: set[datetime.date], bq_dataset: str
+) -> Generator[str, None, None]:
+  """Restores missing asset cohorts data.
+
+  Cohorts snapshots can be restored only for the last 5 days.
+
+  Args:
+    snapshot_dates: Dates when cohort snapshots are present.
+    bq_dataset: BigQuery dataset to save data to.
+
+  Yields:
+    Table id and query to restore the snapshot.
+  """
+  dates = {
+    day.date()
+    for day in pd.date_range(min(snapshot_dates), max(snapshot_dates))
     .to_pydatetime()
     .tolist()
-  )
-  missing_dates = list(set(dates).difference(snapshot_dates))
-  snapshot_dates = sorted(
-    [datetime.strptime(date, '%Y%m%d').date() for date in snapshot_dates]
-  )
+  }
+
+  if not (missing_dates := list(dates.difference(snapshot_dates))):
+    return
   if not missing_dates:
     logging.info('No asset cohort snapshots to backfill')
     return
+  snapshot_dates = sorted(snapshot_dates)
   for date in sorted(missing_dates):
-    index = bisect_left(snapshot_dates, date.date())
+    index = bisect_left(snapshot_dates, date)
     if index == 0:
       continue
     last_available_date = snapshot_dates[index - 1]
-    date_diff = (date.date() - last_available_date).days
+    date_diff = (date - last_available_date).days
     table_id = f'{bq_dataset}.conversion_lags_{date.strftime("%Y%m%d")}'
-    query = f"""
-            CREATE OR REPLACE TABLE `{table_id}`
-            AS
-            SELECT
-                day_of_interaction,
-                lag+{date_diff} AS lag,
-                ad_group_id,
-                asset_id,
-                field_type,
-                network AS network,
-                installs,
-                inapps,
-                view_through_conversions,
-                conversions_value
-            FROM `{bq_dataset}.conversion_lags_{last_available_date.strftime("%Y%m%d")}`
-            """
-    try:
-      result = bigquery_executor.execute(
-        'restore_conversion_lag_snapshot', query
-      )
-      logging.info("table '%s' has been created", table_id)
-    except google_api_exceptions.Conflict:
-      logging.warning("table '%s' already exists", table_id)
+    last_available_date_table_id = last_available_date.strftime('%Y%m%d')
+    yield (
+      table_id,
+      f"""
+      CREATE OR REPLACE TABLE `{table_id}`
+      AS
+      SELECT
+          day_of_interaction,
+          lag+{date_diff} AS lag,
+          ad_group_id,
+          asset_id,
+          field_type,
+          network AS network,
+          installs,
+          inapps,
+          view_through_conversions,
+          conversions_value
+      FROM `{bq_dataset}.conversion_lags_{last_available_date_table_id}`
+     """,
+    )
+
+
+def save_restored_asset_cohort(
+  bigquery_executor: bq_executor.BigQueryExecutor, query: str, table_id: str
+) -> None:
+  """Execute query for backfilling asset cohort snapshot.
+
+  Cohorts snapshots can be restored only for the last 5 days.
+
+  Args:
+    bigquery_executor: Instantiated executor to write data to BigQuery.
+    query: Query for snapshot backfilling.
+    table_id: Full name of the table when snapshot saved to.
+  """
+  try:
+    bigquery_executor.execute('restore_conversion_lag_snapshot', query)
+    logging.info("table '%s' has been created", table_id)
+  except bq_executor.BigQueryExecutorException:
+    logging.warning("table '%s' already exists", table_id)
 
 
 def _get_bid_budget_snapshot_dates(
@@ -377,7 +437,9 @@ def save_restored_change_history(
     daily_history = restored_bid_budget_history.loc[
       restored_bid_budget_history['day'] == date
     ]
-    daily_history.loc[:, ('day')] = datetime.strptime(date, '%Y-%m-%d').date()
+    daily_history.loc[:, ('day')] = datetime.datetime.strptime(
+      date, '%Y-%m-%d'
+    ).date()
     table_id = f'bid_budgets_{date.replace("-","")}'
     try:
       bq_writer.write(
@@ -435,8 +497,12 @@ def main():
       write_disposition='WRITE_EMPTY',
     )
     date_range = (
-      (datetime.now() - timedelta(days=28)).strftime('%Y-%m-%d'),
-      (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
+      (datetime.datetime.now() - datetime.timedelta(days=28)).strftime(
+        '%Y-%m-%d'
+      ),
+      (datetime.datetime.now() - datetime.timedelta(days=1)).strftime(
+        '%Y-%m-%d'
+      ),
     )
     if not (
       missing_dates := _get_bid_budget_snapshot_missing_dates(
@@ -457,8 +523,15 @@ def main():
       bq_writer, restored_bid_budget_history, missing_dates
     )
 
-  if args.cohorts:
-    restore_missing_cohorts(bigquery_executor, bq_dataset)
+  if args.cohorts and (
+    snapshot_dates := _get_asset_cohorts_snapshots(
+      bigquery_executor, bq_dataset
+    )
+  ):
+    for table_id, query in restore_missing_cohorts(
+      bigquery_executor, bq_dataset
+    ):
+      save_restored_asset_cohort(bigquery_executor, query, table_id)
 
 
 if __name__ == '__main__':
