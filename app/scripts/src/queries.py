@@ -121,14 +121,3 @@ class CampaignsWithSpend(DateRangeQuery):
         AND segments.date <= '{end_date}'
         AND metrics.impressions > 0
   """
-
-
-class Videos(base_query.BaseQuery):
-  """Fetches ids of all videos added to account."""
-
-  query_text = """
-      SELECT
-        media_file.video.youtube_video_id AS video_id
-      FROM media_file
-      WHERE media_file.type = VIDEO
-  """

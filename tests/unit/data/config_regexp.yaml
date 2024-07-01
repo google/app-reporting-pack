@@ -1,0 +1,37 @@
+gaarf:
+  account:
+  - '1234567890'
+  output: bq
+  api_version: '16'
+  params:
+    macro:
+      start_date: :YYYYMMDD-90
+      end_date: :YYYYMMDD-1
+    template:
+      skan4: 'true'
+  customer_ids_query: SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type
+    = "MULTI_CHANNEL"
+  bq:
+    project: TEST_PROJECT
+    dataset: TEST_DATASET
+gaarf-bq:
+  project: TEST_PROJECT
+  params:
+    macro:
+      bq_dataset: TEST_DATASET
+      target_dataset: TEST_DATASET_output
+      legacy_dataset: TEST_DATASET_legacy
+      start_date: :YYYYMMDD-90
+    template:
+      cohort_days: 1,3,5,7,14,30
+      has_skan: 'true'
+      incremental: 'true'
+scripts:
+  video_orientation:
+    mode: regex
+    element_delimiter: '_'
+    orientation_position: 1
+    orientation_delimiter: 'x'
+backfill: true
+incremental: true
+legacy: false
