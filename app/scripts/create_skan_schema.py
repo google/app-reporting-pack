@@ -11,19 +11,30 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+"""Module responsible for defining iOS SKAN schema.
+
+SKAN Schema can be copied from existing BigQuery table; if no input table is
+provided than placeholder table is created.
+"""
 
 import argparse
 import os
 
+import smart_open
 import yaml
-from gaarf.bq_executor import BigQueryExecutor
-from gaarf.cli.utils import ConfigBuilder, GaarfBqConfig, init_logging
-from smart_open import open
+from gaarf.cli import utils as gaarf_utils
+from gaarf.executors import bq_executor
 
 
 def update_config(path: str, mode: str) -> None:
+  """Helper methods for saving values to config.
+
+  Args:
+    path: Config path.
+    mode: Skan schema saving mode ('table', 'placeholders').
+  """
   if os.path.exists(path):
-    with open(path, 'r', encoding='utf-8') as f:
+    with smart_open.open(path, 'r', encoding='utf-8') as f:
       config = yaml.safe_load(f)
   else:
     config = {}
@@ -32,22 +43,41 @@ def update_config(path: str, mode: str) -> None:
     config.get('scripts').update(scripts_config.get('scripts'))
   else:
     config.update(scripts_config)
-  with open(path, 'w', encoding='utf-8') as f:
+  with smart_open.open(path, 'w', encoding='utf-8') as f:
     yaml.dump(
       config, f, default_flow_style=False, sort_keys=False, encoding='utf-8'
     )
 
 
-def has_existing_schema(bq_executor, config: GaarfBqConfig) -> bool:
+def has_existing_schema(
+  bigquery_executor: bq_executor.BigQueryExecutor, bq_dataset: str
+) -> bool:
+  """Checks whether SKAN schema has been already copied to BigQuery.
+
+  Args:
+    bigquery_executor: Executor responsible for writing data to BigQuery.
+    bq_dataset: BigQuery dataset to write data to.
+  """
   try:
-    schema = '{bq_dataset}.skan_schema'.format(**config.params.get('macro'))
-    bq_executor.client.get_table(schema)
+    bigquery_executor.execute(
+      'check_existing_skan_schema',
+      f'SELECT app_id FROM `{bq_dataset}.skan_schema_input_table` LIMIT 0',
+    )
     return True
-  except Exception:
+  except bq_executor.BigQueryExecutorException:
     return False
 
 
-def copy_schema(bq_executor, config: GaarfBqConfig) -> None:
+def copy_schema(
+  bigquery_executor: bq_executor.BigQueryExecutor,
+  config: gaarf_utils.GaarfBqConfig,
+) -> None:
+  """Copies SKAN schema existing table in BigQuery.
+
+  Args:
+    bigquery_executor: Executor responsible for writing data to BigQuery.
+    config: GaarfBqConfig with parameters for copying.
+  """
   query = """
             CREATE OR REPLACE TABLE `{bq_dataset}.skan_schema_input_table` AS
             SELECT
@@ -61,11 +91,19 @@ def copy_schema(bq_executor, config: GaarfBqConfig) -> None:
             FROM `{skan_schema_input_table}`;
 
         """
-  bq_executor.execute('skan_schema', query, config.params)
+  bigquery_executor.execute('skan_schema', query, config.params)
 
 
-def generate_placeholder_schema(bq_executor, config: GaarfBqConfig) -> None:
-  query = """
+def generate_placeholder_schema(
+  bigquery_executor: bq_executor.BigQueryExecutor, bq_dataset: str
+) -> None:
+  """Creates table with empty values for SKAN schema.
+
+  Args:
+    bigquery_executor: Executor responsible for writing data to BigQuery.
+    bq_dataset: BigQuery dataset to write data to.
+  """
+  query = f"""
             CREATE OR REPLACE TABLE `{bq_dataset}.skan_schema_input_table` AS
             SELECT
               "com.example" AS app_id,
@@ -77,7 +115,7 @@ def generate_placeholder_schema(bq_executor, config: GaarfBqConfig) -> None:
               "" AS skan_mapped_event
             LIMIT 1
         """
-  bq_executor.execute('skan_schema', query, config.params)
+  bigquery_executor.execute('skan_schema', query)
 
 
 def main():
@@ -87,58 +125,50 @@ def main():
   parser.add_argument('--log', '--loglevel', dest='loglevel', default='info')
   parser.add_argument('--logger', dest='logger', default='local')
   parser.add_argument('--save-config', dest='save_config', action='store_true')
-  parser.add_argument(
-    '--config-destination', dest='save_config_dest', default='config.yaml'
-  )
-
-  parser.add_argument('--project', dest='project', default=None)
-  parser.add_argument(
-    '--dataset-location', dest='dataset_location', default=None
-  )
   parser.add_argument('--dry-run', dest='dry_run', action='store_true')
   parser.set_defaults(save_config=False)
   parser.set_defaults(dry_run=False)
-  args = parser.parse_known_args()
+  args, kwargs = parser.parse_known_args()
 
-  save_config = args[0].save_config
-  dry_run = args[0].dry_run
-
-  logger = init_logging(
-    loglevel=args[0].loglevel.upper(), logger_type=args[0].logger
+  logger = gaarf_utils.init_logging(
+    loglevel=args.loglevel.upper(), logger_type=args.logger
   )
 
-  config = ConfigBuilder('gaarf-bq').build(vars(args[0]), args[1])
-  bq_executor = BigQueryExecutor(config.project)
-  if gaarf_config := args[0].gaarf_config:
-    with open(gaarf_config, 'r', encoding='utf-8') as f:
+  config = gaarf_utils.ConfigBuilder('gaarf-bq').build(vars(args), kwargs)
+  bq_dataset = config.params.get('macros', {}).get('bq_dataset')
+  bigquery_executor = bq_executor.BigQueryExecutor(config.project)
+  if gaarf_config := args.gaarf_config:
+    with smart_open.open(gaarf_config, 'r', encoding='utf-8') as f:
       raw_config = yaml.safe_load(f)
     mode = (
       raw_config.get('scripts', {}).get('skan_mode', {}).get('mode')
-      or args[0].mode
+      or args.mode
     )
-    if save_config:
-      update_config(path=gaarf_config, mode=mode)
-
-  else:
-    mode = args[0].mode
-  if dry_run:
     logger.info('Saving SKAN mode to the config')
+    if args.save_config:
+      update_config(path=gaarf_config, mode=mode)
+  else:
+    mode = args.mode
+
+  if args.dry_run:
     exit()
   if mode == 'placeholders' or not config.params.get('macro', {}).get(
     'skan_schema_input_table'
   ):
     logger.info('Generating placeholders for SKAN schema')
-    generate_placeholder_schema(bq_executor, config)
-    exit()
-  try:
-    logger.info('Copying SKAN schema')
-    copy_schema(bq_executor, config)
-  except Exception:
-    if not has_existing_schema(bq_executor, config):
-      logger.info('Failed to copy SKAN schema, generating placeholders instead')
-      generate_placeholder_schema(bq_executor, config)
-    else:
-      logger.info('Failed to copy SKAN schema, re-using existing schema')
+    generate_placeholder_schema(bigquery_executor, bq_dataset)
+  else:
+    try:
+      logger.info('Copying SKAN schema')
+      copy_schema(bigquery_executor, config)
+    except bq_executor.BigQueryExecutorException:
+      if not has_existing_schema(bigquery_executor, config):
+        logger.info(
+          'Failed to copy SKAN schema, generating placeholders instead'
+        )
+        generate_placeholder_schema(bigquery_executor, bq_dataset)
+      else:
+        logger.info('Failed to copy SKAN schema, re-using existing schema')
 
 
 if __name__ == '__main__':
