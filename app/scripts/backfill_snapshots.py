@@ -14,12 +14,12 @@
 """Entrypoint for performing various backfilling operations."""
 
 import argparse
+import datetime
 import functools
 import itertools
 import logging
 from bisect import bisect_left
 from collections.abc import Sequence
-import datetime
 from typing import Generator
 
 import gaarf
@@ -59,7 +59,8 @@ def get_new_date_for_missing_incremental_snapshots(
       'missing_incremental_snapshot',
       f'SELECT TABLE_SUFFIX, new_start_date FROM `{base_table_id}_missing`',
     )
-    if result is not None and not result.empty:
+
+    if bool(isinstance(result, pd.DataFrame)):
       start_date = result.new_start_date.squeeze().strftime('%Y-%m-%d')
       suffix = result.TABLE_SUFFIX.squeeze()
       delete_ddl = f'DROP TABLE `{base_output_table_id}_{suffix}`;'
