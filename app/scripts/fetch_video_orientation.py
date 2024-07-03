@@ -434,7 +434,7 @@ def infer_video_orientation_from_config(  # noqa: PLR0913
   mode: str | None = None,
   youtube_config_path: str | None = None,
   element_delimiter: str | None = None,
-  orientation_position: str | None = None,
+  orientation_position: int | None = None,
   orientation_delimiter: str | None = None,
   width_expression: str | None = None,
   height_expression: str | None = None,
@@ -461,17 +461,27 @@ def infer_video_orientation_from_config(  # noqa: PLR0913
     if video_orientation_config := config.get('scripts', {}).get(
       'video_orientation'
     ):
-      mode = video_orientation_config.get('mode')
-      element_delimiter = video_orientation_config.get('element_delimiter')
-      orientation_position = video_orientation_config.get(
-        'orientation_position'
+      mode = mode or video_orientation_config.get('mode')
+      element_delimiter = element_delimiter or video_orientation_config.get(
+        'element_delimiter'
       )
-      orientation_delimiter = video_orientation_config.get(
-        'orientation_delimiter'
+      orientation_position = (
+        orientation_position
+        or video_orientation_config.get('orientation_position')
       )
-      youtube_config_path = video_orientation_config.get('youtube_config_path')
-      width_expression = video_orientation_config.get('width_expression')
-      height_expression = video_orientation_config.get('height_expression')
+      orientation_delimiter = (
+        orientation_delimiter
+        or video_orientation_config.get('orientation_delimiter')
+      )
+      youtube_config_path = youtube_config_path or video_orientation_config.get(
+        'youtube_config_path'
+      )
+      width_expression = width_expression or video_orientation_config.get(
+        'width_expression'
+      )
+      height_expression = height_expression or video_orientation_config.get(
+        'height_expression'
+      )
   video_orientation_regexp = VideoOrientationRegexp(
     element_delimiter, orientation_position, orientation_delimiter
   )
