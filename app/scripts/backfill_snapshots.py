@@ -293,9 +293,11 @@ def _get_asset_cohorts_snapshots(
       ORDER BY 1
      """,
     )
+    has_snapshots = bool(isinstance(result, pd.DataFrame))
   except bq_executor.BigQueryExecutorException:
     logging.warning('failed to get data')
-  if result and (snapshots_days := set(result.day)):
+    return snapshot_dates
+  if has_snapshots and (snapshots_days := set(result.day)):
     snapshot_dates = {
       datetime.datetime.strptime(date, '%Y%m%d').date()
       for date in snapshots_days
