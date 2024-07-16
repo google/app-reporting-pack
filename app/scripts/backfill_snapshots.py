@@ -532,7 +532,7 @@ def main():
     )
   ):
     for table_id, query in restore_missing_cohorts(
-      bigquery_executor, bq_dataset
+      snapshot_dates, bq_dataset
     ):
       save_restored_asset_cohort(bigquery_executor, query, table_id)
 
