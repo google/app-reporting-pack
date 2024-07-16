@@ -91,10 +91,11 @@ AS (
 );
 
 CREATE OR REPLACE FUNCTION `{bq_dataset}.equalsArr`(
-  x ARRAY<STRING>, y ARRAY<STRING>)
+  arr_new ARRAY<STRING>, arr_old ARRAY<STRING>)
 RETURNS INT64
 LANGUAGE js
 AS r"""
-var count = (x.length >= y.length ? x : y).reduce((count, element) => count + (!x.includes(element) ? 1 : 0), 0);
+var count = arr_new.filter(x => !arr_old.includes(x))
+  .concat(arr_old.filter(x => !arr_new.includes(x))).length;
 return count;
 """;
