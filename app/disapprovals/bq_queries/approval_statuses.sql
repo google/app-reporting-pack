@@ -106,8 +106,8 @@ AS (
     M.ad_group_status,
     IF(
       D.asset_id = -1,
-      field_type,
-      `{bq_dataset}.ConvertAssetFieldType`(A.field_type)) AS disapproval_level,
+      D.field_type,
+      `{bq_dataset}.ConvertAssetFieldType`(D.field_type)) AS disapproval_level,
     D.asset_id,
     CASE A.type
       WHEN 'TEXT' THEN A.text
