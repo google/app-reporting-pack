@@ -60,7 +60,7 @@ AS (
 -- Save ad_group performance data for the current fetch
 CREATE OR REPLACE TABLE `{target_dataset}.ad_group_network_split_{date_iso}`
 AS (
-  SELECT *
+  SELECT
     day,
     account_id,
     account_name,
