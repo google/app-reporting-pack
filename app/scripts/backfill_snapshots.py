@@ -398,7 +398,16 @@ def _get_bid_budget_snapshot_dates(
         )
       """,
     )
+    if not result:
+      today = datetime.datetime.today()
+      end_date = today - datetime.timedelta(days=1)
+      start_date = today - datetime.timedelta(days=28)
+      return {
+        date.strftime('%Y-%m-%d')
+        for date in pd.date_range(start_date, end_date).to_pydatetime().tolist()
+      }
     return set(result['day'])
+
   except bq_executor.BigQueryExecutorException:
     logging.error('Fail to find bid_budget snapshots')
     return set()
@@ -531,9 +540,7 @@ def main():
       bigquery_executor, bq_dataset
     )
   ):
-    for table_id, query in restore_missing_cohorts(
-      snapshot_dates, bq_dataset
-    ):
+    for table_id, query in restore_missing_cohorts(snapshot_dates, bq_dataset):
       save_restored_asset_cohort(bigquery_executor, query, table_id)
 
 
