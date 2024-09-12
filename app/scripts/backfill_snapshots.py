@@ -398,7 +398,7 @@ def _get_bid_budget_snapshot_dates(
         )
       """,
     )
-    if not result:
+    if result is None or (isinstance(result, pd.DataFrame) and result.empty):
       today = datetime.datetime.today()
       end_date = today - datetime.timedelta(days=1)
       start_date = today - datetime.timedelta(days=28)
