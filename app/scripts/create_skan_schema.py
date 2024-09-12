@@ -135,7 +135,7 @@ def main():
   )
 
   config = gaarf_utils.ConfigBuilder('gaarf-bq').build(vars(args), kwargs)
-  bq_dataset = config.params.get('macros', {}).get('bq_dataset')
+  bq_dataset = config.params.get('macro', {}).get('bq_dataset')
   bigquery_executor = bq_executor.BigQueryExecutor(config.project)
   if gaarf_config := args.gaarf_config:
     with smart_open.open(gaarf_config, 'r', encoding='utf-8') as f:
