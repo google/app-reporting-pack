@@ -78,8 +78,8 @@ case $1 in
   --legacy)
     legacy="y"
     ;;
-  --backfill)
-    backfill="y"
+  --no-backfill)
+    backfill="n"
     ;;
   --initial-load)
     initial_mode=0
@@ -420,6 +420,8 @@ run_with_config() {
     $(which python3) $(dirname $0)/scripts/conv_lag_adjustment.py \
       -c=$config_file \
       --ads-config=$ads_config --log=$loglevel --api-version=$API_VERSION
+    echo -e "${COLOR}===generating bid budget snapshots===${NC}"
+    gaarf-bq $(dirname $0)/core/bq_queries/snapshots/*.sql -c=$config_file --log=$loglevel
     infer_answer_from_config $config_file backfill
     if [[ $backfill = "y" ]]; then
       echo -e "${COLOR}===backfilling bid budget snapshots===${NC}"
