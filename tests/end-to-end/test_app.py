@@ -62,7 +62,7 @@ def prepare_configs(configs_path: str, dataset: str) -> None:
 def run_app_reporting_pack(configs_path: str):
   for config in sorted(pathlib.Path(configs_path).glob('*_prepared.yaml')):
     command = (f'bash ../../app/run-local.sh -c {config} -q '
-               '-g $HOME/google-ads.yaml --modules core')
+               '-g $HOME/google-ads.yaml')
     subprocess.run(command, shell=True, check=False)
 
 
