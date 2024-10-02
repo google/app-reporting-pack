@@ -60,7 +60,7 @@ def get_new_date_for_missing_incremental_snapshots(
       f'SELECT TABLE_SUFFIX, new_start_date FROM `{base_table_id}_missing`',
     )
 
-    if bool(isinstance(result, pd.DataFrame)):
+    if not result.empty:
       start_date = result.new_start_date.squeeze().strftime('%Y-%m-%d')
       suffix = result.TABLE_SUFFIX.squeeze()
       delete_ddl = f'DROP TABLE `{base_output_table_id}_{suffix}`;'
@@ -294,11 +294,10 @@ def _get_asset_cohorts_snapshots(
       ORDER BY 1
      """,
     )
-    has_snapshots = bool(isinstance(result, pd.DataFrame))
   except bq_executor.BigQueryExecutorException:
-    logging.warning('failed to get data')
+    logging.warning('Failed to get cohort data.')
     return snapshot_dates
-  if has_snapshots and (snapshots_days := set(result.day)):
+  if not result.empty and (snapshots_days := set(result.day)):
     snapshot_dates = {
       datetime.datetime.strptime(date, '%Y%m%d').date()
       for date in snapshots_days
@@ -398,7 +397,7 @@ def _get_bid_budget_snapshot_dates(
         )
       """,
     )
-    if result is None or (isinstance(result, pd.DataFrame) and result.empty):
+    if result.empty:
       today = datetime.datetime.today()
       end_date = today - datetime.timedelta(days=1)
       start_date = today - datetime.timedelta(days=28)
