@@ -187,7 +187,7 @@ You can safely delete all ARP virtual machines and rerun Scheduler job manually.
 #### Prerequisites
 
 - Google Ads API access and [google-ads.yaml](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md#setting-up-using-google-adsyaml) file - follow documentation on [API authentication](https://github.com/google/ads-api-report-fetcher/blob/main/docs/how-to-authenticate-ads-api.md).
-- Python 3.8+
+- Python 3.9+
 - [Service account](https://cloud.google.com/iam/docs/creating-managing-service-accounts#creating) created and [service account key](https://cloud.google.com/iam/docs/creating-managing-service-account-keys#creating) downloaded in order to write data to BigQuery.
 
   - Once you downloaded service account key export it as an environmental variable

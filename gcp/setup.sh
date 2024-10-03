@@ -377,9 +377,9 @@ deploy_all() {
   enable_apis
   set_iam_permissions
   deploy_files
-  #create_registry - uncomment then migrated back to Artifact Registry
-  #build_docker_image - uncomment to migrated back to Artifact Registry
-  build_docker_image_gcr  # using Container Registry as most reliable service but it's only safe till May 2024 (due to upcomming deprication)
+  create_registry
+  build_docker_image
+  #build_docker_image_gcr  # Container Registry is deprecated
   deploy_cf
   schedule_run
 }
