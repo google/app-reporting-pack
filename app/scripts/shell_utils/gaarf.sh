@@ -19,6 +19,7 @@ fetch_reports() {
   --output=bq \
   --customer-ids-query="$customer_ids_query" \
   --bq.project=$project --bq.dataset=$bq_dataset \
+  --bq.location=$bq_dataset_location \
   --macro.start_date=$start_date --macro.end_date=$end_date \
   --ads-config=$ads_config "$@"
 }
@@ -43,5 +44,6 @@ create_skan_schema() {
 
 generate_output_tables() {
   gaarf-bq $(dirname $0)/core/bq_queries/*.sql \
-    --project=$project --target=$bq_dataset_output $macros "$@"
+    --project=$project --dataset-location=$bq_dataset_location \
+    $macros "$@"
 }

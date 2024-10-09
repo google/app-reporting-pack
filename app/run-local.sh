@@ -208,6 +208,10 @@ setup() {
     read -r bq_dataset
     bq_dataset=${bq_dataset:-arp}
 
+    echo -n "Enter BigQuery dataset location (US): "
+    read -r bq_dataset_location
+    bq_dataset_location=${bq_dataset_location:-US}
+
     ask_for_incremental_saving
     start_date=${start_date:-:YYYYMMDD-90}
     end_date=${end_date:-:YYYYMMDD-1}
@@ -321,6 +325,7 @@ print_configuration() {
   echo "  account_id: $customer_id"
   echo "  BigQuery project_id: $project"
   echo "  BigQuery dataset: $bq_dataset"
+  echo "  BigQuery dataset_location: $bq_dataset_location"
   echo "  Reporting window: Last $start_date_days days"
   echo "  Ads config: $ads_config"
   echo "  Cohorts: $cohorts_final"
@@ -497,6 +502,7 @@ start_date_days=90
 start_date=":YYYYMMDD-90"
 end_date=":YYYYMMDD-1"
 bq_dataset="arp"
+bq_dataset_location="US"
 gcloud_project=`gcloud config get-value project 2>/dev/null || echo`
 project=${GOOGLE_CLOUD_PROJECT:-$gcloud_project}
 parse_yaml $ads_config "GOOGLE_ADS_"
