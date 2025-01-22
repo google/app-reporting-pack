@@ -65,6 +65,14 @@ check_billing() {
   fi
 }
 
+generate_youtube_api_key() {
+  gcloud projects add-iam-policy-binding $PROJECT_ID --member="user:$USER_EMAIL" --role roles/serviceusage.apiKeysAdmin
+  curl -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" \
+    https://apikeys.googleapis.com/v2/projects/$PROJECT_NUMBER/locations/global/keys -X POST -d '{"displayName" : "ARP YouTube Data API Key", "restrictions": {"api_targets": [{"service": "youtube.googleapis.com"}]}}'
+  key_name=`curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" https://apikeys.googleapis.com/v2/projects/$PROJECT_NUMBER/locations/global/keys | grep -B1 "ARP YouTube Data API Key" | head -n 1 | cut -d '"' -f4`
+  YOUTUBE_API_KEY=`curl -s -H "Authorization: Bearer $(gcloud auth print-access-token)" -H "Content-Type: application/json" https://apikeys.googleapis.com/v2/$key_name/keyString | grep keyString | cut -d '"' -f4`
+}
+
 copy_application_scripts() {
   echo "Copying application files to $GCS_BASE_PATH"
   gsutil rsync -r -x ".*/__pycache__/.*|[.].*" ./../app $GCS_BASE_PATH
@@ -116,6 +124,7 @@ enable_apis() {
   gcloud services enable eventarc.googleapis.com
   gcloud services enable cloudscheduler.googleapis.com
   gcloud services enable googleads.googleapis.com
+  gcloud services enable youtube.googleapis.com
 }
 
 
@@ -209,6 +218,7 @@ deploy_cf() {
   else
     sed -i'.bak' -e "s|^NO_PUBLIC_IP[[:space:]]*:|#NO_PUBLIC_IP:|" ./cloud-functions/create-vm/env.yaml
   fi
+  sed -i'.bak' -e "s|.*GOOGLE_API_KEY:.*|  GOOGLE_API_KEY: $YOUTUBE_API_KEY|" ./cloud-functions/create-vm/env.yaml
 
   # deploy CF (pubsub triggered)
   gcloud functions deploy $CF_NAME \

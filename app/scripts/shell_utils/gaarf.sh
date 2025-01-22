@@ -24,16 +24,6 @@ fetch_reports() {
   --ads-config=$ads_config "$@"
 }
 
-fetch_video_orientation() {
-  $(which python3) $(dirname $0)/scripts/fetch_video_orientation.py \
-    --mode=$video_parsing_mode_output \
-    -c=$config_file --ads-config=$ads_config \
-    --youtube-config-path=$youtube_config_path \
-    --element-delimiter=$element_delimiter \
-    --orientation-position=$orientation_position \
-    --orientation-delimiter=$orientation_delimiter "$@"
-}
-
 create_skan_schema() {
   $(which python3) $(dirname $0)/scripts/create_skan_schema.py \
     -m=$skan_schema_mode \

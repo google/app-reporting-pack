@@ -259,7 +259,6 @@ setup() {
         --template.skan_fine="$skan_fine"
     fi
     generate_output_tables $save_config --log=$loglevel --dry-run
-    fetch_video_orientation $save_config --log=$loglevel --dry-run
     if [[ $skan_answer = "y" ]]; then
       create_skan_schema $save_config --log=$loglevel --dry-run
     fi
@@ -303,7 +302,6 @@ setup() {
         --template.skan_fine="$skan_fine"
   fi
   generate_output_tables $save_config --log=$loglevel --dry-run
-  fetch_video_orientation $save_config --log=$loglevel --dry-run
   if [[ $skan_answer = "y" ]]; then
     create_skan_schema $save_config --log=$loglevel --dry-run
   fi
