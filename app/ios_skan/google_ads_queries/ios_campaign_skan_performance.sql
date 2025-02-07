@@ -18,7 +18,7 @@ SELECT
     {% if skan_fine == "true" %}
         segments.sk_ad_network_fine_conversion_value AS skan_conversion_value,
     {% else %}
-        segments.sk_ad_network_conversion_value AS skan_conversion_value,
+        segments.sk_ad_network_coarse_conversion_value AS skan_conversion_value,
     {% endif %}
     segments.sk_ad_network_source_app.sk_ad_network_source_app_id AS skan_source_app_id,
     segments.sk_ad_network_user_type AS skan_user_type,
