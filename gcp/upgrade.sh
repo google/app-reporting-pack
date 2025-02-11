@@ -17,10 +17,6 @@
 CYAN='\033[0;36m' # Cyan
 WHITE='\033[0;37m'  # White
 
-git pull > /dev/null
-git checkout tags/stable
-trap "git checkout main" EXIT
-
 SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
 SETTING_FILE="${SCRIPT_PATH}/settings.ini"
 NAME=$(git config -f $SETTING_FILE config.name)
@@ -32,9 +28,9 @@ OBSOLETE_CONFIG=0
 _check_api_version() {
     local api_version=$(cat /tmp/arp.yaml | grep api_version |\
         cut -d ":" -f2 | grep -oE '[0-9]+([.][0-9]+)?')
-    if (( $api_version < 15 )); then
+    if (( $api_version < 17 )); then
         echo "Unsupported API version."
-        echo "Recommended to update to Google Ads API 16."
+        echo "Recommended to update to Google Ads API 18."
         OBSOLETE_CONFIG=$(($OBSOLETE_CONFIG+1))
     fi
 }
