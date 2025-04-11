@@ -1,14 +1,14 @@
 gaarf:
   output: bq
-  api_version: '16'
+  api_version: '19'
   account:
   - '{{ account }}'
   params:
     macro:
-      start_date: '2024-05-16'
-      end_date: '2024-05-18'
+      start_date: '2024-05-19'
+      end_date: '2024-05-19'
       date_iso: '20240519'
-      yesterday_iso: '20240518'
+      yesterday_iso: '20240519'
       initial_load_date: '2024-05-10'
     template:
       skan4: 'true'
@@ -26,8 +26,8 @@ gaarf-bq:
       legacy_dataset: '{{ dataset }}_legacy'
       initial_date: '20240510'
       date_iso: '20240519'
-      yesterday_iso: '20240518'
-      start_date: '2024-05-16'
+      yesterday_iso: '20240519'
+      start_date: '2024-05-19'
       current_date: '2024-05-19'
       current_datetime: '2024-05-19 00:00:00'
     template:

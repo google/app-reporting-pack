@@ -17,19 +17,12 @@
 SCRIPT_PATH=$(readlink -f "$0" | xargs dirname)
 
 api_version=$1
-if (($api_version  == 17 )); then
-  skan_fine=true
-else
-  skan_fine=false
-fi
 echo "api_version: $api_version"
-echo "skan_fine: $skan_fine"
 errors=$(gaarf-simulator $SCRIPT_PATH/../app/*/google_ads_queries/*.sql \
   --account 1 \
   --macro.start_date=:YYYYMMDD-1 \
   --macro.end_date=:YYYYMMDD-1 \
-  --api-version=$api_version \
-  --template.skan4=$skan4 --template.skan_fine=$skan_fine> /dev/null)
+  --api-version=$api_version > /dev/null)
 if [[ ! -z $errors ]]; then
   echo "Found errors in the Google Ads API queries."
   exit 1

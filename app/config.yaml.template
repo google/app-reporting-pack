@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+# Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ gaarf:
     project: YOUR-BQ-PROJECT
     dataset: arp
   # Do not change API version manually
-  api_version: '14'
+  api_version: '19'
   account:
   - 'YOUR_MCC_ID'
   customer_ids_query: SELECT customer.id FROM campaign WHERE campaign.advertising_channel_type
@@ -37,13 +37,12 @@ gaarf-bq:
       target_dataset: arp_output
       legacy_dataset: arp_legacy
       skan_schema_input_table: YOUR_PROJECT.YOUR_DATASET.YOUR_SKAN_SCHEMA_TABLE
+      start_date: :YYYYMMDD-91
     template:
       cohort_days: 0,1,3,5,7,14,30
       has_skan: 'false' # Change to 'true' is have SKAN schema
       incremental: 'false' # Change to 'true' is you want to store performance data incrementally
 scripts:
-  video_orientation:
-    mode: placeholders
   skan_mode:
     mode: placeholders
 incremental: false # Change to true is you want to store performance data incrementally
