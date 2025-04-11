@@ -5,3 +5,4 @@ google-api-python-client==2.80.0
 urllib3==1.26.18  # remedy for pkg_resources.ContextualVersionConflict bug
 smart_open[gcs]
 garf_youtube_data_api
+garf-executors[bq]
