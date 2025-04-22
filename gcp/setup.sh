@@ -164,6 +164,7 @@ set_iam_permissions() {
     gcloud projects add-iam-policy-binding $PROJECT_ID \
       --member=serviceAccount:$SERVICE_ACCOUNT \
       --role=roles/$role \
+      --condition=None \
       --no-user-output-enabled
   done
 }
@@ -223,7 +224,7 @@ deploy_cf() {
   gcloud functions deploy $CF_NAME \
       --trigger-topic=$TOPIC \
       --entry-point=createInstance \
-      --runtime=nodejs18 \
+      --runtime=nodejs20 \
       --timeout=540s \
       --region=$CF_REGION \
       --quiet \
