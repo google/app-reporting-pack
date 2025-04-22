@@ -191,8 +191,7 @@ deploy_cf() {
   fi
   # initialize env.yaml - environment variables for CF:
   #   - docker image url
-  #url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
-  url="gcr.io/$PROJECT_ID/$IMAGE_NAME"
+  url="$REPOSITORY_LOCATION-docker.pkg.dev/$PROJECT_ID/docker/$IMAGE_NAME"
   sed -i'.bak' -e "s|#*[[:space:]]*DOCKER_IMAGE[[:space:]]*:[[:space:]]*.*$|DOCKER_IMAGE: $url|" ./cloud-functions/create-vm/env.yaml
   #   - GCE VM name (base)
   instance=$(eval echo $(git config -f $SETTING_FILE compute.name))
