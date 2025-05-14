@@ -218,7 +218,7 @@ deploy_cf() {
   else
     sed -i'.bak' -e "s|^NO_PUBLIC_IP[[:space:]]*:|#NO_PUBLIC_IP:|" ./cloud-functions/create-vm/env.yaml
   fi
-  sed -i'.bak' -e "s|.*GOOGLE_API_KEY:.*|  GOOGLE_API_KEY: $YOUTUBE_API_KEY|" ./cloud-functions/create-vm/env.yaml
+  sed -i'.bak' -e "s|.*GOOGLE_API_KEY:.*|GOOGLE_API_KEY: $YOUTUBE_API_KEY|" ./cloud-functions/create-vm/env.yaml
 
   # deploy CF (pubsub triggered)
   gcloud functions deploy $CF_NAME \

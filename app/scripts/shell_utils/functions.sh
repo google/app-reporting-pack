@@ -113,6 +113,12 @@ parse_yaml() {
    done < <(cat $yaml_file)
 }
 
+install_gaarf() {
+  python3 -m venv gaarf
+  ./gaarf/bin/pip install --upgrade pip
+  ./gaarf/bin/pip install google-ads-api-report-fetcher[bq]
+}
+
 check_gaarf_version() {
   if [[ $quiet = "n" ]]; then
     echo "checking google-ads-api-report-fetcher version"

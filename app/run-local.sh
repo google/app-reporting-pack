@@ -492,6 +492,7 @@ if [[ $reset_snapshots == "y" && $proceed_after_resetting_snapshots != "y" ]]; t
   exit
 fi
 
+install_gaarf
 check_gaarf_version
 check_ads_config $validate_ads_config
 
