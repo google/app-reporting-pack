@@ -44,6 +44,7 @@ done
 
 NAME=$(git config -f $SETTING_FILE config.name)
 PROJECT_ID=$(gcloud config get-value project 2> /dev/null)
+BUCKET=$(git config -f $SETTING_FILE config.bucket)
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="csv(projectNumber)" | tail -n 1)
 USER_EMAIL=$(gcloud config get-value account 2> /dev/null)
 
@@ -54,7 +55,7 @@ REPOSITORY_LOCATION=$(git config -f $SETTING_FILE repository.location)
 TOPIC=$(eval echo $(git config -f $SETTING_FILE pubsub.topic))
 
 SERVICE_ACCOUNT=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
-GCS_BASE_PATH=gs://$PROJECT_ID/$NAME
+GCS_BASE_PATH=gs://$BUCKET/$NAME
 
 check_billing() {
   BILLING_ENABLED=$(gcloud beta billing projects describe $PROJECT_ID --format="csv(billingEnabled)" | tail -n 1)

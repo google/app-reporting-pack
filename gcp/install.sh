@@ -37,6 +37,7 @@ export RUNNING_IN_GCE   # signaling to run-local.sh that we're runnign inside GC
 
 # deploy solution
 echo -e "${CYAN}Deploying Cloud components...${WHITE}"
-./gcp/setup.sh deploy_public_index deploy_all start
+#./gcp/setup.sh deploy_public_index deploy_all start
+./gcp/setup.sh deploy_all start
 
 popd >/dev/null
