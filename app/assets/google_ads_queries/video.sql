@@ -14,10 +14,10 @@
 
 # Get video information on each youtube video
 SELECT
-  video.id,
-  metrics.video_views
-  metrics.video_quartile_p100_rate,
-  metrics.video_quartile_p25_rate,
-  metrics.video_quartile_p50_rate,
-  metrics.video_quartile_p75_rate
+  video.id AS video_id,
+  metrics.video_views AS video_views,
+  metrics.video_quartile_p100_rate AS p100_view,
+  metrics.video_quartile_p25_rate AS p25_view,
+  metrics.video_quartile_p50_rate AS p50_view,
+  metrics.video_quartile_p75_rate AS p75_view
 FROM video
