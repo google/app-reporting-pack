@@ -221,6 +221,11 @@ AS (
       WHEN 'YOUTUBE_VIDEO' THEN VO.video_orientation
       ELSE NULL
       END AS asset_orientation,
+    video.video_views AS video_views,
+    video.p25_view AS p25_view,
+    video.p50_view AS p50_view,
+    video.p75_view AS p75_view,
+    video.p100_view AS p100_view,
     ROUND(VD.video_duration / 1000) AS video_duration,
     0 AS video_aspect_ratio,
     A.type AS asset_type,
@@ -293,6 +298,8 @@ AS (
       AND AP.field_type = R.field_type
   LEFT JOIN AssetMapping AS A
     ON AP.asset_id = A.id
+  LEFT JOIN {bq_dataset}.video AS video
+    ON A.youtube_video_id = video.video_id
   LEFT JOIN VideoDurations AS VD
     ON A.youtube_video_id = VD.video_id
   LEFT JOIN VideoOrientation AS VO
