@@ -98,10 +98,10 @@ def main():
   try:
     video_orientations = get_video_orientations_from_youtube_data_api(videos)
   except Exception as e:
+    logging.error(e)
     logging.error(
       'Failed to get data from YouTube Data API, generating placeholders'
     )
-    logging.debug(e)
     video_orientations = generate_placeholders(videos)
   bigquery_writer.BigQueryWriter(
     project=bq_project,
