@@ -8,7 +8,6 @@
 1. [Deliverables](#deliverables)
 1. [Prerequisites](#prerequisites)
 1. [Installation](#installation)
-   - [Primary Installation Method](#primary-installation-method)
    - [Manual installation in Google Cloud](#manual-installation-in-google-cloud)
    - [Alternative Installation Methods](#alternative-installation-methods)
      - [Prerequisites for alternative installation methods](#prerequisites-1)
@@ -57,43 +56,12 @@ in your own infrastructure. In either way you need two things:
 - Google Ads API credentials (in `google-ads.yaml` or separately)
 - ARP configuration (in `app_reporting_pack.yaml`) - it can be generated via running `run-local.sh`.
 
-### Primary Installation Method
-
-The primary installation method deploys ARP into Google Cloud by using Cloud Run Button.
-The procedure automates generating ARP configuration and deploying all required components to the Cloud.
-
-This approach is the simplest one because it clones the repo and starts install scripts for you. But sometimes you might need some customization.
-The majority infrastructure settings can be changed in `gcp/settings.ini` file (regions, service names, etc).
-If it's a case for you please use the [Manual installation in Google Cloud](#manual-installation-in-google-cloud) below.
-
-To install the solution, follow these steps:
-
-1. Click "Run on Google Cloud":
-   [![Run on Google Cloud](https://deploy.cloud.run/button.svg)](https://deploy.cloud.run?dir=gcp/cloud-run-button)
-
-1. Select your GCP project and choose any region.
-
-1. When prompted, upload your google-ads.yaml (alternately you can paste in your client ID, client secret, refresh token, developer token and MCC ID later).
-
-1. The install script will generate ARP configuration by asking some interactive questions and then deploy all cloud components in the current project
-
-1. At the end you will be given a link to a webpage on Cloud Storage where you can track the progress.
-
-1. This webpage will inform you once the BigQuery datasets have been populated and you can create a dashboard.
-   When the button is enabled, click "Open Dashboard" to clone the dashboard template.
-   Click the "Save" button on the top right to save your new dashboard.
-
-1. Change your dashboard's name and save it's URL or bookmark it.
-
-It's important to note that a Cloud Run service that is being built and deployed during installation isn't actually needed (it'll be removed at the end).
-All ARP installation happens in a pre-build script.
-
 ### Manual installation in Google Cloud
 
 1. First you need to clone the repo in Cloud Shell or on your local machine (we assume Linux with gcloud CLI installed):
 
 ```
-git clone https://github.com/google/app-reporting-pack
+git clone https://github.com/google-marketing-solutions/app-reporting-pack
 ```
 
 1. Go to the repo folder: `cd app-reporting-pack/`
@@ -114,7 +82,7 @@ Or if you already have ARP configuration (`app_reporting_pack.yaml`) then you ca
 ./gcp/setup.sh deploy_public_index deploy_all start
 ```
 
-It runs threee tasks ('deploy_public_index', 'deploy_all' and 'start') described below.
+It runs three tasks ('deploy_public_index', 'deploy_all' and 'start') described below.
 
 > TIP: when you install via clicking Cloud Run Button basically you run the same `install.sh` but in an automatically created Shell.
 
@@ -207,7 +175,7 @@ In order to run App Reporting Pack locally please follow the steps outlined belo
 
 - clone this repository
   ```
-  git clone https://github.com/google/app-reporting-pack
+  git clone https://github.com/google-marketing-solutions/app-reporting-pack
   cd app-reporting-pack
   ```
 - (Recommended) configure virtual environment if you starting testing the solution:
@@ -267,7 +235,7 @@ sudo docker run \
     -v /path/to/google-ads.yaml:/google-ads.yaml \
     -v /path/to/service_account.json:/app/service_account.json \
     -v /path/to/app_reporting_pack.yaml:/app_reporting_pack.yaml \
-    ghcr.io/google/app-reporting-pack \
+    ghcr.io/google-marketing-solutions/app-reporting-pack \
     -g google-ads.yaml -c app_reporting_pack.yaml --legacy --backfill
 ```
 
@@ -280,7 +248,7 @@ configs into the container:
 ```
 sudo docker run \
     -v /path/to/service_account.json:/app/service_account.json \
-    ghcr.io/google/app-reporting-pack \
+    ghcr.io/google-marketing-solutions/app-reporting-pack \
     -g gs://project_name/google-ads.yaml \
     -c gs://project_name/app_reporting_pack.yaml \
     --legacy --backfill
@@ -288,7 +256,7 @@ sudo docker run \
 
 ### Dashboard Replication
 
-If you install ARP via Cloud Run Button (see [Primary Installation Method](#primary-installation-method)) then in most cases you don't need the following procedure. Otherwise use the following command to clone the ARP dashboard.
+If you install ARP in Google Cloud then in most cases you don't need the following procedure. Otherwise use the following command to clone the ARP dashboard.
 
 Once queries ran successfully you can proceed with dashboard replication.\
 Run the following command in the terminal to get a link for cloning the dashboard:
